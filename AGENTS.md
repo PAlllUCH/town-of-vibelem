@@ -38,7 +38,7 @@ tests/engine.test.js    # node:test suite, requires ../js/engine.js (the barrel)
 
 ```bash
 # Run tests (works on Windows Node 26):
-cd C:/__private
+cd <project-root>
 node --test --test-reporter=dot tests/engine.test.js
 # or plain:  node --test tests/engine.test.js
 
@@ -79,6 +79,6 @@ python -m http.server 8000    # then open http://<your-ip>:8000 on the phone
 
 ## Working in this repo (orchestration notes)
 
-- This project is built and maintained via the **orchestrator workflow**: plan → dispatch workers via `crush run "..." -m opencode-go/deepseek-v4-flash --cwd "C:/__private"` (user constraint: Flash workers only, no free tier, no MiMo) → mandatory review pass → fix loop → `node --test` until green.
+- This project is built and maintained via the **orchestrator workflow**: plan → dispatch workers via `crush run "..." -m opencode-go/deepseek-v4-flash --cwd "<project-root>"` (user constraint: Flash workers only, no free tier, no MiMo) → mandatory review pass → fix loop → `node --test` until green.
 - Worker prompts must be **shell-safe** (no backticks, parentheses, `&&`, `<`, `>`). Long specs live in `docs/` and workers are told to read them first.
 - The GDD is deliberately the single source of truth — change rules in `docs/GDD.md` first, then update `docs/interface.md` if the API shape changes, then code + tests.
