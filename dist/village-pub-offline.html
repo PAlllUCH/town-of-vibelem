@@ -1,0 +1,4456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12171a">
+<meta name="description" content="Village Pub moderator assistant">
+<title>Village Pub - Moderator Assistant</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12171a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #11161f;
+  --panel: #161e2a;
+  --panel2: #1c2736;
+  --line: #2a3648;
+  --text: #e7edf5;
+  --muted: #93a3b8;
+  --accent: #4fa3e3;
+  --ok: #43b581;
+  --bad: #e05d5d;
+  --warn: #e0b23c;
+  --town: #5d8cc4;
+  --mafia: #cf4444;
+  --neutral: #d9a520;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.app {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 14px calc(120px + env(safe-area-inset-bottom));
+}
+
+h1, h2, h3 { margin: 0 0 8px; line-height: 1.2; }
+h2 { font-size: 1.05rem; letter-spacing: .02em; }
+h3 { font-size: .95rem; }
+p { margin: 6px 0; }
+.muted { color: var(--muted); font-size: .86rem; }
+.small { font-size: .8rem; }
+
+/* Header */
+.app-header { text-align: center; padding: 18px 0 10px; }
+.app-header h1 { font-size: 1.5rem; letter-spacing: .08em; margin: 0; }
+.app-sub { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .14em; }
+
+/* Screens */
+.screen { display: none; }
+.screen.active { display: block; animation: fade .18s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Cards */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 12px 0;
+  box-shadow: var(--shadow);
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.card-head h2 { margin: 0; }
+
+/* Buttons */
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+.btn:active { transform: scale(.97); filter: brightness(1.15); }
+.btn:disabled { opacity: .4; pointer-events: none; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #08131f; }
+.btn-danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn-ok { background: var(--ok); border-color: var(--ok); color: #06241a; }
+.btn-block { display: flex; width: 100%; }
+.btn-big { min-height: 54px; font-size: 1.1rem; }
+.btn-sm { min-height: 44px; padding: 6px 10px; font-size: .85rem; }
+.btn-icon { min-width: 44px; width: 44px; padding: 0; font-size: .8rem; }
+.btn-row { display: flex; gap: 8px; margin: 10px 0; }
+.btn-row .btn { flex: 1; }
+.btn-col { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.btn-actor { justify-content: flex-start; min-height: 50px; }
+.btn-vote { flex: 1; min-height: 44px; padding: 8px 4px; font-size: .88rem; }
+.btn-vote.on { background: var(--accent); border-color: var(--accent); color: #08131f; }
+.btn.on { background: var(--accent); border-color: var(--accent); color: #08131f; }
+
+/* Team colors */
+.team-TOWN { --tc: var(--town); }
+.team-MAFIA { --tc: var(--mafia); }
+.team-NEUTRAL { --tc: var(--neutral); }
+.team-TOWN-text { color: var(--town); }
+.team-MAFIA-text { color: var(--mafia); }
+.team-NEUTRAL-text { color: var(--neutral); }
+.team-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tc, var(--muted));
+  margin-right: 6px;
+  flex: none;
+}
+
+/* Flow strip */
+.flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: 10px 0;
+}
+.flow-step { display: flex; align-items: center; gap: 5px; opacity: .45; }
+.flow-step.done { opacity: .7; }
+.flow-step.on { opacity: 1; }
+.flow-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.flow-step.on .flow-dot { background: var(--accent); box-shadow: 0 0 0 3px rgba(79, 163, 227, .25); }
+.flow-step.done .flow-dot { background: var(--ok); }
+.flow-step.on .flow-label { color: var(--accent); font-weight: 700; }
+.flow-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+
+/* Status tags */
+.tag {
+  display: inline-block;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  margin: 2px 2px 0 0;
+  text-transform: uppercase;
+}
+.tag-ok { color: var(--ok); border-color: var(--ok); }
+.tag-bad { color: var(--bad); border-color: var(--bad); }
+.tag-warn { color: var(--warn); border-color: var(--warn); }
+.tag-accent { color: var(--accent); border-color: var(--accent); }
+.tag-ghost { color: var(--muted); border-color: var(--muted); }
+
+/* Game screen */
+#game-body { padding-bottom: 12px; }
+#game-bar { position: sticky; bottom: 0; z-index: 20; }
+
+.bottom-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 2px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(13, 17, 23, .95) 70%, transparent);
+  margin: 0 -4px;
+}
+.btn-bar { flex: 1; min-height: 54px; font-size: 1rem; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--panel2);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: .9rem;
+  box-shadow: var(--shadow);
+  z-index: 50;
+  max-width: 88vw;
+  text-align: center;
+  transition: transform .2s ease;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+</style>
+<style>
+/* Stepper */
+.stepper { display: flex; align-items: stretch; gap: 10px; margin: 10px 0; }
+.btn-stepper { min-width: 64px; font-size: 1.6rem; }
+.stepper-num {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  min-height: 64px;
+}
+.stepper-num strong { font-size: 1.6rem; line-height: 1; }
+.stepper-num span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+.ratio { text-align: center; color: var(--muted); font-size: .92rem; }
+
+/* Team structure steppers */
+.team-structure { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.team-structure-head { margin-bottom: 6px; }
+.team-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  margin: 6px 0;
+}
+.team-stepper-label { flex: 1; font-size: .95rem; }
+.btn-stepper-sm { min-width: 44px; width: 44px; min-height: 44px; padding: 0; font-size: 1.2rem; font-weight: 700; }
+.team-stepper-num, .civ-stepper-num {
+  min-width: 44px;
+  text-align: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+}
+.team-stepper-num strong, .civ-stepper-num strong { font-size: 1.1rem; }
+
+/* Civilian stepper */
+.civ-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  margin: 8px 0;
+}
+
+/* Preset cards */
+.preset-grid { display: flex; flex-direction: column; gap: 8px; }
+.preset-card {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: var(--bg2);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  min-height: 64px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.preset-card.selected { border-color: var(--accent); background: rgba(79, 163, 227, .12); }
+.preset-name { font-weight: 700; }
+.preset-tag { color: var(--muted); font-size: .82rem; }
+
+/* Toggles */
+.toggle-row {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.toggle-text { flex: 1; display: flex; flex-direction: column; }
+.toggle-text small { color: var(--muted); font-size: .78rem; }
+.toggle {
+  flex: none;
+  width: 54px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--line);
+  position: relative;
+  transition: background .15s ease;
+}
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .15s ease;
+}
+.toggle.on { background: var(--accent); }
+.toggle.on .toggle-knob { left: 25px; }
+
+/* Layout picker */
+.layout-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.layout-card {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg2);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 4px;
+  min-height: 72px;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.layout-card.selected { border-color: var(--accent); background: rgba(79, 163, 227, .12); }
+.layout-icon {
+  width: 56px;
+  height: 38px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: .95;
+}
+.layout-icon-circle { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cellipse cx='32' cy='22' rx='24' ry='15' fill='none' stroke='%235d8cc4' stroke-width='2'/%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='32' cy='5' r='3'/%3E%3Ccircle cx='54' cy='22' r='3'/%3E%3Ccircle cx='32' cy='39' r='3'/%3E%3Ccircle cx='10' cy='22' r='3'/%3E%3Ccircle cx='19' cy='9' r='3'/%3E%3Ccircle cx='45' cy='35' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-two_rows { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='32' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-u_shape { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-rectangular { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Ccircle cx='32' cy='10' r='3'/%3E%3Ccircle cx='52' cy='10' r='3'/%3E%3Ccircle cx='12' cy='22' r='3'/%3E%3Ccircle cx='32' cy='22' r='3'/%3E%3Ccircle cx='52' cy='22' r='3'/%3E%3Ccircle cx='12' cy='34' r='3'/%3E%3Ccircle cx='32' cy='34' r='3'/%3E%3Ccircle cx='52' cy='34' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+
+/* Deck builder */
+.team-edit { margin: 12px 0; }
+.team-edit-head { display: flex; align-items: center; margin-bottom: 6px; }
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  margin: 6px 0;
+}
+.team-rank { color: var(--muted); font-size: .8rem; width: 18px; text-align: right; flex: none; }
+.team-row-name { flex: 1; font-size: .92rem; }
+.team-add { display: flex; gap: 8px; margin-top: 8px; }
+.select {
+  flex: 1;
+  min-height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: .95rem;
+}
+.btn-add { min-width: 76px; }
+
+/* Deck preview */
+.deck-preview { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.deck-team { margin: 8px 0; }
+.deck-team-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.deck-count {
+  margin-left: auto;
+  background: rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.deck-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.deck-chip {
+  font-size: .78rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--tc, var(--line));
+  color: var(--tc, var(--text));
+  background: color-mix(in srgb, var(--tc, var(--line)) 14%, transparent);
+}
+
+/* Resume banner */
+.resume-banner {
+  background: rgba(79, 163, 227, .12);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Safe spacing on small screens */
+@media (max-width: 380px) {
+  .layout-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+</style>
+<style>
+.hint {
+  background: var(--bg2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+/* Seat grids */
+.seat-grid { display: grid; gap: 8px; margin: 12px 0; }
+.seat-grid.layout-two_rows { grid-template-columns: repeat(2, 1fr); }
+.seat-grid.layout-rectangular { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+.seat-grid.layout-u_shape { grid-template-columns: repeat(3, 1fr); }
+.seat-grid.layout-u_shape .seat-input-wrap:nth-child(3n + 1):not(:last-child) { border-top: 2px solid var(--line); }
+.seat-input-wrap { display: flex; flex-direction: column; gap: 4px; }
+.seat-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: .78rem;
+  font-weight: 700;
+  flex: none;
+}
+.seat-name-input {
+  min-height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 1rem;
+  width: 100%;
+}
+
+/* Circle layout */
+.circle {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 430px;
+  margin: 8px auto;
+}
+.circle .seat-input-wrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  align-items: center;
+  gap: 2px;
+}
+.circle .seat-name-input { width: 64px; font-size: .82rem; min-height: 30px; padding: 4px 6px; text-align: center; border-radius: 999px; }
+
+/* Seat tiles (dealt) */
+.seat-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; margin: 12px 0; }
+.seat-tile {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--tc, var(--line));
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.seat-tile-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.seat-name { font-weight: 700; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat-role { font-size: .88rem; color: var(--tc, var(--text)); margin-bottom: 4px; letter-spacing: .02em; }
+
+/* Dealt seat cards in the chosen seat layout (mirrors the naming screen) */
+.seat-dealt {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--tc, var(--line));
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  min-width: 0;
+}
+.seat-dealt-name { font-weight: 700; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat-grid .seat-dealt { height: 100%; }
+.circle .seat-dealt { width: 88px; text-align: center; padding: 6px 8px; }
+.circle .seat-dealt-name { font-size: .8rem; }
+.circle .seat-dealt .seat-role { font-size: .8rem; }
+
+/* Swap mode */
+.seat-dealt[data-action='swap-select'] { cursor: pointer; }
+.swap-selected .seat-dealt {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(79, 163, 227, .45);
+}
+
+/* Safe spacing on small screens */
+@media (max-width: 380px) {
+  .seat-tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+
+</style>
+<style>
+.notice {
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+  font-size: .9rem;
+  background: rgba(255, 255, 255, .05);
+  border-left: 4px solid var(--accent);
+}
+.notice.ok { border-left-color: var(--ok); }
+.notice.accent { border-left-color: var(--accent); }
+.notice.bad { border-left-color: var(--bad); }
+
+/* Wizard */
+.wizard-progress { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+.wizard-title { font-size: 1.2rem; }
+.wizard-prompt { font-size: 1.06rem; line-height: 1.5; background: var(--bg2); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 12px; }
+.wizard-label { color: var(--muted); font-size: .88rem; text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 6px; }
+.actor-done { opacity: .45; }
+.timer {
+  display: inline-block;
+  background: rgba(79, 163, 227, .14);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: .95rem;
+  font-weight: 700;
+  margin: 8px 0;
+}
+
+/* Death cards */
+.death-card {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--bad);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+.death-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.death-will { font-style: italic; color: var(--text); font-size: .9rem; margin: 4px 0; }
+.death-role { color: var(--muted); font-size: .85rem; }
+
+/* Will window */
+.will-row { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+.will-name { font-weight: 600; font-size: .9rem; }
+.will-input {
+  min-height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: .92rem;
+  font-family: inherit;
+  resize: vertical;
+  width: 100%;
+}
+.will-input:disabled { opacity: .5; }
+
+/* Voting */
+.voter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  margin: 6px 0;
+}
+.ghost-voter { border-style: dashed; }
+.voter-name { flex: 1; font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vote-btns { display: flex; gap: 4px; }
+.tally { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+.tally-chip { font-size: .78rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
+.tally-chip.g { color: var(--ok); border-color: var(--ok); }
+.tally-chip.i { color: var(--bad); border-color: var(--bad); }
+.tally-chip.a { color: var(--muted); }
+
+/* Picker */
+.picker-card { border: 2px solid var(--accent); }
+
+/* Logs */
+.logs { display: none; }
+.logs.open { display: block; }
+.logs ul { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; color: var(--muted); }
+.logs li { margin: 3px 0; }
+
+</style>
+<style>
+/* End screen */
+.end-banner {
+  text-align: center;
+  padding: 22px 12px;
+  margin: 14px 0;
+  background: linear-gradient(180deg, rgba(79, 163, 227, .18), transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.end-banner h1 { font-size: 1.6rem; margin: 0; }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <h1>Village Pub</h1>
+    <span class="app-sub">Moderator Assistant</span>
+  </header>
+
+  <section class="screen" data-screen="setup">
+    <div id="resume-banner"></div>
+    <div id="setup-body"></div>
+  </section>
+
+  <section class="screen" data-screen="seats">
+    <div id="seats-body"></div>
+  </section>
+
+  <section class="screen" data-screen="game">
+    <div id="game-header"></div>
+    <div id="game-body"></div>
+    <nav id="game-bar" class="bottom-bar" aria-label="Game actions"></nav>
+  </section>
+
+  <section class="screen" data-screen="end">
+    <div id="end-body"></div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+</div>
+<script>
+'use strict';
+(function (root) {
+  if (typeof root.VillageEngine === 'undefined') {
+    root.VillageEngine = {};
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E.ROLES = {
+    jailor: {
+      id: 'jailor', name: 'Jailor', team: 'TOWN', category: 'Town Killing',
+      blurb: 'Jails a player each night, reads their will, then EXECUTES (Unstoppable, max 3) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: 3
+    },
+    undertaker: {
+      id: 'undertaker', name: 'Undertaker', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, privately learns the true role of one corpse. Cannot inspect a corpse cleaned by the Janitor, or the same corpse twice.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    medium: {
+      id: 'medium', name: 'Medium', team: 'TOWN', category: 'Town Support',
+      blurb: 'Alive: reads the Ghost Ledger each night. Dead: whispers with one living player each night.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    doctor: {
+      id: 'doctor', name: 'Doctor', team: 'TOWN', category: 'Town Protective',
+      blurb: 'Each night, protects one player from the first Basic attack against them. Fails if Drunk or roleblocked.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    sheriff: {
+      id: 'sheriff', name: 'Sheriff', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, checks one player: SUSPICIOUS for Mafia (except the Godfather) and the Serial Killer. Result inverts if Drunk.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    deputy: {
+      id: 'deputy', name: 'Deputy', team: 'TOWN', category: 'Town Killing',
+      blurb: 'Once per game, publicly shoots a player. Dies of guilt at the following night if the victim was Town. Inherits the Sheriff badge when the Sheriff dies.',
+      nightAction: false, dayAction: true, oncePerGame: true, maxUses: 1
+    },
+    tracker: {
+      id: 'tracker', name: 'Tracker', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, learns which player, if any, the chosen player targeted with a night action.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    lookout: {
+      id: 'lookout', name: 'Lookout', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, learns which players targeted the chosen player with a night action.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    escort: {
+      id: 'escort', name: 'Escort', team: 'TOWN', category: 'Town Support',
+      blurb: 'Each night, roleblocks one player: their night action fails that night.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    retributionist: {
+      id: 'retributionist', name: 'Retributionist', team: 'TOWN', category: 'Town Support',
+      blurb: 'Once per game, revives one dead player at the next morning.',
+      nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1
+    },
+    veteran: {
+      id: 'veteran', name: 'Veteran', team: 'TOWN', category: 'Town Killing',
+      blurb: 'Up to three times, declares ALERT at night: visitors die (Unstoppable) and the Veteran cannot be killed.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: 3
+    },
+    vigilante: {
+      id: 'vigilante', name: 'Vigilante', team: 'TOWN', category: 'Town Killing',
+      blurb: 'Up to three times during the day, secretly shoots a player. Dies of guilt at the following night if the victim was Town.',
+      nightAction: false, dayAction: true, oncePerGame: false, maxUses: 3
+    },
+    mayor: {
+      id: 'mayor', name: 'Mayor', team: 'TOWN', category: 'Town Support',
+      blurb: 'Once per game, publicly reveals: each of the Mayor\'s votes then counts as 3.',
+      nightAction: false, dayAction: true, oncePerGame: true, maxUses: 1
+    },
+    civilian: {
+      id: 'civilian', name: 'Civilian', team: 'TOWN', category: 'Town Support',
+      blurb: 'No ability. Votes and speaks normally.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    godfather: {
+      id: 'godfather', name: 'Godfather', team: 'MAFIA', category: 'Mafia Killing',
+      blurb: 'Leads the Mafia kill. Night immune, reads INNOCENT to the Sheriff. Given three Town bluff roles not in the deck at setup.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    mafioso: {
+      id: 'mafioso', name: 'Mafioso', team: 'MAFIA', category: 'Mafia Killing',
+      blurb: 'Carries out the Mafia kill. Performs it alone if the Godfather is dead or roleblocked. Becomes the new Godfather when the Godfather dies.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    janitor: {
+      id: 'janitor', name: 'Janitor', team: 'MAFIA', category: 'Mafia Deception',
+      blurb: 'Each night, cleans one corpse: its true role can never be learned. Fails if Drunk or roleblocked.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    consigliere: {
+      id: 'consigliere', name: 'Consigliere', team: 'MAFIA', category: 'Mafia Support',
+      blurb: 'Each night, learns the exact role of one player. If Drunk, learns a random role of a different alignment.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    consort: {
+      id: 'consort', name: 'Consort', team: 'MAFIA', category: 'Mafia Support',
+      blurb: 'Each night, roleblocks one player: their night action fails that night.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    poisoner: {
+      id: 'poisoner', name: 'Poisoner', team: 'MAFIA', category: 'Mafia Deception',
+      blurb: 'Each night, poisons one player: they are Drunk for one cycle.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    blackmailer: {
+      id: 'blackmailer', name: 'Blackmailer', team: 'MAFIA', category: 'Mafia Deception',
+      blurb: 'Each night, blackmails one player: they cannot speak during the next day. No consecutive-night blackmail.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    framer: {
+      id: 'framer', name: 'Framer', team: 'MAFIA', category: 'Mafia Deception',
+      blurb: 'Each night, frames one player: they read SUSPICIOUS to the Sheriff for that night.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    forger: {
+      id: 'forger', name: 'Forger', team: 'MAFIA', category: 'Mafia Deception',
+      blurb: 'Each night, forges a false last will for one player. Shown instead of their true will if they die before the next morning.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    serialkiller: {
+      id: 'serialkiller', name: 'Serial Killer', team: 'NEUTRAL', category: 'Neutral Killing',
+      blurb: 'Each night, kills one player (Basic attack). Night immune. Reads SUSPICIOUS to the Sheriff. Wins when last standing or holding majority.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    survivor: {
+      id: 'survivor', name: 'Survivor', team: 'NEUTRAL', category: 'Neutral Benign',
+      blurb: 'No ability. Wins if alive at game end.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    jester: {
+      id: 'jester', name: 'Jester', team: 'NEUTRAL', category: 'Neutral Evil',
+      blurb: 'No ability. Wins when lynched, becoming a taunting ghost that may haunt one Guilty voter the following night.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    witch: {
+      id: 'witch', name: 'Witch', team: 'NEUTRAL', category: 'Neutral Evil',
+      blurb: 'Each night, controls one player (except a jailed player) and redirects their action; learns their role. Sides with Mafia by default, Town if declared.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    drunk: {
+      id: 'drunk', name: 'The Drunk', team: 'NEUTRAL', category: 'Neutral Benign',
+      blurb: 'Permanently Drunk: all abilities disabled. No night or day action. Wins if alive at game end.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    amnesiac: {
+      id: 'amnesiac', name: 'Amnesiac', team: 'NEUTRAL', category: 'Neutral Benign',
+      blurb: 'Once per game, remembers the role of one dead player and permanently becomes it. Wins with that role\'s team.',
+      nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1
+    },
+    executioner: {
+      id: 'executioner', name: 'Executioner', team: 'NEUTRAL', category: 'Neutral Evil',
+      blurb: 'Wins when the assigned Town target is lynched. If the target dies by any other means, becomes a Jester.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    }
+  };
+
+  Object.freeze(E.ROLES);
+  Object.keys(E.ROLES).forEach(function (k) { Object.freeze(E.ROLES[k]); });
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E.RATIO_TABLE = {
+    6: { town: 4, mafia: 2, neutral: 0 },
+    7: { town: 5, mafia: 2, neutral: 0 },
+    8: { town: 5, mafia: 2, neutral: 1 },
+    9: { town: 6, mafia: 2, neutral: 1 },
+    10: { town: 6, mafia: 3, neutral: 1 },
+    11: { town: 7, mafia: 3, neutral: 1 },
+    12: { town: 7, mafia: 3, neutral: 2 },
+    13: { town: 8, mafia: 3, neutral: 2 },
+    14: { town: 9, mafia: 4, neutral: 1 },
+    15: { town: 9, mafia: 4, neutral: 2 }
+  };
+
+  E.PRESETS = {
+    p1: {
+      id: 'p1', name: 'Whispers from the Morgue',
+      tagline: 'The town gathers its information from the dead; the Mafia buries the truth.',
+      town: ['jailor', 'undertaker', 'medium', 'doctor', 'sheriff', 'tracker', 'retributionist'],
+      mafia: ['godfather', 'mafioso', 'janitor', 'consigliere'],
+      neutral: ['amnesiac', 'jester']
+    },
+    p2: {
+      id: 'p2', name: 'The Poisoned Pint',
+      tagline: 'Sabotage: the Mafia cripples the town\'s power roles one drink at a time.',
+      town: ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker'],
+      mafia: ['godfather', 'mafioso', 'poisoner', 'consort'],
+      neutral: ['drunk', 'witch']
+    },
+    p3: {
+      id: 'p3', name: 'The Gunpowder Plot',
+      tagline: 'Firepower on both sides: town guns and an unsuppressible night killer.',
+      town: ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort'],
+      mafia: ['godfather', 'mafioso', 'consort', 'forger'],
+      neutral: ['serialkiller', 'survivor']
+    },
+    p4: {
+      id: 'p4', name: 'The Imposter at the Altar',
+      tagline: 'A wedding party where the guest of honor (the Mayor) is a target for both the knife and the noose. The Executioner schemes to hang the guest of honor; the town must shield them.',
+      town: ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker'],
+      mafia: ['godfather', 'mafioso', 'framer', 'consigliere'],
+      neutral: ['jester', 'executioner']
+    },
+    p5: {
+      id: 'p5', name: 'The Widow\'s Vigil',
+      tagline: 'Mourning and espionage: the Witch and the Poisoner turn knowledge against the town while the dead keep watching.',
+      town: ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist'],
+      mafia: ['godfather', 'mafioso', 'poisoner', 'blackmailer'],
+      neutral: ['witch', 'survivor']
+    },
+    p6: {
+      id: 'p6', name: 'The Clock Strikes Thirteen',
+      tagline: 'Chaos at midnight: two night killers and heavy town firepower make every night decisive.',
+      town: ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort'],
+      mafia: ['godfather', 'mafioso', 'consort', 'forger'],
+      neutral: ['serialkiller', 'drunk']
+    }
+  };
+
+  E.SEAT_LAYOUTS = ['circle', 'two_rows', 'u_shape', 'rectangular'];
+
+  E.NIGHT_STEPS = [
+    {
+      position: 0, title: 'Veteran Alert', roles: ['veteran'],
+      prompt: 'Veteran, open your eyes. Are you on alert tonight? Signal yes or no.'
+    },
+    {
+      position: 1, title: 'Poisoner', roles: ['poisoner'],
+      prompt: 'Poisoner, open your eyes. Point to your target.'
+    },
+    {
+      position: 2, title: 'Witch', roles: ['witch'],
+      prompt: 'Witch, open your eyes. Point to the player you control, then point to your target.'
+    },
+    {
+      position: 3, title: 'Jailor', roles: ['jailor'],
+      prompt: 'Jailor, open your eyes. Point to your target. Do you EXECUTE, thumbs down, or SPARE, thumbs up?'
+    },
+    {
+      position: 4, title: 'Escort / Consort', roles: ['escort', 'consort'],
+      prompt: 'Escort, or Consort, open your eyes. Point to your roleblock target.'
+    },
+    {
+      position: 5, title: 'Doctor', roles: ['doctor'],
+      prompt: 'Doctor, open your eyes. Point to the player you protect.'
+    },
+    {
+      position: 6, title: 'Mafia', roles: ['godfather', 'mafioso'],
+      prompt: 'Mafia: Godfather and Mafioso, open your eyes. Godfather, point to your kill target.'
+    },
+    {
+      position: 7, title: 'Janitor and Forger', roles: ['janitor', 'forger'],
+      prompt: 'Janitor and Forger, open your eyes. Janitor, point to the corpse you clean. Forger, point to the player whose will you forge.'
+    },
+    {
+      position: 8, title: 'Blackmailer', roles: ['blackmailer'],
+      prompt: 'Blackmailer, open your eyes. Point to the player you blackmail.'
+    },
+    {
+      position: 9, title: 'Serial Killer', roles: ['serialkiller'],
+      prompt: 'Serial Killer, open your eyes. Point to your kill target.'
+    },
+    {
+      position: 10, title: 'Framer', roles: ['framer'],
+      prompt: 'Framer, open your eyes. Point to the player you frame.'
+    },
+    {
+      position: 11, title: 'Investigators', roles: ['sheriff', 'deputy', 'tracker', 'lookout', 'consigliere', 'undertaker'],
+      prompt: 'Investigators: Sheriff, or inherited Deputy, Tracker, Lookout, Consigliere, and Undertaker, open your eyes.'
+    },
+    {
+      position: 12, title: 'Retributionist', roles: ['retributionist', 'amnesiac'],
+      prompt: 'Retributionist, open your eyes. Point to the corpse you revive. Amnesiac, if you choose to remember, point to the corpse whose role you remember.'
+    },
+    {
+      position: 13, title: 'Medium and Ghosts', roles: ['medium'],
+      prompt: 'Medium, open your eyes. Ghost Council, open your eyes.'
+    },
+    {
+      position: 14, title: 'Morning', roles: [],
+      prompt: 'Everyone, open your eyes. Morning has broken.'
+    },
+    {
+      position: 15, title: 'Last Will Window', roles: [],
+      prompt: 'Take 30 seconds to update your Last Wills silently.',
+      timerSeconds: 30
+    },
+    {
+      position: 16, title: 'Pencils Down', roles: [],
+      prompt: 'Pencils down! Last night, the dead are announced. The day begins.'
+    }
+  ];
+
+  Object.freeze(E.RATIO_TABLE);
+  Object.freeze(E.PRESETS);
+  Object.freeze(E.SEAT_LAYOUTS);
+  Object.freeze(E.NIGHT_STEPS);
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E._randInt = function (n) {
+    if (!n || n < 1) return 0;
+    return Math.floor(Math.random() * n);
+  };
+
+  E._shuffle = function (arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i -= 1) {
+      var j = E._randInt(i + 1);
+      var t = a[i];
+      a[i] = a[j];
+      a[j] = t;
+    }
+    return a;
+  };
+
+  function cleanList(list) {
+    var out = [];
+    if (!list) return out;
+    for (var i = 0; i < list.length; i += 1) {
+      var id = list[i];
+      if (E.ROLES[id] && out.indexOf(id) === -1) out.push(id);
+    }
+    return out;
+  }
+
+  function padTeam(list, slots, presetList, team) {
+    var out = list.slice(0, slots);
+    var candidates = presetList.concat(Object.keys(E.ROLES));
+    for (var i = 0; i < candidates.length && out.length < slots; i += 1) {
+      var rid = candidates[i];
+      if (E.ROLES[rid] && E.ROLES[rid].team === team && out.indexOf(rid) === -1) out.push(rid);
+    }
+    return out;
+  }
+
+  E._buildDeck = function (playerCount, presetId, opts) {
+    var preset = E.PRESETS[presetId];
+    var ratio = E.RATIO_TABLE[playerCount];
+    var tc = (opts && opts.teamCounts) || ratio;
+    var townSlots = tc.town;
+    var mafiaSlots = tc.mafia;
+    var neutralSlots = tc.neutral;
+    var townList = cleanList((opts && opts.town) || preset.town);
+    var mafiaList = cleanList((opts && opts.mafia) || preset.mafia);
+    var neutralList = cleanList((opts && opts.neutral) || preset.neutral);
+    var civMin = (opts && opts.civilians != null)
+      ? Math.max(0, Math.min(townSlots, Number(opts.civilians)))
+      : null;
+    var townNamed = civMin == null
+      ? townList.slice(0, townSlots)
+      : townList.slice(0, Math.max(0, townSlots - civMin));
+    var civCount = Math.max(civMin == null ? 0 : civMin, Math.max(0, townSlots - townNamed.length));
+    var town = townNamed.slice();
+    for (var c = 0; c < civCount; c += 1) town.push('civilian');
+    var mafia = padTeam(mafiaList, mafiaSlots, preset.mafia, 'MAFIA');
+    var neutral = padTeam(neutralList, neutralSlots, preset.neutral, 'NEUTRAL');
+    return E._shuffle(town.concat(mafia, neutral));
+  };
+
+  E.getDeckPreview = function (state) {
+    var out = { town: [], mafia: [], neutral: [] };
+    for (var i = 0; i < state.deck.length; i += 1) {
+      var id = state.deck[i];
+      var role = E.ROLES[id];
+      if (!role) continue;
+      out[role.team.toLowerCase()].push(id);
+    }
+    return out;
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E._byId = function (state, id) {
+    return state.players[id - 1] || null;
+  };
+
+  function resetTransient(state) {
+    state.graveyard = [];
+    state.ghosts = { ledgerEnabled: true };
+    state.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+    state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
+    state.dayNumber = 0;
+    state.winner = null;
+    state.logs = [];
+    state.executionerConverted = false;
+    state.jester = { haunted: false, hauntTarget: null };
+    state.retributionist = { used: false };
+    state.amnesiac = { used: false, rememberedRole: null };
+    state.pendingInheritanceNote = '';
+    state.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null };
+    state.players.forEach(function (p) {
+      p.inheritedRole = null;
+      p.isAlive = true;
+      p.isDrunk = false;
+      p.hasGhostVote = false;
+      p.ghostVoteSpent = false;
+      p.lastWill = '';
+      p.nightTarget = null;
+      p.jailorDecision = null;
+      p.isRoleblocked = false;
+      p.isProtected = false;
+      p.framed = false;
+      p.blackmailed = false;
+      p.jailed = false;
+      p.poisoned = false;
+      p.alerted = false;
+      p.cleaned = false;
+      p.revealed = false;
+      p.shotsFired = 0;
+      p.executionsUsed = 0;
+      p.alertsUsed = 0;
+      p.usedOncePerGame = false;
+      p.guiltPending = false;
+    });
+  }
+
+  function assignSetupInfo(state) {
+    state.executionerTarget = null;
+    var townPlayers = state.players.filter(function (p) { return E.ROLES[p.assignedRole].team === 'TOWN'; });
+    if (state.deck.indexOf('executioner') !== -1 && townPlayers.length > 0) {
+      state.executionerTarget = townPlayers[E._randInt(townPlayers.length)].id;
+    }
+    state.gfBluffs = [];
+    if (state.deck.indexOf('godfather') !== -1) {
+      var pool = Object.keys(E.ROLES).filter(function (id) {
+        return E.ROLES[id].team === 'TOWN' && state.deck.indexOf(id) === -1;
+      });
+      state.gfBluffs = E._shuffle(pool).slice(0, 3);
+    }
+    state.witchSide = 'MAFIA';
+  }
+
+  function dealCommon(state, label) {
+    state.deck = E._shuffle(state.deck.slice());
+    state.players.forEach(function (p, i) { p.assignedRole = state.deck[i]; });
+    resetTransient(state);
+    assignSetupInfo(state);
+    state.phase = 'SEATS';
+    state.logs.push(label);
+    return state;
+  }
+
+  E.createGame = function (opts) {
+    opts = opts || {};
+    var playerCount = opts.playerCount || 8;
+    if (!Number.isInteger(playerCount) || playerCount < 6 || playerCount > 15) {
+      throw new Error('playerCount must be an integer between 6 and 15');
+    }
+    var presetId = opts.presetId || 'p1';
+    if (!E.PRESETS[presetId]) throw new Error('Unknown preset: ' + presetId);
+    var houseRules = {
+      noKillN1: !!(opts.houseRules && opts.houseRules.noKillN1),
+      noLynchD1: !!(opts.houseRules && opts.houseRules.noLynchD1),
+      classicReveal: !!(opts.houseRules && opts.houseRules.classicReveal)
+    };
+    var teamCounts = null;
+    if (opts.teamCounts != null) {
+      var tc = opts.teamCounts;
+      if (!tc || typeof tc.town !== 'number' || typeof tc.mafia !== 'number' ||
+          typeof tc.neutral !== 'number' ||
+          !Number.isInteger(tc.town) || !Number.isInteger(tc.mafia) || !Number.isInteger(tc.neutral) ||
+          tc.town < 0 || tc.mafia < 0 || tc.neutral < 0) {
+        throw new Error('teamCounts must be an object { town, mafia, neutral } of non-negative integers');
+      }
+      if (tc.town + tc.mafia + tc.neutral !== playerCount) {
+        throw new Error('teamCounts must sum to the player count (' + playerCount +
+          '), got ' + (tc.town + tc.mafia + tc.neutral));
+      }
+      teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
+    }
+    var deck = E._buildDeck(playerCount, presetId, teamCounts
+      ? { town: opts.town, mafia: opts.mafia, neutral: opts.neutral, civilians: opts.civilians, teamCounts: teamCounts }
+      : opts);
+    var players = [];
+    for (var i = 1; i <= playerCount; i += 1) {
+      players.push({
+        id: i, name: '', seat: i,
+        assignedRole: null, inheritedRole: null,
+        isAlive: true, isDrunk: false,
+        hasGhostVote: false, ghostVoteSpent: false,
+        lastWill: '', nightTarget: null, jailorDecision: null,
+        isRoleblocked: false, isProtected: false, framed: false, blackmailed: false,
+        jailed: false, poisoned: false, alerted: false, cleaned: false,
+        revealed: false,
+        shotsFired: 0, executionsUsed: 0, alertsUsed: 0,
+        usedOncePerGame: false, guiltPending: false
+      });
+    }
+    var state = {
+      version: 1,
+      playerCount: playerCount,
+      presetId: presetId,
+      houseRules: houseRules,
+      deck: deck,
+      players: players,
+      graveyard: [],
+      ghosts: { ledgerEnabled: true },
+      trial: { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 },
+      night: { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null },
+      phase: 'SETUP',
+      dayNumber: 0,
+      logs: [],
+      winner: null,
+      executionerTarget: null,
+      executionerConverted: false,
+      gfBluffs: [],
+      witchSide: 'MAFIA',
+      jester: { haunted: false, hauntTarget: null },
+      retributionist: { used: false },
+      amnesiac: { used: false, rememberedRole: null },
+      pendingInheritanceNote: '',
+      morning: { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null }
+    };
+    state.logs.push('Game created: ' + playerCount + ' players, preset ' + presetId + '.');
+    return state;
+  };
+
+  E.swapRoles = function (state, aId, bId) {
+    var a = E._byId(state, aId);
+    var b = E._byId(state, bId);
+    if (!a || !b) throw new Error('swapRoles: unknown player id ' + aId + ' or ' + bId);
+    if (String(aId) === String(bId)) throw new Error('swapRoles: cannot swap a player with themself');
+    var tmp = a.assignedRole;
+    a.assignedRole = b.assignedRole;
+    b.assignedRole = tmp;
+    var oldTarget = state.executionerTarget;
+    if (oldTarget != null && (String(oldTarget) === String(aId) || String(oldTarget) === String(bId))) {
+      var target = E._byId(state, oldTarget);
+      var isLivingTown = target && target.isAlive &&
+        E.ROLES[target.assignedRole] && E.ROLES[target.assignedRole].team === 'TOWN';
+      if (!isLivingTown) {
+        var next = state.players.find(function (p) {
+          return p.isAlive && String(p.id) !== String(oldTarget) &&
+            E.ROLES[p.assignedRole] && E.ROLES[p.assignedRole].team === 'TOWN';
+        });
+        if (next) {
+          state.executionerTarget = next.id;
+          state.logs.push('The Executioner\'s target was reassigned to ' + next.name + ' after a role swap.');
+        } else {
+          state.executionerTarget = null;
+        }
+      }
+    }
+    var ra = E.ROLES[a.assignedRole] || { name: a.assignedRole };
+    var rb = E.ROLES[b.assignedRole] || { name: b.assignedRole };
+    state.logs.push(a.name + ' and ' + b.name + ' swapped roles (' + ra.name + ' / ' + rb.name + ').');
+    return state;
+  };
+
+  E.setPlayerNames = function (state, entries) {
+    if (!entries) return state;
+    for (var i = 0; i < entries.length; i += 1) {
+      var e = entries[i];
+      var p = state.players.find(function (pl) { return pl.seat === e.seat; });
+      if (p && typeof e.name === 'string') p.name = e.name;
+    }
+    state.logs.push('Player names recorded.');
+    return state;
+  };
+
+  E.dealRoles = function (state) {
+    return dealCommon(state, 'Roles dealt. The game is ready to begin.');
+  };
+
+  E.redeal = function (state) {
+    return dealCommon(state, 'Roles redealt.');
+  };
+
+  E.serialize = function (state) {
+    return JSON.stringify(state);
+  };
+
+  E.deserialize = function (jsonString) {
+    var data;
+    try {
+      data = JSON.parse(jsonString);
+    } catch (e) {
+      throw new Error('Invalid save data: not valid JSON');
+    }
+    if (!data || typeof data !== 'object') throw new Error('Invalid save data: not an object');
+    if (!Number.isInteger(data.playerCount) || data.playerCount < 6 || data.playerCount > 15) {
+      throw new Error('Invalid save data: playerCount');
+    }
+    if (!Array.isArray(data.players) || data.players.length !== data.playerCount) {
+      throw new Error('Invalid save data: players');
+    }
+    if (!Array.isArray(data.deck)) throw new Error('Invalid save data: deck');
+    for (var i = 0; i < data.players.length; i += 1) {
+      var p = data.players[i];
+      if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > data.playerCount) {
+        throw new Error('Invalid save data: player id');
+      }
+      if (typeof p.name !== 'string') throw new Error('Invalid save data: player name');
+      if (typeof p.isAlive !== 'boolean') throw new Error('Invalid save data: player isAlive');
+      ['jailed', 'poisoned', 'alerted', 'cleaned'].forEach(function (flag) {
+        if (typeof p[flag] !== 'boolean') p[flag] = false;
+      });
+    }
+    if (!data.houseRules || typeof data.houseRules !== 'object') data.houseRules = {};
+    if (!Array.isArray(data.graveyard)) data.graveyard = [];
+    if (!data.trial || typeof data.trial !== 'object') {
+      data.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+    }
+    if (!data.night || typeof data.night !== 'object') {
+      data.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
+    }
+    if (!data.jester || typeof data.jester !== 'object') data.jester = { haunted: false, hauntTarget: null };
+    if (!data.retributionist || typeof data.retributionist !== 'object') data.retributionist = { used: false };
+    if (!data.amnesiac || typeof data.amnesiac !== 'object') data.amnesiac = { used: false, rememberedRole: null };
+    if (!Array.isArray(data.logs)) data.logs = [];
+    if (data.version == null) data.version = 1;
+    return data;
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E.getNightSteps = function (state) {
+    var steps = [];
+    var nightNum = state.night.number;
+    var isNightOne = nightNum === 1;
+    var P = state.players;
+    var hasLivingRole = function (roleId) {
+      return P.some(function (p) { return p.isAlive && p.assignedRole === roleId; });
+    };
+    var hauntPending = state.jester.haunted && state.jester.hauntTarget === null;
+
+    for (var i = 0; i < E.NIGHT_STEPS.length; i += 1) {
+      var tpl = E.NIGHT_STEPS[i];
+      var step = null;
+      if (tpl.position === 0) {
+        var vet = P.find(function (p) { return p.assignedRole === 'veteran'; });
+        var vetAvailable = !!vet && vet.isAlive && vet.alertsUsed < 3;
+        var roles0 = [];
+        var prompt0 = tpl.prompt;
+        if (vetAvailable) roles0.push('veteran');
+        if (hauntPending) {
+          roles0.push('jester');
+          prompt0 += ' (If the Jester was lynched yesterday, the Jester ghost may point to one player who voted Guilty in that lynch trial.)';
+        }
+        if (roles0.length > 0) step = { position: 0, title: tpl.title, roles: roles0, prompt: prompt0 };
+      } else if (tpl.position === 3) {
+        if (!hasLivingRole('jailor')) continue;
+        var prompt3 = tpl.prompt;
+        if (isNightOne) prompt3 += ' (Night 1: the Jailor jails and reads the will, but cannot execute.)';
+        step = { position: 3, title: tpl.title, roles: tpl.roles.slice(), prompt: prompt3 };
+      } else if (tpl.position === 4) {
+        if (!hasLivingRole('escort') && !hasLivingRole('consort')) continue;
+        step = { position: 4, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+      } else if (tpl.position === 6) {
+        if (!hasLivingRole('godfather') && !hasLivingRole('mafioso')) continue;
+        step = { position: 6, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+      } else if (tpl.position === 7) {
+        if (!hasLivingRole('janitor') && !hasLivingRole('forger')) continue;
+        step = { position: 7, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+      } else if (tpl.position === 11) {
+        var anyInvestigator = P.some(function (p) {
+          return p.isAlive && (
+            p.assignedRole === 'sheriff' ||
+            p.assignedRole === 'tracker' ||
+            p.assignedRole === 'lookout' ||
+            p.assignedRole === 'consigliere' ||
+            p.assignedRole === 'undertaker' ||
+            (p.assignedRole === 'deputy' && p.inheritedRole === 'sheriff')
+          );
+        });
+        if (!anyInvestigator) continue;
+        step = { position: 11, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+      } else if (tpl.position === 12) {
+        var retAvailable = P.some(function (p) {
+          return p.isAlive && p.assignedRole === 'retributionist' && !p.usedOncePerGame;
+        });
+        var amnAvailable = P.some(function (p) {
+          return p.isAlive && p.assignedRole === 'amnesiac' && !state.amnesiac.used;
+        });
+        if (!retAvailable && !amnAvailable) continue;
+        var roles12 = [];
+        if (retAvailable) roles12.push('retributionist');
+        if (amnAvailable) roles12.push('amnesiac');
+        step = { position: 12, title: tpl.title, roles: roles12, prompt: tpl.prompt };
+      } else if (tpl.position === 13) {
+        var anyMedium = P.some(function (p) { return p.assignedRole === 'medium'; });
+        if (!anyMedium) continue;
+        step = { position: 13, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+      } else if (tpl.roles.length === 0) {
+        step = { position: tpl.position, title: tpl.title, roles: [], prompt: tpl.prompt };
+        if (tpl.timerSeconds) step.timerSeconds = tpl.timerSeconds;
+      } else {
+        var present = tpl.roles.some(function (r) { return hasLivingRole(r); });
+        if (!present) continue;
+        step = { position: tpl.position, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+      }
+      if (step) steps.push(step);
+    }
+    return steps;
+  };
+
+  E.recordNightAction = function (state, input) {
+    input = input || {};
+    var p = E._byId(state, input.playerId);
+    if (!p) return false;
+    var action = {
+      position: input.position,
+      roleId: input.roleId,
+      playerId: input.playerId,
+      targetId: input.targetId != null ? input.targetId : null,
+      extra: input.extra != null ? input.extra : null
+    };
+    state.night.actions.push(action);
+    if (action.targetId != null) p.nightTarget = action.targetId;
+    if (input.position === 3 && input.extra && input.extra.jailorDecision) {
+      p.jailorDecision = input.extra.jailorDecision;
+    }
+    return true;
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  function resolvePoisoner(ctx) {
+    var poisonAction = ctx.actions.find(function (a) { return a.position === 1 && a.roleId === 'poisoner'; });
+    if (poisonAction) {
+      var poisoner = E._byId(ctx.state, poisonAction.playerId);
+      if (poisoner && poisoner.isAlive && !ctx.isBlocked(poisoner.id) && !ctx.isVoided(poisonAction) &&
+          poisonAction.targetId && ctx.alive(poisonAction.targetId)) {
+        var poisonedTarget = E._byId(ctx.state, poisonAction.targetId);
+        poisonedTarget.isDrunk = true;
+        poisonedTarget.poisoned = true;
+        ctx.setEff(poisoner.id, poisonAction.targetId);
+        ctx.log(poisoner.name + ' poisoned ' + poisonedTarget.name + '.');
+      }
+    }
+  }
+
+  function resolveWitchReveal(ctx) {
+    if (ctx.witchAction && ctx.control && ctx.control.valid &&
+        E._byId(ctx.state, ctx.witchAction.playerId).isAlive) {
+      var w = E._byId(ctx.state, ctx.witchAction.playerId);
+      ctx.setEff(w.id, ctx.control.controlledId);
+      var ctrl = E._byId(ctx.state, ctx.control.controlledId);
+      var ctrlRole = E.ROLES[ctrl.assignedRole];
+      ctx.log('The Witch controls ' + ctrl.name + ' and learns their role: ' + (ctrlRole ? ctrlRole.name : ctrl.assignedRole) + '.');
+    }
+  }
+
+  function resolveJailor(ctx) {
+    if (ctx.jailAction) {
+      var jailTarget = ctx.jailAction.targetId;
+      if (ctx.control && ctx.control.valid && ctx.control.controlledId === ctx.jailor.id && ctx.control.redirect) {
+        jailTarget = ctx.control.redirect;
+      }
+      if (ctx.jailor && ctx.jailor.isAlive && !ctx.isBlocked(ctx.jailor.id) && !ctx.isVoided(ctx.jailAction) &&
+          jailTarget && ctx.alive(jailTarget) && jailTarget !== ctx.state.night.lastJailTarget) {
+        ctx.blocked.push(jailTarget);
+        ctx.setEff(ctx.jailor.id, jailTarget);
+        var jailed = E._byId(ctx.state, jailTarget);
+        jailed.jailed = true;
+        ctx.log(ctx.jailor.name + ' jailed ' + jailed.name + ' and read their will.');
+        var decision = (ctx.jailAction.extra && ctx.jailAction.extra.jailorDecision) || 'SPARE';
+        if (decision === 'EXECUTE' && ctx.nightNum !== 1 && !ctx.noKillN1 && ctx.jailor.executionsUsed < 3) {
+          ctx.jailor.executionsUsed += 1;
+          ctx.applyAttack(jailTarget, 'unstoppable', 'executed by the Jailor');
+        }
+        ctx.state.night.lastJailTarget = jailTarget;
+      } else {
+        ctx.state.night.lastJailTarget = null;
+      }
+    }
+  }
+
+  function resolveRoleblockers(ctx) {
+    for (var rbi2 = 0; rbi2 < ctx.rbActions.length; rbi2 += 1) {
+      var rba2 = ctx.rbActions[rbi2];
+      if (ctx.isVoided(rba2)) continue;
+      var rbActor2 = E._byId(ctx.state, rba2.playerId);
+      if (!rbActor2 || !rbActor2.isAlive || ctx.isBlocked(rbActor2.id)) continue;
+      if (rba2.targetId && ctx.alive(rba2.targetId)) {
+        ctx.blocked.push(rba2.targetId);
+        ctx.setEff(rbActor2.id, rba2.targetId);
+        ctx.log(rbActor2.name + ' roleblocked ' + E._byId(ctx.state, rba2.targetId).name + '.');
+      }
+    }
+  }
+
+  function resolveDoctor(ctx) {
+    var docAction = ctx.actions.find(function (a) { return a.position === 5 && a.roleId === 'doctor'; });
+    if (docAction) {
+      var doc = E._byId(ctx.state, docAction.playerId);
+      if (doc && doc.isAlive && !ctx.isBlocked(doc.id) && !ctx.isVoided(docAction) && !doc.isDrunk &&
+          docAction.targetId && ctx.alive(docAction.targetId)) {
+        E._byId(ctx.state, docAction.targetId).isProtected = true;
+        ctx.setEff(doc.id, docAction.targetId);
+        ctx.log(doc.name + ' protected ' + E._byId(ctx.state, docAction.targetId).name + '.');
+      }
+    }
+  }
+
+  function resolveMafia(ctx) {
+    var mafiaAction = ctx.actions.find(function (a) {
+      return a.position === 6 && (a.roleId === 'godfather' || a.roleId === 'mafioso');
+    });
+    if (mafiaAction && !ctx.isVoided(mafiaAction)) {
+      var gf = ctx.state.players.find(function (p) { return p.assignedRole === 'godfather'; });
+      var mafioso = ctx.state.players.find(function (p) { return p.assignedRole === 'mafioso'; });
+      var gfAlive = !!gf && gf.isAlive;
+      var mfAlive = !!mafioso && mafioso.isAlive;
+      var gfBlocked = gfAlive && ctx.isBlocked(gf.id);
+      var mfBlocked = mfAlive && ctx.isBlocked(mafioso.id);
+      var killer = null;
+      if (gfAlive && !gfBlocked) killer = gf;
+      else if (mfAlive && !mfBlocked) killer = mafioso;
+      if (killer) {
+        var mTarget = mafiaAction.targetId;
+        if (ctx.control && ctx.control.valid && ctx.control.controlledId === gf.id && ctx.control.redirect) {
+          mTarget = ctx.control.redirect;
+        }
+        if (mTarget && ctx.alive(mTarget)) {
+          if (E._alignmentOf(ctx.state, E._byId(ctx.state, mTarget)) === 'MAFIA') {
+            ctx.log('The Mafia kill failed: ' + E._byId(ctx.state, mTarget).name + ' is Mafia-aligned.');
+          } else {
+            ctx.setEff(killer.id, mTarget);
+            if (ctx.noKillN1) {
+              ctx.log('The Mafia kill is void (No Kill on Night One): ' + E._byId(ctx.state, mTarget).name + ' is unharmed.');
+            } else {
+              ctx.applyAttack(mTarget, 'basic', 'killed by the Mafia');
+              ctx.log('The Mafia killed ' + E._byId(ctx.state, mTarget).name + '.');
+            }
+          }
+        }
+      } else {
+        ctx.log('The Mafia kill failed: no available killer.');
+      }
+    }
+  }
+
+  function resolveJanitor(ctx) {
+    var janitorAction = ctx.actions.find(function (a) { return a.position === 7 && a.roleId === 'janitor'; });
+    if (janitorAction) {
+      var janitor = E._byId(ctx.state, janitorAction.playerId);
+      if (janitor && janitor.isAlive && !ctx.isBlocked(janitor.id) && !ctx.isVoided(janitorAction) &&
+          !janitor.isDrunk && janitorAction.targetId && !ctx.alive(janitorAction.targetId)) {
+        var jEntry = ctx.latestEntry(ctx.state, janitorAction.targetId);
+        if (jEntry) {
+          jEntry.wasCleaned = true;
+          var jd = ctx.deaths.find(function (d) { return d.playerId === janitorAction.targetId; });
+          if (jd) jd.wasCleaned = true;
+          var jp = E._byId(ctx.state, janitorAction.targetId);
+          if (jp) jp.cleaned = true;
+          ctx.setEff(janitor.id, janitorAction.targetId);
+          ctx.log(janitor.name + ' cleaned the corpse of ' + E._byId(ctx.state, janitorAction.targetId).name + '.');
+        }
+      }
+    }
+  }
+
+  function resolveForger(ctx) {
+    var forgerAction = ctx.actions.find(function (a) { return a.position === 7 && a.roleId === 'forger'; });
+    if (forgerAction) {
+      var forger = E._byId(ctx.state, forgerAction.playerId);
+      if (forger && forger.isAlive && !ctx.isBlocked(forger.id) && !ctx.isVoided(forgerAction) && forgerAction.targetId) {
+        var willText = (forgerAction.extra && typeof forgerAction.extra.will === 'string')
+          ? forgerAction.extra.will
+          : '';
+        ctx.forgedWills[forgerAction.targetId] = willText;
+        ctx.setEff(forger.id, forgerAction.targetId);
+        var fd = ctx.deaths.find(function (d) { return d.playerId === forgerAction.targetId; });
+        if (fd) {
+          fd.will = willText;
+          var fe = ctx.latestEntry(ctx.state, forgerAction.targetId);
+          if (fe) fe.willShown = willText;
+        }
+        ctx.log(forger.name + ' forged a will for ' + E._byId(ctx.state, forgerAction.targetId).name + '.');
+      }
+    }
+  }
+
+  function resolveBlackmailer(ctx) {
+    var bmAction = ctx.actions.find(function (a) { return a.position === 8 && a.roleId === 'blackmailer'; });
+    if (bmAction) {
+      var bm = E._byId(ctx.state, bmAction.playerId);
+      if (bm && bm.isAlive && !ctx.isBlocked(bm.id) && !ctx.isVoided(bmAction) &&
+          bmAction.targetId && ctx.alive(bmAction.targetId) && bmAction.targetId !== ctx.prevBlackmailTarget) {
+        E._byId(ctx.state, bmAction.targetId).blackmailed = true;
+        ctx.state.night.lastBlackmailTarget = bmAction.targetId;
+        ctx.setEff(bm.id, bmAction.targetId);
+        ctx.log(bm.name + ' blackmailed ' + E._byId(ctx.state, bmAction.targetId).name + '.');
+      }
+    }
+  }
+
+  function resolveSerialKiller(ctx) {
+    var skAction = ctx.actions.find(function (a) { return a.position === 9 && a.roleId === 'serialkiller'; });
+    if (skAction && !ctx.isVoided(skAction)) {
+      var sk = E._byId(ctx.state, skAction.playerId);
+      if (sk && sk.isAlive && !ctx.isBlocked(sk.id) && skAction.targetId) {
+        var skTarget = skAction.targetId;
+        if (ctx.control && ctx.control.valid && ctx.control.controlledId === sk.id && ctx.control.redirect) {
+          skTarget = ctx.control.redirect;
+        }
+        if (ctx.alive(skTarget)) {
+          ctx.setEff(sk.id, skTarget);
+          if (!ctx.noKillN1) ctx.applyAttack(skTarget, 'basic', 'killed by the Serial Killer');
+          ctx.log('The Serial Killer attacked ' + E._byId(ctx.state, skTarget).name + '.');
+        }
+      }
+    }
+  }
+
+  function resolveFramer(ctx) {
+    var frAction = ctx.actions.find(function (a) { return a.position === 10 && a.roleId === 'framer'; });
+    if (frAction) {
+      var fr = E._byId(ctx.state, frAction.playerId);
+      if (fr && fr.isAlive && !ctx.isBlocked(fr.id) && !ctx.isVoided(frAction) &&
+          frAction.targetId && ctx.alive(frAction.targetId)) {
+        E._byId(ctx.state, frAction.targetId).framed = true;
+        ctx.setEff(fr.id, frAction.targetId);
+        ctx.log(fr.name + ' framed ' + E._byId(ctx.state, frAction.targetId).name + '.');
+      }
+    }
+  }
+
+  function resolveInvestigators(ctx) {
+    var invActions = ctx.actions.filter(function (a) { return a.position === 11 && !ctx.isVoided(a); });
+    for (var ii = 0; ii < invActions.length; ii += 1) {
+      var ia = invActions[ii];
+      var actor = E._byId(ctx.state, ia.playerId);
+      if (!actor || !actor.isAlive || ctx.isBlocked(actor.id)) continue;
+      var tgt = ia.targetId;
+      if (!tgt) continue;
+      var isSheriffActor = actor.assignedRole === 'sheriff' ||
+        (actor.assignedRole === 'deputy' && actor.inheritedRole === 'sheriff');
+      if ((ia.roleId === 'sheriff' || ia.roleId === 'deputy') && isSheriffActor) {
+        if (!ctx.alive(tgt)) continue;
+        ctx.setEff(actor.id, tgt);
+        var target = E._byId(ctx.state, tgt);
+        var result = target.framed
+          ? 'SUSPICIOUS'
+          : (ctx.sheriffSuspicious(ctx.state, target) ? 'SUSPICIOUS' : 'INNOCENT');
+        if (actor.isDrunk) result = result === 'SUSPICIOUS' ? 'INNOCENT' : 'SUSPICIOUS';
+        ctx.log(actor.name + ' (Sheriff) checks ' + target.name + ': ' + result + '.');
+      } else if (ia.roleId === 'tracker') {
+        if (!ctx.alive(tgt)) continue;
+        ctx.setEff(actor.id, tgt);
+        ctx.deferred.push({ actor: actor, kind: 'tracker', targetId: tgt });
+      } else if (ia.roleId === 'lookout') {
+        if (!ctx.alive(tgt)) continue;
+        ctx.setEff(actor.id, tgt);
+        ctx.deferred.push({ actor: actor, kind: 'lookout', targetId: tgt });
+      } else if (ia.roleId === 'consigliere') {
+        if (!ctx.alive(tgt)) continue;
+        ctx.setEff(actor.id, tgt);
+        var learned = E._byId(ctx.state, tgt).assignedRole;
+        if (actor.isDrunk) {
+          var aligned = E._alignmentOf(ctx.state, E._byId(ctx.state, tgt));
+          var pool = Object.keys(E.ROLES).filter(function (id) { return E.ROLES[id].team !== aligned; });
+          learned = pool[E._randInt(pool.length)];
+        }
+        var lRole = E.ROLES[learned];
+        ctx.log(actor.name + ' (Consigliere) learns the role of ' + E._byId(ctx.state, tgt).name + ': ' +
+          (lRole ? lRole.name : learned) + '.');
+      } else if (ia.roleId === 'undertaker') {
+        if (actor.assignedRole !== 'undertaker') continue;
+        var uEntry = ctx.latestEntry(ctx.state, tgt);
+        if (!uEntry || uEntry.wasCleaned) continue;
+        if (uEntry.inspectedByUndertaker) continue;
+        uEntry.inspectedByUndertaker = true;
+        ctx.setEff(actor.id, tgt);
+        var uRole = E.ROLES[uEntry.trueRole];
+        ctx.log(actor.name + ' (Undertaker) inspects the corpse of ' + E._byId(ctx.state, tgt).name + ': ' +
+          (uRole ? uRole.name : uEntry.trueRole) + '.');
+      }
+    }
+  }
+
+  function resolveRevivers(ctx) {
+    var retAction = ctx.actions.find(function (a) { return a.position === 12 && a.roleId === 'retributionist'; });
+    if (retAction) {
+      var ret = E._byId(ctx.state, retAction.playerId);
+      if (ret && ret.isAlive && !ctx.isBlocked(ret.id) && !ctx.isVoided(retAction) &&
+          !ret.usedOncePerGame && retAction.targetId && !ctx.alive(retAction.targetId)) {
+        ret.usedOncePerGame = true;
+        ctx.state.retributionist.used = true;
+        ctx.reviveTarget = retAction.targetId;
+        ctx.setEff(ret.id, retAction.targetId);
+        ctx.log(ret.name + ' will revive ' + E._byId(ctx.state, retAction.targetId).name + '.');
+      }
+    }
+    var amnAction = ctx.actions.find(function (a) { return a.position === 12 && a.roleId === 'amnesiac'; });
+    if (amnAction) {
+      var amn = E._byId(ctx.state, amnAction.playerId);
+      if (amn && amn.isAlive && !ctx.isBlocked(amn.id) && !ctx.isVoided(amnAction) &&
+          !ctx.state.amnesiac.used && amnAction.targetId && !ctx.alive(amnAction.targetId)) {
+        var amnEntry = ctx.latestEntry(ctx.state, amnAction.targetId);
+        if (amnEntry) {
+          ctx.state.amnesiac.used = true;
+          ctx.state.amnesiac.rememberedRole = amnEntry.trueRole;
+          amn.usedOncePerGame = true;
+          ctx.setEff(amn.id, amnAction.targetId);
+          var amnRole = E.ROLES[amnEntry.trueRole];
+          ctx.log(amn.name + ' (Amnesiac) remembered the role of ' + E._byId(ctx.state, amnAction.targetId).name + ': ' +
+            (amnRole ? amnRole.name : amnEntry.trueRole) + '.');
+        }
+      }
+    }
+  }
+
+  function resolveMedium(ctx) {
+    var medAction = ctx.actions.find(function (a) { return a.position === 13 && a.roleId === 'medium'; });
+    if (medAction && !ctx.isVoided(medAction)) {
+      var med = E._byId(ctx.state, medAction.playerId);
+      if (med) {
+        if (med.isAlive) {
+          if (!ctx.isBlocked(med.id)) ctx.log(med.name + ' reads the Ghost Ledger.');
+        } else if (medAction.targetId && ctx.alive(medAction.targetId)) {
+          ctx.setEff(med.id, medAction.targetId);
+          ctx.log(med.name + ' whispers with ' + E._byId(ctx.state, medAction.targetId).name + '.');
+        }
+      }
+    }
+  }
+
+  function resolveDeferred(ctx) {
+    for (var di = 0; di < ctx.deferred.length; di += 1) {
+      var d = ctx.deferred[di];
+      if (d.kind === 'tracker') {
+        var eff = ctx.getEff(d.targetId);
+        ctx.log(d.actor.name + ' (Tracker) tracks ' + E._byId(ctx.state, d.targetId).name + ': ' +
+          (eff ? E._byId(ctx.state, eff).name : 'no one') + '.');
+      } else {
+        var visitors = [];
+        for (var ei = 0; ei < ctx.effectiveTargets.length; ei += 1) {
+          var e2 = ctx.effectiveTargets[ei];
+          if (e2.targetId === d.targetId && e2.playerId !== d.actor.id) {
+            var vp = E._byId(ctx.state, e2.playerId);
+            if (vp) visitors.push(vp.name);
+          }
+        }
+        ctx.log(d.actor.name + ' (Lookout) watches ' + E._byId(ctx.state, d.targetId).name + ': ' +
+          (visitors.length > 0 ? visitors.join(', ') : 'no one') + '.');
+      }
+    }
+  }
+
+  E._nightActions = {
+    poisoner: resolvePoisoner,
+    witchReveal: resolveWitchReveal,
+    jailor: resolveJailor,
+    roleblockers: resolveRoleblockers,
+    doctor: resolveDoctor,
+    mafia: resolveMafia,
+    janitor: resolveJanitor,
+    forger: resolveForger,
+    blackmailer: resolveBlackmailer,
+    serialkiller: resolveSerialKiller,
+    framer: resolveFramer,
+    investigators: resolveInvestigators,
+    revivers: resolveRevivers,
+    medium: resolveMedium,
+    deferred: resolveDeferred
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E._alignmentOf = function (state, player) {
+    if (!player) return 'NEUTRAL';
+    if (player.assignedRole === 'amnesiac' && state.amnesiac.used && state.amnesiac.rememberedRole) {
+      var r = E.ROLES[state.amnesiac.rememberedRole];
+      return r ? r.team : 'NEUTRAL';
+    }
+    if (player.assignedRole === 'witch') {
+      return state.witchSide === 'TOWN' ? 'TOWN' : 'MAFIA';
+    }
+    var role = E.ROLES[player.assignedRole];
+    return role ? role.team : 'NEUTRAL';
+  };
+
+  function isGodfatherLike(state, player) {
+    return player.assignedRole === 'godfather' ||
+      player.inheritedRole === 'godfather' ||
+      (player.assignedRole === 'amnesiac' && state.amnesiac.used && state.amnesiac.rememberedRole === 'godfather');
+  }
+
+  E._isSerialKiller = function (state, player) {
+    return player.assignedRole === 'serialkiller' ||
+      (player.assignedRole === 'amnesiac' && state.amnesiac.used && state.amnesiac.rememberedRole === 'serialkiller');
+  };
+
+  E._hasBasicDefense = function (state, player) {
+    return isGodfatherLike(state, player) || E._isSerialKiller(state, player);
+  };
+
+  function sheriffSuspicious(state, player) {
+    if (isGodfatherLike(state, player)) return false;
+    if (E._isSerialKiller(state, player)) return true;
+    return E._alignmentOf(state, player) === 'MAFIA';
+  }
+
+  function latestEntry(state, pid) {
+    for (var i = state.graveyard.length - 1; i >= 0; i -= 1) {
+      if (state.graveyard[i].playerId === pid) return state.graveyard[i];
+    }
+    return null;
+  }
+
+  function convertExecutioner(state, cause) {
+    if (state.executionerConverted || !state.executionerTarget) return;
+    var p = E._byId(state, state.executionerTarget);
+    state.executionerConverted = true;
+    state.logs.push('The Executioner\'s target ' + (p ? p.name : String(state.executionerTarget)) +
+      ' died (' + cause + '); the Executioner becomes a Jester.');
+  }
+
+  E._recordDeath = function (state, pid, cause, byLynch, skipToken) {
+    var p = E._byId(state, pid);
+    if (!p || !p.isAlive) return null;
+    p.isAlive = false;
+    var firstDeath = !state.graveyard.some(function (e) { return e.playerId === pid; });
+    if (firstDeath && !skipToken) p.hasGhostVote = true;
+    var entry = {
+      playerId: pid,
+      name: p.name,
+      trueRole: p.assignedRole,
+      inspectedByUndertaker: false,
+      wasCleaned: false,
+      lastWill: p.lastWill,
+      deathCause: cause,
+      willShown: p.lastWill
+    };
+    state.graveyard.push(entry);
+    if (!byLynch && state.executionerTarget === pid) convertExecutioner(state, cause);
+    return entry;
+  };
+
+  E._livingSharers = function (state) {
+    return state.players.filter(function (p) {
+      if (!p.isAlive) return false;
+      var r = p.assignedRole;
+      return r === 'survivor' || r === 'drunk' || (r === 'amnesiac' && !state.amnesiac.used);
+    }).map(function (p) { return p.id; });
+  };
+
+  E._updateInheritance = function (state) {
+    var sheriff = state.players.find(function (p) { return p.assignedRole === 'sheriff'; });
+    var deputy = state.players.find(function (p) { return p.assignedRole === 'deputy'; });
+    if (sheriff && !sheriff.isAlive && deputy && deputy.isAlive && deputy.inheritedRole !== 'sheriff') {
+      deputy.inheritedRole = 'sheriff';
+      state.pendingInheritanceNote = 'The Deputy has inherited the Sheriff\'s badge.';
+      state.logs.push('The Deputy has inherited the Sheriff\'s badge.');
+    }
+    var gf = state.players.find(function (p) { return p.assignedRole === 'godfather'; });
+    var mafioso = state.players.find(function (p) { return p.assignedRole === 'mafioso'; });
+    if (gf && !gf.isAlive && mafioso && mafioso.isAlive && mafioso.inheritedRole !== 'godfather') {
+      mafioso.inheritedRole = 'godfather';
+      state.logs.push('The Mafioso has become the new Godfather.');
+    }
+  };
+
+  E.resolveNight = function (state) {
+    var logs = [];
+    var deaths = [];
+    var revivals = [];
+    var nightNum = state.night.number;
+    var noKillN1 = !!state.houseRules.noKillN1 && nightNum === 1;
+    var actions = state.night.actions.slice();
+    var P = state.players;
+    var alive = function (id) {
+      var p = E._byId(state, id);
+      return !!p && p.isAlive;
+    };
+    var voided = [];
+    var isVoided = function (a) { return voided.indexOf(a) !== -1; };
+    var blocked = [];
+    var isBlocked = function (id) { return blocked.indexOf(id) !== -1; };
+    var effectiveTargets = [];
+    var getEff = function (pid) {
+      for (var i = 0; i < effectiveTargets.length; i += 1) {
+        if (effectiveTargets[i].playerId === pid) return effectiveTargets[i].targetId;
+      }
+      return null;
+    };
+    var setEff = function (pid, tid) {
+      for (var i = 0; i < effectiveTargets.length; i += 1) {
+        if (effectiveTargets[i].playerId === pid) {
+          effectiveTargets[i].targetId = tid;
+          return;
+        }
+      }
+      effectiveTargets.push({ playerId: pid, targetId: tid });
+    };
+    var forgedWills = {};
+    var log = function (m) {
+      var line = '[Night ' + nightNum + '] ' + m;
+      logs.push(line);
+      state.logs.push(line);
+    };
+
+    function killPlayer(targetId, cause) {
+      var target = E._byId(state, targetId);
+      if (!target || !target.isAlive) return false;
+      E._recordDeath(state, targetId, cause, false, false);
+      deaths.push({
+        playerId: targetId, name: target.name, cause: cause,
+        trueRole: target.assignedRole, will: target.lastWill, wasCleaned: false
+      });
+      log(target.name + ' died: ' + cause + '.');
+      return true;
+    }
+
+    function applyAttack(targetId, type, cause) {
+      if (veteranAlerting && vet && targetId === vet.id) return false;
+      var target = E._byId(state, targetId);
+      if (!target || !target.isAlive) return false;
+      if (type === 'unstoppable') return killPlayer(targetId, cause);
+      if (target.isProtected) {
+        target.isProtected = false;
+        log(target.name + ' survived an attack (Doctor protection).');
+        return false;
+      }
+      if (E._hasBasicDefense(state, target)) {
+        log(target.name + ' survived the attack.');
+        return false;
+      }
+      return killPlayer(targetId, cause);
+    }
+
+    P.forEach(function (p) {
+      if (p.assignedRole === 'drunk') p.isDrunk = true;
+      else p.isDrunk = false;
+      p.isRoleblocked = false;
+      p.isProtected = false;
+      p.framed = false;
+      p.jailed = false;
+      p.poisoned = false;
+      p.alerted = false;
+      p.nightTarget = null;
+      p.jailorDecision = null;
+    });
+
+    var prevBlackmailTarget = null;
+    for (var pi = 0; pi < P.length; pi += 1) {
+      if (P[pi].blackmailed) prevBlackmailTarget = P[pi].id;
+      P[pi].blackmailed = false;
+    }
+    state.night.lastBlackmailTarget = null;
+
+    var rbActions = actions.filter(function (a) {
+      return a.position === 4 && (a.roleId === 'escort' || a.roleId === 'consort');
+    });
+    for (var rbi = 0; rbi < rbActions.length; rbi += 1) {
+      var rba = rbActions[rbi];
+      var rbActor = E._byId(state, rba.playerId);
+      if (!rbActor || !rbActor.isAlive || isBlocked(rbActor.id)) continue;
+      if (rba.targetId && alive(rba.targetId)) blocked.push(rba.targetId);
+    }
+    var jailAction = actions.find(function (a) { return a.position === 3 && a.roleId === 'jailor'; });
+    var jailor = jailAction ? E._byId(state, jailAction.playerId) : null;
+    var witchAction = actions.find(function (a) { return a.position === 2 && a.roleId === 'witch'; });
+    var jailProvisionalTarget = jailAction ? jailAction.targetId : null;
+    if (jailAction && witchAction && witchAction.targetId === jailor.id &&
+        witchAction.extra && witchAction.extra.controlRedirect) {
+      jailProvisionalTarget = witchAction.extra.controlRedirect;
+    }
+    var jailorProvisionalValid = !!jailor && jailor.isAlive && !isBlocked(jailor.id) &&
+      !!jailProvisionalTarget && alive(jailProvisionalTarget) &&
+      jailProvisionalTarget !== state.night.lastJailTarget;
+    if (jailorProvisionalValid) blocked.push(jailProvisionalTarget);
+
+    var control = null;
+    if (witchAction) {
+      var witch = E._byId(state, witchAction.playerId);
+      var controlledId = witchAction.targetId;
+      var redirect = witchAction.extra && witchAction.extra.controlRedirect
+        ? witchAction.extra.controlRedirect
+        : null;
+      var controlledJailed = jailorProvisionalValid && jailAction.targetId === controlledId;
+      var controlValid = !!witch && witch.isAlive && !isBlocked(witch.id) &&
+        !!controlledId && alive(controlledId) && !controlledJailed;
+      control = { controlledId: controlledId, redirect: redirect, valid: controlValid };
+    }
+
+    var alertAction = actions.find(function (a) {
+      return a.position === 0 && a.roleId === 'veteran' && a.extra && a.extra.alert;
+    });
+    var vet = alertAction ? E._byId(state, alertAction.playerId) : null;
+    var veteranAlerting = !!vet && vet.isAlive && vet.assignedRole === 'veteran' && vet.alertsUsed < 3;
+    if (veteranAlerting) {
+      vet.alertsUsed += 1;
+      vet.alerted = true;
+    }
+
+    for (var gi = 0; gi < P.length; gi += 1) {
+      if (P[gi].isAlive && P[gi].guiltPending) {
+        P[gi].guiltPending = false;
+        killPlayer(P[gi].id, 'died of guilt');
+      }
+    }
+
+    if (veteranAlerting) {
+      for (var vi = 0; vi < actions.length; vi += 1) {
+        var va = actions[vi];
+        if (va.position === 0 && va.roleId === 'veteran') continue;
+        if (!va.targetId) continue;
+        var vActor = E._byId(state, va.playerId);
+        if (!vActor || !vActor.isAlive) continue;
+        if (isBlocked(vActor.id)) continue;
+        var effTarget = (control && control.valid && control.controlledId === vActor.id && control.redirect)
+          ? control.redirect
+          : va.targetId;
+        if (effTarget === vet.id) {
+          voided.push(va);
+          if (!noKillN1) {
+            killPlayer(va.playerId, 'visited an alerting Veteran');
+          } else {
+            log(vActor.name + ' visited the alerting Veteran; their action is void.');
+          }
+        }
+      }
+    }
+
+    E._applyJesterHaunt(state, actions, alive, applyAttack);
+
+    blocked = [];
+    for (var rbx = 0; rbx < rbActions.length; rbx += 1) {
+      var rbax = rbActions[rbx];
+      if (isVoided(rbax)) continue;
+      var rbActorX = E._byId(state, rbax.playerId);
+      if (!rbActorX || !rbActorX.isAlive || isBlocked(rbActorX.id)) continue;
+      if (rbax.targetId && alive(rbax.targetId)) blocked.push(rbax.targetId);
+    }
+    var jailEffTarget = jailAction ? jailAction.targetId : null;
+    if (jailAction && control && control.valid && control.controlledId === jailor.id && control.redirect) {
+      jailEffTarget = control.redirect;
+    }
+    jailorProvisionalValid = !!jailor && jailor.isAlive && !isBlocked(jailor.id) && !isVoided(jailAction) &&
+      !!jailEffTarget && alive(jailEffTarget) && jailEffTarget !== state.night.lastJailTarget;
+    if (jailorProvisionalValid) blocked.push(jailEffTarget);
+
+    if (witchAction) {
+      var wc = E._byId(state, witchAction.playerId);
+      var cId = witchAction.targetId;
+      var cRed = witchAction.extra && witchAction.extra.controlRedirect
+        ? witchAction.extra.controlRedirect
+        : null;
+      var cJailed = jailorProvisionalValid && jailAction.targetId === cId;
+      control = {
+        controlledId: cId,
+        redirect: cRed,
+        valid: !!wc && wc.isAlive && !isBlocked(wc.id) && !isVoided(witchAction) &&
+          !!cId && alive(cId) && !cJailed
+      };
+    }
+
+    var ctx = {
+      state: state,
+      actions: actions,
+      deaths: deaths,
+      nightNum: nightNum,
+      noKillN1: noKillN1,
+      alive: alive,
+      isVoided: isVoided,
+      isBlocked: isBlocked,
+      effectiveTargets: effectiveTargets,
+      getEff: getEff,
+      setEff: setEff,
+      forgedWills: forgedWills,
+      log: log,
+      applyAttack: applyAttack,
+      latestEntry: latestEntry,
+      sheriffSuspicious: sheriffSuspicious,
+      blocked: blocked,
+      control: control,
+      prevBlackmailTarget: prevBlackmailTarget,
+      rbActions: rbActions,
+      jailAction: jailAction,
+      jailor: jailor,
+      witchAction: witchAction,
+      deferred: [],
+      reviveTarget: null
+    };
+
+    E._nightActions.poisoner(ctx);
+    E._nightActions.witchReveal(ctx);
+    E._nightActions.jailor(ctx);
+    E._nightActions.roleblockers(ctx);
+    E._nightActions.doctor(ctx);
+    E._nightActions.mafia(ctx);
+    E._nightActions.janitor(ctx);
+    E._nightActions.forger(ctx);
+    E._nightActions.blackmailer(ctx);
+    E._nightActions.serialkiller(ctx);
+    E._nightActions.framer(ctx);
+    E._nightActions.investigators(ctx);
+    E._nightActions.revivers(ctx);
+    E._nightActions.medium(ctx);
+    E._nightActions.deferred(ctx);
+
+    if (ctx.reviveTarget) {
+      var rp = E._byId(state, ctx.reviveTarget);
+      rp.isAlive = true;
+      rp.hasGhostVote = false;
+      rp.ghostVoteSpent = false;
+      var rEntry = latestEntry(state, ctx.reviveTarget);
+      if (rEntry) rEntry.revived = true;
+      revivals.push(ctx.reviveTarget);
+      log(rp.name + ' has been revived.');
+    }
+
+    E._updateInheritance(state);
+
+    Object.keys(forgedWills).forEach(function (fpid) {
+      var fId = Number(fpid);
+      if (alive(fId)) return;
+      var fw = forgedWills[fpid];
+      var fd = deaths.find(function (d) { return d.playerId === fId; });
+      if (fd) fd.will = fw;
+      var fe = latestEntry(state, fId);
+      if (fe) {
+        fe.willShown = fw;
+        fe.lastWill = fw;
+      }
+    });
+
+    state.morning = {
+      deaths: deaths.map(function (d) {
+        return { playerId: d.playerId, name: d.name, will: d.will, trueRole: d.trueRole, wasCleaned: d.wasCleaned, cause: d.cause };
+      }),
+      revivals: revivals.slice(),
+      inheritanceNote: state.pendingInheritanceNote || '',
+      blackmailTarget: state.night.lastBlackmailTarget
+    };
+    state.pendingInheritanceNote = '';
+
+    state.night.actions = [];
+    state.night.number += 1;
+    state.phase = 'MORNING';
+
+    return {
+      deaths: deaths.map(function (d) {
+        return { playerId: d.playerId, name: d.name, cause: d.cause, role: d.trueRole, will: d.will, wasCleaned: d.wasCleaned };
+      }),
+      revived: revivals.slice(),
+      inheritedSheriff: !!(state.morning.inheritanceNote),
+      logs: logs
+    };
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E._applyJesterHaunt = function (state, actions, alive, applyAttack) {
+    if (state.jester.haunted) {
+      var hauntAction = actions.find(function (a) { return a.position === 0 && a.roleId === 'jester'; });
+      if (hauntAction && hauntAction.targetId) {
+        var votedGuilty = (state.trial.votes || []).some(function (v) {
+          return v.voterId === hauntAction.targetId && v.verdict === 'GUILTY';
+        });
+        if (votedGuilty && alive(hauntAction.targetId)) {
+          if (applyAttack(hauntAction.targetId, 'unstoppable', 'haunted by the Jester')) {
+            state.jester.hauntTarget = hauntAction.targetId;
+          }
+        }
+      }
+      state.jester.haunted = false;
+    }
+  };
+
+  E._spendGhostVote = function (voter, verdict, ghostToken) {
+    if (verdict === 'ABSTAIN') return false;
+    if (!ghostToken) return false;
+    if (!voter.hasGhostVote || voter.ghostVoteSpent) return false;
+    voter.ghostVoteSpent = true;
+    return true;
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E.getMorningAnnouncement = function (state) {
+    var m = state.morning || { deaths: [], revivals: [], inheritanceNote: '' };
+    var classic = !!state.houseRules.classicReveal;
+    return {
+      deaths: m.deaths.map(function (d) {
+        var roleShown = '?? UNKNOWN ??';
+        if (classic && !d.wasCleaned && E.ROLES[d.trueRole]) roleShown = E.ROLES[d.trueRole].name;
+        return { name: d.name, will: d.will || '', roleShown: roleShown };
+      }),
+      revivals: m.revivals.map(function (id) {
+        var p = E._byId(state, id);
+        return p ? p.name : String(id);
+      }),
+      inheritanceNote: m.inheritanceNote || ''
+    };
+  };
+
+  E.beginDay = function (state) {
+    state.dayNumber += 1;
+    state.phase = 'DAY';
+    var bm = state.morning ? state.morning.blackmailTarget : null;
+    state.players.forEach(function (p) { p.blackmailed = false; });
+    if (bm) {
+      var t = E._byId(state, bm);
+      if (t) t.blackmailed = true;
+    }
+    state.trial.dayTrialsDone = 0;
+    var victory = E.checkVictory(state);
+    return victory;
+  };
+
+  E.updateWill = function (state, playerId, willText) {
+    if (state.phase !== 'MORNING') return false;
+    var p = E._byId(state, playerId);
+    if (!p || !p.isAlive) return false;
+    p.lastWill = String(willText || '');
+    return true;
+  };
+
+  E.startTrial = function (state, accusedId, nominatorId) {
+    var accused = E._byId(state, accusedId);
+    var nominator = E._byId(state, nominatorId);
+    if (state.trial.active) return false;
+    if (!accused || !accused.isAlive) return false;
+    if (!nominator || !nominator.isAlive) return false;
+    if (accusedId === nominatorId) return false;
+    if (state.trial.dayTrialsDone >= 1) return false;
+    state.trial.active = true;
+    state.trial.accusedId = accusedId;
+    state.trial.nominatorId = nominatorId;
+    state.trial.votes = [];
+    state.logs.push(nominator.name + ' nominates ' + accused.name + ' for trial.');
+    return true;
+  };
+
+  E.castVote = function (state, vote) {
+    vote = vote || {};
+    if (!state.trial.active) return false;
+    var voter = E._byId(state, vote.voterId);
+    if (!voter) return false;
+    var verdict = vote.verdict;
+    if (verdict !== 'GUILTY' && verdict !== 'INNOCENT' && verdict !== 'ABSTAIN') return false;
+    var isGhost = !voter.isAlive;
+    if (isGhost) {
+      if (!E._spendGhostVote(voter, verdict, vote.ghostToken)) return false;
+    }
+    var record = { voterId: vote.voterId, verdict: verdict, ghostToken: !!vote.ghostToken };
+    var idx = state.trial.votes.findIndex(function (v) { return v.voterId === vote.voterId; });
+    if (idx >= 0) state.trial.votes[idx] = record;
+    else state.trial.votes.push(record);
+    return true;
+  };
+
+  E.resolveTrial = function (state) {
+    if (!state.trial.active) return null;
+    var accused = E._byId(state, state.trial.accusedId);
+    var guilty = 0;
+    var others = 0;
+    for (var i = 0; i < state.trial.votes.length; i += 1) {
+      var v = state.trial.votes[i];
+      var voter = E._byId(state, v.voterId);
+      var weight = 1;
+      if (voter && voter.isAlive && voter.revealed && voter.assignedRole === 'mayor') weight = 3;
+      if (v.verdict === 'GUILTY') guilty += weight;
+      else others += weight;
+    }
+    var noLynchD1 = !!state.houseRules.noLynchD1 && state.dayNumber === 1;
+    var lynch = guilty > others && !noLynchD1;
+    var lynchedId = null;
+    var jesterWin = false;
+    var executionerWin = false;
+    if (lynch && accused && accused.isAlive) {
+      lynchedId = accused.id;
+      var isJesterLike = accused.assignedRole === 'jester' ||
+        (accused.assignedRole === 'executioner' && state.executionerConverted);
+      if (isJesterLike) jesterWin = true;
+      E._recordDeath(state, accused.id, 'lynched by the town', true, jesterWin);
+      state.logs.push(accused.name + ' was lynched by the town.');
+      if (accused.id === state.executionerTarget) executionerWin = true;
+    }
+    state.trial.active = false;
+    state.trial.dayTrialsDone += 1;
+    E._updateInheritance(state);
+    var victory = null;
+    if (executionerWin) {
+      victory = {
+        winner: 'EXECUTIONER',
+        survivors: E._livingSharers(state),
+        reason: 'The Executioner\'s target was lynched by the town.'
+      };
+      state.winner = victory;
+      state.phase = 'END';
+      state.logs.push('The Executioner wins!');
+    } else if (lynchedId) {
+      victory = E.checkVictory(state);
+      if (!victory && jesterWin) {
+        state.jester.haunted = true;
+        state.jester.hauntTarget = null;
+        state.logs.push('The Jester wins and becomes a taunting ghost!');
+      }
+    }
+    return { lynchedId: lynchedId, jesterWin: jesterWin, executionerWin: executionerWin, victory: victory };
+  };
+
+  E.vigilanteShoot = function (state, shooterId, targetId) {
+    var shooter = E._byId(state, shooterId);
+    var target = E._byId(state, targetId);
+    if (!shooter || !target) return null;
+    if (shooter.assignedRole !== 'vigilante' || !shooter.isAlive) return null;
+    if (!target.isAlive || targetId === shooterId) return null;
+    if (shooter.shotsFired >= 3) return null;
+    shooter.shotsFired += 1;
+    var guilty = E._alignmentOf(state, target) === 'TOWN';
+    if (guilty) shooter.guiltPending = true;
+    E._recordDeath(state, targetId, 'shot during the day', false, false);
+    state.logs.push(target.name + ' was shot during the day.');
+    E._updateInheritance(state);
+    var victory = E.checkVictory(state);
+    return { killedId: targetId, guilty: guilty, victory: victory };
+  };
+
+  E.deputyShoot = function (state, deputyId, targetId) {
+    var deputy = E._byId(state, deputyId);
+    var target = E._byId(state, targetId);
+    if (!deputy || !target) return null;
+    if (deputy.assignedRole !== 'deputy' || !deputy.isAlive) return null;
+    if (deputy.usedOncePerGame) return null;
+    if (!target.isAlive || targetId === deputyId) return null;
+    deputy.usedOncePerGame = true;
+    var guilty = E._alignmentOf(state, target) === 'TOWN';
+    if (guilty) deputy.guiltPending = true;
+    E._recordDeath(state, targetId, 'shot by the Deputy', false, false);
+    state.logs.push('The Deputy publicly shot ' + target.name + '.');
+    E._updateInheritance(state);
+    var victory = E.checkVictory(state);
+    return { killedId: targetId, guilty: guilty, victory: victory };
+  };
+
+  E.mayorReveal = function (state, mayorId) {
+    var mayor = E._byId(state, mayorId);
+    if (!mayor) return null;
+    if (mayor.assignedRole !== 'mayor' || !mayor.isAlive || mayor.revealed) return null;
+    mayor.revealed = true;
+    mayor.usedOncePerGame = true;
+    state.logs.push('The Mayor has revealed!');
+    return { revealed: true };
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E.checkVictory = function (state) {
+    var living = state.players.filter(function (p) { return p.isAlive; });
+    var town = 0;
+    var mafia = 0;
+    for (var i = 0; i < living.length; i += 1) {
+      var a = E._alignmentOf(state, living[i]);
+      if (a === 'TOWN') town += 1;
+      else if (a === 'MAFIA') mafia += 1;
+    }
+    var sk = living.find(function (p) { return E._isSerialKiller(state, p); });
+    var result = null;
+    if (sk && living.length - 1 <= 1) {
+      result = { winner: 'SERIAL_KILLER', reason: 'The Serial Killer stands last or holds majority.' };
+    } else if (mafia >= town) {
+      result = { winner: 'MAFIA', reason: 'The Mafia holds majority.' };
+    } else if (mafia === 0 && !sk) {
+      result = { winner: 'TOWN', reason: 'All Mafia-aligned players and the Serial Killer are dead.' };
+    }
+    if (result) {
+      result.survivors = E._livingSharers(state);
+      state.winner = result;
+      state.phase = 'END';
+      state.logs.push(result.winner + ' wins: ' + result.reason);
+    }
+    return result;
+  };
+
+  E.endGame = function (state) {
+    state.phase = 'END';
+    if (!state.winner) {
+      state.winner = { winner: null, survivors: [], reason: 'The game ended without a declared winner.' };
+    }
+    var reveal = state.players.map(function (p) {
+      var role = E.ROLES[p.assignedRole] || { name: p.assignedRole, team: 'NEUTRAL' };
+      return {
+        id: p.id, name: p.name, seat: p.seat,
+        role: p.assignedRole, roleName: role.name, team: role.team,
+        isAlive: p.isAlive, inheritedRole: p.inheritedRole
+      };
+    });
+    state.logs.push('Game over. All roles revealed.');
+    return { winner: state.winner, reveal: reveal };
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = {};
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function roleName(id) {
+    var r = E.ROLES && E.ROLES[id];
+    return r && r.name ? esc(r.name) : esc(id);
+  }
+
+  function teamOf(id) {
+    var r = E.ROLES && E.ROLES[id];
+    return r && r.team ? r.team : 'TOWN';
+  }
+
+  function teamLabel(t) {
+    return { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral' }[t] || t;
+  }
+
+  function playersBySeat(players) {
+    var list = (players || []).slice();
+    list.sort(function (a, b) { return (a.seat || 0) - (b.seat || 0); });
+    return list;
+  }
+
+  function living(players) {
+    return (players || []).filter(function (p) { return p.isAlive; });
+  }
+
+  function dead(players) {
+    return (players || []).filter(function (p) { return !p.isAlive; });
+  }
+
+  function findPlayer(state, id) {
+    var out = null;
+    (state.players || []).forEach(function (p) {
+      if (String(p.id) === String(id)) out = p;
+    });
+    return out;
+  }
+
+  function nameOf(state, id) {
+    var p = findPlayer(state, id);
+    if (p) return p.name;
+    var g = null;
+    (state.graveyard || []).forEach(function (x) {
+      if (String(x.playerId) === String(id)) g = x;
+    });
+    return g ? g.name : id;
+  }
+
+  function statusTags(p) {
+    var tags = [];
+    if (p.isAlive) tags.push(['ALIVE', 'ok']);
+    else tags.push(['GHOST', 'ghost']);
+    if (p.isDrunk) tags.push(['DRUNK', 'warn']);
+    if (p.inheritedRole) tags.push(['INHERITED SHERIFF', 'warn']);
+    if (p.jailed) tags.push(['JAILED', 'warn']);
+    if (p.isProtected) tags.push(['PROTECTED', 'ok']);
+    if (p.poisoned) tags.push(['POISONED', 'warn']);
+    if (p.alerted) tags.push(['ALERT', 'accent']);
+    if (p.revealed) tags.push(['REVEALED', 'accent']);
+    if (p.cleaned) tags.push(['CLEANED', 'bad']);
+    if (p.blackmailed) tags.push(['BLACKMAILED', 'bad']);
+    return tags.map(function (t) {
+      return '<span class="tag tag-' + t[1] + '">' + t[0] + '</span>';
+    }).join('');
+  }
+
+  function flowStrip(phase) {
+    var order = ['NIGHT', 'MORNING', 'DAY', 'END'];
+    var labels = { NIGHT: 'Night', MORNING: 'Morning', DAY: 'Day', END: 'End' };
+    var cur = order.indexOf(phase);
+    if (cur === -1 && (phase === 'SEATS' || phase === 'SETUP')) cur = 0;
+    var html = '<div class="flow">';
+    order.forEach(function (s, i) {
+      var cls = i === cur ? ' on' : (cur > -1 && i < cur ? ' done' : '');
+      html += '<div class="flow-step' + cls + '">' +
+        '<span class="flow-dot"></span><span class="flow-label">' + labels[s] + '</span></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function seatTiles(state, rolesHidden) {
+    var html = '<div class="seat-tiles">';
+    playersBySeat(state.players).forEach(function (p) {
+      var team = teamOf(p.assignedRole);
+      var roleTxt = rolesHidden ? '&#8226;&#8226;&#8226;' : roleName(p.assignedRole);
+      html += '<div class="seat-tile team-' + team + '">' +
+        '<div class="seat-tile-top"><span class="seat-label">' + p.seat + '</span>' +
+        '<span class="seat-name">' + esc(p.name) + '</span></div>' +
+        '<div class="seat-role">' + roleTxt + '</div>' +
+        '<div class="seat-tags">' + statusTags(p) + '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function seatLayoutOpen(cfg) {
+    if (cfg.layout === 'circle') return '<div class="circle">';
+    return '<div class="seat-grid layout-' + esc(cfg.layout) + '">';
+  }
+
+  function seatLayoutClose() {
+    return '</div>';
+  }
+
+  function seatPosAttr(cfg, seat, n) {
+    if (cfg.layout !== 'circle') return '';
+    var ang = ((seat - 1) / n) * 2 * Math.PI - Math.PI / 2;
+    var x = Math.max(12, Math.min(88, 50 + 45 * Math.cos(ang)));
+    var y = Math.max(12, Math.min(88, 50 + 45 * Math.sin(ang)));
+    return ' style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%"';
+  }
+
+  var toastTimer = null;
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  UI.esc = esc;
+  UI.roleName = roleName;
+  UI.teamOf = teamOf;
+  UI.teamLabel = teamLabel;
+  UI.playersBySeat = playersBySeat;
+  UI.living = living;
+  UI.dead = dead;
+  UI.findPlayer = findPlayer;
+  UI.nameOf = nameOf;
+  UI.statusTags = statusTags;
+  UI.flowStrip = flowStrip;
+  UI.seatTiles = seatTiles;
+  UI.seatLayoutOpen = seatLayoutOpen;
+  UI.seatLayoutClose = seatLayoutClose;
+  UI.seatPosAttr = seatPosAttr;
+  UI.toast = toast;
+
+  window.UI = UI;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI;
+
+  function teamSlotCounts(cfg) {
+    var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+    return cfg.teamCounts || ratio;
+  }
+
+  function townCivilians(cfg, slots, listLen) {
+    var civs = cfg.civilians;
+    if (civs == null) return Math.max(0, slots - Math.min(listLen, slots));
+    return Math.max(0, Math.min(slots, Number(civs) || 0));
+  }
+
+  function deckBuilder(cfg) {
+    var teams = ['TOWN', 'MAFIA', 'NEUTRAL'];
+    var tc = teamSlotCounts(cfg);
+    var townSlots = tc.town || 0;
+    var out = '';
+    teams.forEach(function (team) {
+      var key = team.toLowerCase();
+      var slots = tc[key] || 0;
+      var list = cfg.deckConfig[key] || [];
+      var isTown = team === 'TOWN';
+      var pool = Object.keys(E.ROLES || {}).filter(function (id) {
+        var r = E.ROLES[id];
+        if (!r || r.team !== team) return false;
+        if (isTown && id === 'civilian') return false;
+        return list.indexOf(id) === -1;
+      });
+      var civs = isTown ? townCivilians(cfg, townSlots, list.length) : 0;
+      var civMin = isTown && cfg.civilians != null
+        ? Math.max(0, Math.min(townSlots, Number(cfg.civilians) || 0))
+        : 0;
+      var namedLimit = isTown ? Math.max(0, slots - civMin) : slots;
+      var full = list.length >= namedLimit;
+      var fullReason = isTown
+        ? (cfg.civilians != null
+            ? 'All ' + slots + ' Town slots are assigned (' + civs + ' civilian' + (civs === 1 ? '' : 's') + ' reserved).'
+            : 'All ' + slots + ' Town slots are assigned.')
+        : 'All ' + slots + ' ' + UI.teamLabel(team) + ' slots are assigned.';
+      out += '<div class="team-edit">';
+      out += '<div class="team-edit-head"><span class="team-dot team-' + team + '"></span>' +
+        '<strong>' + UI.teamLabel(team) + ' priority</strong><span class="muted small">(top = drawn first)</span>' +
+        '<span class="deck-count">' + list.length + '/' + slots + '</span></div>';
+      if (!list.length) {
+        out += '<p class="muted small">Empty list. ' +
+          (isTown ? 'Slots fill with Civilians.' : 'Slots pad from the preset and role pool.') + '</p>';
+      }
+      list.forEach(function (rid, i) {
+        out += '<div class="team-row">' +
+          '<span class="team-rank">' + (i + 1) + '</span>' +
+          '<span class="team-row-name">' + UI.roleName(rid) + '</span>' +
+          '<button class="btn btn-icon" data-action="deck-up" data-team="' + team + '" data-index="' + i + '" aria-label="Move up">&#9650;</button>' +
+          '<button class="btn btn-icon" data-action="deck-down" data-team="' + team + '" data-index="' + i + '" aria-label="Move down">&#9660;</button>' +
+          '<button class="btn btn-icon btn-danger" data-action="deck-remove" data-team="' + team + '" data-index="' + i + '" aria-label="Remove">&#10005;</button>' +
+          '</div>';
+      });
+      if (isTown) {
+        out += '<div class="civ-stepper">' +
+          '<span class="muted small">Civilians:</span>' +
+          '<button class="btn btn-stepper-sm" data-action="civ-dec" aria-label="Fewer civilians"' +
+          (civs <= 0 ? ' disabled' : '') + '>-</button>' +
+          '<div class="civ-stepper-num"><strong>' + civs + '</strong></div>' +
+          '<button class="btn btn-stepper-sm" data-action="civ-inc" aria-label="More civilians"' +
+          (civs >= townSlots ? ' disabled' : '') + '>+</button>' +
+          (cfg.civilians == null ? '<span class="muted small">auto</span>' : '') +
+          '</div>';
+      }
+      out += '<div class="team-add">' +
+        '<select id="add-' + team + '" class="select" aria-label="Add role to ' + team + '">' +
+        pool.map(function (id) {
+          return '<option value="' + UI.esc(id) + '">' + UI.roleName(id) + '</option>';
+        }).join('') +
+        '</select>' +
+        (full
+          ? '<span data-action="deck-add" data-team="' + team + '"><button class="btn btn-add" disabled>Add</button></span>'
+          : '<button class="btn btn-add" data-action="deck-add" data-team="' + team + '">Add</button>') +
+        '</div>';
+      if (full) out += '<p class="muted small">' + fullReason + '</p>';
+      out += '</div>';
+    });
+    return out;
+  }
+
+  function deckPreview(cfg) {
+    var pre = { town: [], mafia: [], neutral: [] };
+    var err = null;
+    try {
+      var st = E.createGame({
+        playerCount: cfg.playerCount,
+        presetId: cfg.presetId,
+        houseRules: cfg.houseRules,
+        town: cfg.deckConfig.town,
+        mafia: cfg.deckConfig.mafia,
+        neutral: cfg.deckConfig.neutral,
+        teamCounts: cfg.teamCounts || undefined,
+        civilians: cfg.civilians == null ? undefined : cfg.civilians
+      });
+      pre = E.getDeckPreview(st);
+    } catch (e) { err = e.message; }
+    var teams = ['TOWN', 'MAFIA', 'NEUTRAL'];
+    var out = '<div class="deck-preview"><p class="muted small">Deck preview</p>';
+    if (err) {
+      out += '<p class="muted small">' + UI.esc(err) + '</p>';
+      out += '</div>';
+      return out;
+    }
+    teams.forEach(function (team) {
+      var roles = pre[team.toLowerCase()] || [];
+      out += '<div class="deck-team"><div class="deck-team-head">' +
+        '<span class="team-dot team-' + team + '"></span><strong>' + UI.teamLabel(team) + '</strong>' +
+        '<span class="deck-count">' + roles.length + '</span></div>' +
+        '<div class="deck-chips">' +
+        (roles.length ? roles.map(function (r) {
+          return '<span class="deck-chip team-' + team + '">' + UI.roleName(r) + '</span>';
+        }).join('') : '<span class="muted small">none</span>') +
+        '</div></div>';
+    });
+    out += '</div>';
+    return out;
+  }
+
+  UI.renderSetup = function (cfg) {
+    var pc = cfg.playerCount;
+    var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[pc]) || { town: 0, mafia: 0, neutral: 0 };
+    var tc = cfg.teamCounts || ratio;
+    var total = tc.town + tc.mafia + tc.neutral;
+    var html = '';
+
+    html += '<div class="card"><h2>Players</h2>' +
+      '<div class="stepper">' +
+      '<button class="btn btn-stepper" data-action="count-dec" aria-label="Fewer players">-</button>' +
+      '<div class="stepper-num"><strong>' + pc + '</strong><span>players</span></div>' +
+      '<button class="btn btn-stepper" data-action="count-inc" aria-label="More players">+</button>' +
+      '</div>' +
+      '<div class="ratio">' + pc + ' players: <span class="team-TOWN-text">' + ratio.town + ' Town</span>, ' +
+      '<span class="team-MAFIA-text">' + ratio.mafia + ' Mafia</span>, ' +
+      '<span class="team-NEUTRAL-text">' + ratio.neutral + ' Neutral</span></div>' +
+      '<div class="team-structure">' +
+      '<div class="team-structure-head"><span class="muted small">Team structure (must total ' + pc + ')</span></div>' +
+      ['TOWN', 'MAFIA', 'NEUTRAL'].map(function (team) {
+        var key = team.toLowerCase();
+        var val = tc[key] || 0;
+        return '<div class="team-stepper">' +
+          '<span class="team-dot team-' + team + '"></span>' +
+          '<strong class="team-stepper-label">' + UI.teamLabel(team) + '</strong>' +
+          '<button class="btn btn-stepper-sm" data-action="team-count-dec" data-team="' + team + '" aria-label="Fewer ' + UI.teamLabel(team) + ' slots"' +
+          (val <= 0 ? ' disabled' : '') + '>-</button>' +
+          '<div class="team-stepper-num"><strong>' + val + '</strong></div>' +
+          '<button class="btn btn-stepper-sm" data-action="team-count-inc" data-team="' + team + '" aria-label="More ' + UI.teamLabel(team) + ' slots">+</button>' +
+          '</div>';
+      }).join('') +
+      '<div class="ratio">Total: <strong>' + total + '</strong> / ' + pc + ' players</div>' +
+      '</div></div>';
+
+    html += '<div class="card"><h2>Scenario</h2><div class="preset-grid">';
+    Object.keys(E.PRESETS || {}).forEach(function (id) {
+      var p = E.PRESETS[id];
+      var on = id === cfg.presetId ? ' selected' : '';
+      html += '<button class="preset-card' + on + '" data-action="preset-select" data-preset="' + UI.esc(id) + '">' +
+        '<span class="preset-name">' + UI.esc(p.name) + '</span>' +
+        '<span class="preset-tag">' + UI.esc(p.tagline) + '</span></button>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="card"><h2>House Rules</h2>';
+    [
+      ['noKillN1', 'No Kill on Night One', 'Night kills are void on the first night.'],
+      ['noLynchD1', 'No Lynch on Day One', 'No trial may end in a lynch on day one.'],
+      ['classicReveal', 'Classic Reveal Mode', 'Morning deaths show true roles.']
+    ].forEach(function (r) {
+      var on = cfg.houseRules[r[0]] ? ' on' : '';
+      html += '<button class="toggle-row" data-action="rule-toggle" data-rule="' + r[0] + '">' +
+        '<span class="toggle-text"><strong>' + r[1] + '</strong><small>' + r[2] + '</small></span>' +
+        '<span class="toggle' + on + '"><span class="toggle-knob"></span></span></button>';
+    });
+    html += '</div>';
+
+    html += '<div class="card"><h2>Seat Layout</h2><div class="layout-grid">';
+    (E.SEAT_LAYOUTS || ['circle']).forEach(function (l) {
+      var on = l === cfg.layout ? ' selected' : '';
+      var label = { circle: 'Circle', two_rows: 'Two Rows', u_shape: 'U Shape', rectangular: 'Table Grid' }[l] || l;
+      html += '<button class="layout-card' + on + '" data-action="layout-select" data-layout="' + UI.esc(l) + '">' +
+        '<span class="layout-icon layout-icon-' + UI.esc(l) + '"></span><span>' + label + '</span></button>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="card"><h2>Deck Builder</h2>' +
+      '<p class="muted small">Edit each team priority list, then check the live deck preview.</p>' +
+      deckBuilder(cfg) + deckPreview(cfg) + '</div>';
+
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="start-game">Start Game</button>';
+    return html;
+  };
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var UI = window.UI;
+
+  UI.renderSeats = function (state, cfg, app) {
+    if (!app.namingMode && state.players && state.players.length &&
+        state.players.every(function (p) { return p.assignedRole; })) {
+      return UI.renderSeatsDealt(state, cfg, app);
+    }
+    return UI.renderSeatsNaming(state, cfg, app);
+  };
+
+  UI.renderSeatsNaming = function (state, cfg, app) {
+    var n = state.playerCount || cfg.playerCount;
+    var html = '<div class="card">';
+    html += '<div class="card-head"><h2>Name the Seats</h2>' +
+      '<button class="btn btn-sm" data-action="goto-setup">Setup</button></div>';
+    html += UI.seatLayoutOpen(cfg);
+    for (var seat = 1; seat <= n; seat++) {
+      html += '<div class="seat-input-wrap"' + UI.seatPosAttr(cfg, seat, n) + '>' +
+        '<span class="seat-label">' + seat + '</span>' +
+        '<input class="seat-name-input" data-seat="' + seat +
+        '" value="' + UI.esc(app.names[seat] || ('Player ' + seat)) +
+        '" placeholder="Name" aria-label="Seat ' + seat + ' name"></div>';
+    }
+    html += UI.seatLayoutClose();
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="deal-roles">Deal Roles</button>' +
+      '</div>';
+    html += '<div class="hint">Deal one role per player in private. The app is moderator-only: keep the screen to yourself.</div>';
+    return html;
+  };
+
+  UI.renderSeatsDealt = function (state, cfg, app) {
+    var n = state.playerCount || cfg.playerCount;
+    var html = '<div class="card">';
+    html += '<div class="card-head"><h2>Seats</h2>' +
+      '<button class="btn btn-sm" data-action="toggle-roles">' +
+      (app.rolesHidden ? 'Show' : 'Hide') + ' Roles</button>' +
+      '<button class="btn btn-sm' + (app.swapMode ? ' on' : '') + '" data-action="swap-mode">' +
+      (app.swapMode ? 'Cancel Swap' : 'Swap Roles') + '</button></div>';
+    html += UI.flowStrip(state.phase);
+    if (app.swapMode) {
+      html += '<div class="hint"><strong>Swap mode:</strong> ' +
+        (app.swapSel == null
+          ? 'Tap a seat to select it, then tap a second seat to swap their roles.'
+          : 'Seat ' + app.swapSel + ' selected. Tap a second seat to swap, or Cancel Swap to exit.') +
+        '</div>';
+    }
+    html += UI.seatLayoutOpen(cfg);
+    UI.playersBySeat(state.players).forEach(function (p) {
+      var team = UI.teamOf(p.assignedRole);
+      var sel = app.swapMode && app.swapSel != null && String(app.swapSel) === String(p.seat)
+        ? ' swap-selected' : '';
+      var clickable = app.swapMode
+        ? ' data-action="swap-select" data-seat="' + p.seat + '"'
+        : '';
+      html += '<div class="seat-input-wrap' + sel + '"' + UI.seatPosAttr(cfg, p.seat, n) + '>' +
+        '<span class="seat-label">' + p.seat + '</span>' +
+        '<div class="seat-dealt team-' + team + '"' + clickable + '>' +
+        '<div class="seat-dealt-name">' + UI.esc(p.name || ('Player ' + p.seat)) + '</div>' +
+        '<div class="seat-role">' + (app.rolesHidden ? '&#8226;&#8226;&#8226;' : UI.roleName(p.assignedRole)) + '</div>' +
+        '<div class="seat-tags">' + UI.statusTags(p) + '</div></div></div>';
+    });
+    html += UI.seatLayoutClose();
+    html += '<div class="btn-row">' +
+      '<button class="btn" data-action="edit-names">Edit Names</button>' +
+      '<button class="btn" data-action="redeal">Redeal</button></div>';
+    html += '</div>';
+
+    html += '<div class="card">';
+    if (state.gfBluffs && state.gfBluffs.length) {
+      html += '<div class="hint"><strong>Godfather bluffs:</strong> ' + state.gfBluffs.map(UI.roleName).join(', ') + '</div>';
+    }
+    if (state.executionerTarget) {
+      html += '<div class="hint"><strong>Executioner target:</strong> ' + UI.esc(UI.nameOf(state, state.executionerTarget)) + '</div>';
+    }
+    if (state.deck && state.deck.indexOf('witch') !== -1) {
+      html += '<div class="hint"><strong>Witch side:</strong> ' +
+        '<button class="btn btn-sm' + (state.witchSide !== 'TOWN' ? ' on' : '') + '" data-action="witch-side" data-side="MAFIA">Mafia</button> ' +
+        '<button class="btn btn-sm' + (state.witchSide === 'TOWN' ? ' on' : '') + '" data-action="witch-side" data-side="TOWN">Town</button>' +
+        ' <span class="muted small">(ask the Witch privately before the game starts)</span></div>';
+    }
+    html += '<p class="muted small">Whisper the bluffs and targets above when roles are dealt.</p>';
+    html += '</div>';
+
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="begin-night">Begin Night 1</button>';
+    return html;
+  };
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI;
+
+  function corpseRoles() {
+    return ['undertaker', 'janitor', 'retributionist', 'amnesiac'];
+  }
+
+  function wizardActors(state, step) {
+    var out = [];
+    var roles = step.roles || [];
+    roles.forEach(function (role) {
+      (state.players || []).forEach(function (p) {
+        if (p.assignedRole !== role) return;
+        var allowDead = (role === 'medium' && step.position === 13) ||
+          (role === 'jester' && step.position === 0 && state.jester &&
+            state.jester.haunted && state.jester.hauntTarget === null);
+        if (!p.isAlive && !allowDead) return;
+        var done = ((state.night && state.night.actions) || []).some(function (ac) {
+          return ac.position === step.position && ac.roleId === role && String(ac.playerId) === String(p.id);
+        });
+        out.push({
+          role: role,
+          player: p,
+          name: p.name,
+          done: done,
+          inherited: role === 'deputy' && p.inheritedRole === 'sheriff'
+        });
+      });
+    });
+    return out;
+  }
+
+  function livingBtns(state, action, exclude) {
+    var html = '<div class="btn-col">';
+    UI.living(state.players).forEach(function (p) {
+      if (exclude != null && String(exclude) === String(p.id)) return;
+      html += '<button class="btn btn-actor" data-action="' + action + '" data-target="' + UI.esc(p.id) + '">' +
+        UI.esc(p.name) + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function corpseBtns(state) {
+    var g = state.graveyard || [];
+    if (!g.length) return '<p class="muted">No corpses yet.</p>';
+    var html = '<div class="btn-col">';
+    g.forEach(function (x) {
+      html += '<button class="btn btn-actor" data-action="wizard-target" data-target="' + UI.esc(x.playerId) + '">' +
+        UI.esc(x.name) + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function actorControls(state, step, w) {
+    var role = w.actor.role;
+    var pid = w.actor.player;
+    if (pid && typeof pid === 'object') pid = pid.id;
+    var p = UI.findPlayer(state, pid);
+    var html = '';
+    html += '<p class="wizard-label">Acting: ' + UI.esc(p && p.name ? p.name : pid) + ' - ' + UI.roleName(role) +
+      (w.actor.inherited ? ' (inherited)' : '') + '</p>';
+
+    if (role === 'veteran') {
+      html += '<div class="btn-col">' +
+        '<button class="btn btn-primary" data-action="wizard-alert" data-alert="true">Yes, Alert</button>' +
+        '<button class="btn" data-action="wizard-alert" data-alert="false">No Alert</button></div>';
+    } else if (role === 'witch') {
+      if (!w.pending || !w.pending.control) {
+        html += '<p class="wizard-label">Point to the player you control</p>' + livingBtns(state, 'wizard-target');
+      } else {
+        html += '<p class="wizard-label">Controlled: ' + UI.esc(UI.nameOf(state, w.pending.control)) +
+          '. Now point to the redirect target</p>' + livingBtns(state, 'wizard-target');
+      }
+    } else if (role === 'jailor') {
+      if (!w.pending || !w.pending.jail) {
+        html += '<p class="wizard-label">Point to your jail target</p>' + livingBtns(state, 'wizard-target');
+      } else {
+        html += '<p class="wizard-label">Jailed: ' + UI.esc(UI.nameOf(state, w.pending.jail)) + '. Execute or spare?</p>';
+        if (state.night && state.night.number === 1) {
+          html += '<p class="muted small">Night 1: no execution allowed.</p>';
+        }
+        html += '<div class="btn-col">' +
+          '<button class="btn btn-danger" data-action="wizard-decision" data-decision="EXECUTE">EXECUTE</button>' +
+          '<button class="btn btn-ok" data-action="wizard-decision" data-decision="SPARE">SPARE</button></div>';
+      }
+    } else if (role === 'forger') {
+      if (!w.pending || !w.pending.forge) {
+        html += '<p class="wizard-label">Point to the player whose will you forge</p>' + livingBtns(state, 'wizard-target');
+      } else {
+        html += '<p class="wizard-label">Forging a will for: ' + UI.esc(UI.nameOf(state, w.pending.forge)) + '</p>' +
+          '<textarea id="forge-will" rows="3" class="will-input" placeholder="Forged last will text"></textarea>' +
+          '<button class="btn btn-primary btn-block" data-action="wizard-forge">Confirm Forge</button>';
+      }
+    } else if (role === 'medium') {
+      if (p.isAlive) {
+        html += '<button class="btn btn-block" data-action="wizard-target" data-target="__none__">' +
+          'Medium read the Ghost Ledger (no target)</button>';
+      } else {
+        html += '<p class="wizard-label">Dead Medium: pick a living player to whisper with</p>' +
+          livingBtns(state, 'wizard-target');
+      }
+    } else if (role === 'jester') {
+      var guiltyVoters = ((state.trial && state.trial.votes) || []).filter(function (v) {
+        return v.verdict === 'GUILTY';
+      }).map(function (v) {
+        return UI.findPlayer(state, v.voterId);
+      }).filter(function (gp) {
+        return gp && gp.isAlive;
+      });
+      if (!guiltyVoters.length) {
+        html += '<p class="wizard-label">No living Guilty voters from the lynch trial.</p>' +
+          '<p class="muted small">The haunt may only target someone who voted Guilty.</p>';
+      } else {
+        html += '<p class="wizard-label">Pick one player who voted Guilty in the lynch trial</p>' +
+          '<div class="btn-col">';
+        guiltyVoters.forEach(function (gp) {
+          html += '<button class="btn btn-actor" data-action="wizard-target" data-target="' + UI.esc(gp.id) + '">' +
+            UI.esc(gp.name) + '</button>';
+        });
+        html += '</div>';
+      }
+    } else {
+      var corpses = corpseRoles().indexOf(role) !== -1;
+      html += '<p class="wizard-label">' + (corpses ? 'Point to a corpse' : 'Point to your target') + '</p>';
+      html += corpses ? corpseBtns(state) : livingBtns(state, 'wizard-target');
+    }
+
+    html += '<div class="btn-row">' +
+      '<button class="btn btn-sm" data-action="wizard-actor-back">Back</button>' +
+      '<button class="btn btn-sm" data-action="wizard-skip">Skip</button></div>';
+    return html;
+  }
+
+  function nightWizard(state, cfg, app) {
+    var w = app.wizard;
+    var steps = w.steps || [];
+    var idx = Math.min(w.idx, Math.max(0, steps.length - 1));
+    var html = '<div class="card night-card">';
+    if (!steps.length) {
+      html += '<h2>No night steps</h2><p class="muted">Tap Resolve Night to continue.</p>';
+      html += '</div>';
+      return html;
+    }
+    var step = steps[idx];
+    html += '<div class="wizard-progress">Step ' + (idx + 1) + ' of ' + steps.length + '</div>';
+    html += '<h2 class="wizard-title">' + UI.esc(step.title) + '</h2>';
+    html += '<p class="wizard-prompt">' + UI.esc(step.prompt) + '</p>';
+    if (step.timerSeconds) {
+      html += '<div class="timer" data-timer-seconds="' + step.timerSeconds + '" data-timer-kind="step"></div>';
+    }
+    if (step.position >= 14) {
+      html += '<p class="muted">Morning has broken. Night recording is complete: tap <strong>Resolve Night</strong> below to process it.</p>';
+    } else {
+      var actors = wizardActors(state, step);
+      var remaining = actors.filter(function (a) { return !a.done; });
+      if (!actors.length) {
+        html += '<p class="muted">No eligible actors this night.</p>';
+        html += '<button class="btn btn-block" data-action="wizard-next">Continue</button>';
+      } else if (!w.actor) {
+        actors.filter(function (a) { return a.done; }).forEach(function (a) {
+          html += '<div class="actor-done"><span class="tag tag-ok">RECORDED</span> ' +
+            UI.esc(a.name) + ' - ' + UI.roleName(a.role) + '</div>';
+        });
+        if (!remaining.length) {
+          html += '<p class="muted small">All actors recorded. Continue to the next step.</p>';
+          html += '<button class="btn btn-primary btn-block" data-action="wizard-next">Next Step</button>';
+        } else {
+          html += '<p class="wizard-label">Who acts?</p><div class="btn-col">';
+          remaining.forEach(function (a) {
+            html += '<button class="btn btn-actor" data-action="wizard-actor" data-role="' + UI.esc(a.role) +
+              '" data-player="' + UI.esc(a.player.id) + '">' + UI.esc(a.name) + ' - ' + UI.roleName(a.role) + '</button>';
+          });
+          html += '</div>';
+          html += '<button class="btn btn-block" data-action="wizard-next">Skip to next step</button>';
+        }
+      } else {
+        html += actorControls(state, step, w);
+      }
+    }
+    if (idx > 0) {
+      html += '<button class="btn btn-sm" data-action="wizard-back" style="margin-top:10px;">Previous step</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  UI.nightWizard = nightWizard;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI;
+
+  UI.renderGameHeader = function (state, cfg, app) {
+    var label = 'Game';
+    if (state.phase === 'NIGHT') label = 'Night ' + Math.max(1, (state.dayNumber || 0) + 1);
+    else if (state.phase === 'MORNING') label = 'Morning ' + Math.max(1, state.dayNumber || 1);
+    else if (state.phase === 'DAY') label = 'Day ' + Math.max(1, state.dayNumber || 1);
+    else if (state.phase === 'END') label = 'Game Over';
+    return '<div class="card card-head" style="padding:10px 14px;">' +
+      '<span class="tag tag-accent">' + UI.esc(state.phase) + '</span>' +
+      '<strong>' + label + '</strong>' +
+      '<button class="btn btn-sm" data-action="toggle-seat-overlay">Seats</button>' +
+      '<button class="btn btn-sm" data-action="toggle-logs">Log</button></div>' +
+      UI.flowStrip(state.phase);
+  };
+
+  UI.renderGame = function (state, cfg, app) {
+    var body = '';
+    var bar = '';
+    if (app.seatOverlay) {
+      body += '<div class="card"><div class="card-head"><h2>Seat Grid</h2>' +
+        '<button class="btn btn-sm" data-action="toggle-seat-overlay">Close</button></div>' +
+        UI.seatTiles(state, app.rolesHidden) + '</div>';
+    }
+    if (state.phase === 'NIGHT') {
+      body += UI.nightWizard(state, cfg, app);
+      bar = '<button class="btn btn-primary btn-bar" data-action="resolve-night">Resolve Night</button>';
+    } else if (state.phase === 'MORNING') {
+      body += morningView(state, cfg, app);
+      bar = app.willOpen
+        ? '<button class="btn btn-primary btn-bar" data-action="pencils-down">Pencils Down</button>'
+        : '<button class="btn btn-primary btn-bar" data-action="begin-day">Begin Day</button>';
+    } else if (state.phase === 'DAY') {
+      body += dayView(state, cfg, app);
+      bar = dayBar(state, app);
+    } else {
+      body += '<p class="muted">Game over.</p>';
+    }
+    body += logsCard(state, app);
+    return { body: body, bar: bar };
+  };
+
+  function morningView(state, cfg, app) {
+    var html = '';
+    if (app.willOpen) {
+      html += '<div class="card"><div class="card-head"><h2>Last Will Window</h2>' +
+        '<div class="timer" data-timer-seconds="30" data-timer-kind="will"></div></div>';
+      html += '<p class="muted small">Take 30 seconds to update wills silently, then tap <strong>Pencils Down</strong> below.</p>';
+      UI.living(state.players).forEach(function (p) {
+        html += '<label class="will-row"><span class="will-name">' + UI.esc(p.name) + '</span>' +
+          '<textarea class="will-input" data-action="will-input" data-player="' + UI.esc(p.id) +
+          '" rows="2" placeholder="Last will...">' + UI.esc(p.lastWill || '') + '</textarea></label>';
+      });
+      html += '</div>';
+      return html;
+    }
+    var ann;
+    try { ann = E.getMorningAnnouncement(state); } catch (e) { ann = {}; }
+    ann = ann || {};
+    html += '<div class="card"><h2>Morning Announcement</h2>';
+    if (ann.revivals && ann.revivals.length) {
+      html += '<div class="notice ok"><strong>Revived:</strong> ' + ann.revivals.map(UI.esc).join(', ') + '</div>';
+    }
+    if (ann.inheritanceNote) {
+      html += '<div class="notice accent">' + UI.esc(ann.inheritanceNote) + '</div>';
+    }
+    if (ann.deaths && ann.deaths.length) {
+      ann.deaths.forEach(function (d) {
+        html += '<div class="death-card"><div class="death-head">' +
+          '<strong>' + UI.esc(d.name) + '</strong><span class="tag tag-bad">DEAD</span></div>' +
+          '<div class="death-will">"' + UI.esc(d.will || 'No will') + '"</div>' +
+          '<div class="death-role">' + UI.esc(d.roleShown || '?? UNKNOWN ??') + '</div></div>';
+      });
+    } else {
+      html += '<div class="notice">No deaths last night.</div>';
+    }
+    html += '</div>';
+    html += '<div class="card"><p class="muted">Wills are locked until tomorrow morning. Tap <strong>Begin Day</strong> below to open discussion.</p></div>';
+    return html;
+  }
+
+  function dayAbilities(state) {
+    var html = '<div class="btn-col">';
+    var vig = null, dep = null, may = null;
+    (state.players || []).forEach(function (p) {
+      if (!p.isAlive) return;
+      if (p.assignedRole === 'vigilante') vig = p;
+      if (p.assignedRole === 'deputy') dep = p;
+      if (p.assignedRole === 'mayor') may = p;
+    });
+    if (vig) {
+      var maxUses = (E.ROLES && E.ROLES.vigilante && E.ROLES.vigilante.maxUses) || 3;
+      var left = Math.max(0, maxUses - (vig.shotsFired || 0));
+      html += '<button class="btn" data-action="day-ability" data-ability="vigilante" ' +
+        (left > 0 ? '' : 'disabled') + '>Vigilante Shot (' + left + ' left)</button>';
+    }
+    if (dep && !dep.usedOncePerGame) {
+      html += '<button class="btn" data-action="day-ability" data-ability="deputy">Deputy Shoot (once)</button>';
+    }
+    if (may && !may.revealed) {
+      html += '<button class="btn" data-action="day-ability" data-ability="mayor">Mayor Reveal</button>';
+    }
+    if (!vig && !dep && !may) {
+      html += '<p class="muted">No day abilities available.</p>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function tallyChips(state) {
+    var votes = (state.trial && state.trial.votes) || [];
+    var g = 0, i = 0, a = 0;
+    votes.forEach(function (v) {
+      var voter = UI.findPlayer(state, v.voterId);
+      var weight = 1;
+      if (voter && voter.isAlive && voter.revealed && voter.assignedRole === 'mayor') weight = 3;
+      if (v.verdict === 'GUILTY') g += weight;
+      else if (v.verdict === 'INNOCENT') i += weight;
+      else a += weight;
+    });
+    return '<div class="tally">' +
+      '<span class="tally-chip g">GUILTY ' + g + '</span>' +
+      '<span class="tally-chip i">INNOCENT ' + i + '</span>' +
+      '<span class="tally-chip a">ABSTAIN ' + a + '</span></div>';
+  }
+
+  function ghostTokens(state) {
+    var holders = UI.dead(state.players).filter(function (p) {
+      return p.hasGhostVote && !p.ghostVoteSpent;
+    });
+    if (!holders.length) return '';
+    return '<p class="muted small">Ghost tokens: ' +
+      holders.map(function (p) { return UI.esc(p.name); }).join(', ') + '</p>';
+  }
+
+  function trialView(state, cfg, app) {
+    var tr = state.trial;
+    var html = '<div class="card"><div class="card-head"><h2>Trial</h2></div>';
+    if (app.lastTrialResult) {
+      var r = app.lastTrialResult;
+      html += '<div class="notice ' + (r.lynchedId ? 'bad' : 'ok') + '">' +
+        (r.lynchedId ? '<strong>Lynched:</strong> ' + UI.esc(UI.nameOf(state, r.lynchedId)) :
+          '<strong>Acquitted:</strong> no one was lynched') +
+        (r.jesterWin ? '<br><strong>The Jester wins!</strong>' : '') +
+        (r.executionerWin ? '<br><strong>The Executioner wins!</strong>' : '') +
+        (r.victory ? '<br>' + UI.esc(r.victory.winner || 'Victory!') : '') +
+        '</div>';
+      html += '<button class="btn btn-block" data-action="clear-trial">OK</button>';
+      html += '</div>';
+      return html;
+    }
+    if (!tr || !tr.active) {
+      if (app.trialStage === 'nominator') {
+        html += '<p class="wizard-label">Who nominates?</p>' + livingBtns(state, 'pick-nom');
+      } else if (app.trialStage === 'accused') {
+        html += '<p class="wizard-label">Who is accused?</p>' + livingBtns(state, 'pick-acc', app.trialNom);
+      } else {
+        html += '<button class="btn btn-block" data-action="start-trial">Start Trial</button>';
+        html += '<p class="muted small">At most one lynch per day. Guilty must strictly exceed all other votes.</p>';
+      }
+    } else {
+      html += '<p><strong>Accused:</strong> ' + UI.esc(UI.nameOf(state, tr.accusedId)) +
+        ' &nbsp;<strong>Nominated by:</strong> ' + UI.esc(UI.nameOf(state, tr.nominatorId)) + '</p>';
+      html += tallyChips(state);
+      html += ghostTokens(state);
+      var voters = [];
+      UI.living(state.players).forEach(function (p) {
+        voters.push({ p: p, ghost: false });
+      });
+      UI.dead(state.players).forEach(function (p) {
+        if (p.hasGhostVote && !p.ghostVoteSpent) voters.push({ p: p, ghost: true });
+      });
+      var votesBy = {};
+      (tr.votes || []).forEach(function (v) {
+        votesBy[String(v.voterId) + (v.ghostToken ? 'g' : 'l')] = v.verdict;
+      });
+      voters.forEach(function (v) {
+        var key = String(v.p.id) + (v.ghost ? 'g' : 'l');
+        var cur = votesBy[key];
+        html += '<div class="voter-row' + (v.ghost ? ' ghost-voter' : '') + '">' +
+          '<span class="voter-name">' + UI.esc(v.p.name) + (v.ghost ? ' <span class="muted">(ghost)</span>' : '') + '</span>' +
+          '<span class="vote-btns">' +
+          '<button class="btn btn-vote' + (cur === 'GUILTY' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+          UI.esc(v.p.id) + '" data-verdict="GUILTY" data-ghost="' + (v.ghost ? '1' : '0') + '">Guilty</button>' +
+          '<button class="btn btn-vote' + (cur === 'INNOCENT' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+          UI.esc(v.p.id) + '" data-verdict="INNOCENT" data-ghost="' + (v.ghost ? '1' : '0') + '">Innocent</button>' +
+          (v.ghost ? '' :
+            '<button class="btn btn-vote' + (cur === 'ABSTAIN' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+            UI.esc(v.p.id) + '" data-verdict="ABSTAIN" data-ghost="0">Abstain</button>') +
+          '</span></div>';
+      });
+      html += '<p class="muted small">Ghost votes spend the ghost token. A revealed Mayor counts as 3.</p>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function dayView(state, cfg, app) {
+    var html = '';
+    html += '<div class="card"><h2>Day Abilities</h2>' + dayAbilities(state) + '</div>';
+    if (app.picker) {
+      html += '<div class="card picker-card"><h2>' + UI.esc(app.picker.title) + '</h2>' +
+        '<p class="muted small">' + UI.esc(app.picker.sub || '') + '</p>' +
+        livingBtns(state, 'pick-day-target') +
+        '<button class="btn btn-block" data-action="picker-cancel">Cancel</button></div>';
+    }
+    html += trialView(state, cfg, app);
+    return html;
+  }
+
+  function dayBar(state, app) {
+    var b = '';
+    if (app.picker) {
+      b += '<button class="btn btn-bar" data-action="picker-cancel">Cancel</button>';
+    }
+    if (state.trial && state.trial.active && !app.lastTrialResult) {
+      b += '<button class="btn btn-primary btn-bar" data-action="resolve-trial">Resolve Trial</button>';
+    }
+    b += '<button class="btn btn-primary btn-bar" data-action="end-day">End Day</button>';
+    return b;
+  }
+
+  function logsCard(state, app) {
+    var logs = state.logs || [];
+    var html = '<div class="card">' +
+      '<button class="btn btn-sm" data-action="toggle-logs">Event Log (' + logs.length + ')</button>' +
+      '<div class="logs' + (app.logsOpen ? ' open' : '') + '">' +
+      (logs.length ? '<ul>' + logs.slice().reverse().map(function (l) {
+        return '<li>' + UI.esc(l) + '</li>';
+      }).join('') + '</ul>' : '<p class="muted small">No events yet.</p>') +
+      '</div></div>';
+    return html;
+  }
+
+  function livingBtns(state, action, exclude) {
+    var html = '<div class="btn-col">';
+    UI.living(state.players).forEach(function (p) {
+      if (exclude != null && String(exclude) === String(p.id)) return;
+      html += '<button class="btn btn-actor" data-action="' + action + '" data-target="' + UI.esc(p.id) + '">' +
+        UI.esc(p.name) + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var UI = window.UI;
+
+  UI.renderEnd = function (state, cfg, app) {
+    var html = '';
+    var w = state.winner;
+    var labels = {
+      TOWN: 'The Town Wins',
+      MAFIA: 'The Mafia Wins',
+      'SERIAL KILLER': 'The Serial Killer Wins',
+      SERIAL_KILLER: 'The Serial Killer Wins',
+      SK: 'The Serial Killer Wins',
+      JESTER: 'The Jester Wins',
+      EXECUTIONER: 'The Executioner Wins',
+      WITCH: 'The Witch Wins',
+      SURVIVOR: 'The Survivor Wins'
+    };
+    var title = labels[w] || (w ? String(w) + ' Wins' : 'Game Over');
+    html += '<div class="end-banner"><h1>' + UI.esc(title) + '</h1>';
+    if (app.lastVictory) {
+      if (app.lastVictory.reason) html += '<p class="muted">' + UI.esc(app.lastVictory.reason) + '</p>';
+      if (app.lastVictory.survivors && app.lastVictory.survivors.length) {
+        html += '<p class="muted">Surviving: ' + app.lastVictory.survivors.map(function (id) {
+          return UI.esc(UI.nameOf(state, id));
+        }).join(', ') + '</p>';
+      }
+    }
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-head"><h2>Role Reveal</h2></div>';
+    if (app.endReveal && app.endReveal.length) {
+      html += '<div class="seat-tiles">';
+      app.endReveal.forEach(function (r) {
+        var tags = r.isAlive ? '<span class="tag tag-ok">ALIVE</span>' : '<span class="tag tag-ghost">GHOST</span>';
+        if (r.inheritedRole) tags += '<span class="tag tag-warn">INHERITED SHERIFF</span>';
+        html += '<div class="seat-tile team-' + r.team + '">' +
+          '<div class="seat-tile-top"><span class="seat-label">' + r.seat + '</span>' +
+          '<span class="seat-name">' + UI.esc(r.name) + '</span></div>' +
+          '<div class="seat-role">' + UI.esc(r.roleName || r.role) + '</div>' +
+          '<div class="seat-tags">' + tags + '</div></div>';
+      });
+      html += '</div>';
+    } else {
+      html += UI.seatTiles(state, false);
+    }
+    html += '<p class="muted small">Mystery deaths and Janitor cleaning are void: true roles are shown for everyone.</p></div>';
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="new-game">New Game</button>';
+    return html;
+  };
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var APP = {
+    SAVE_KEY: 'villagepub-save',
+    state: null,
+    cfg: null,
+    app: {
+      screen: 'setup',
+      wizard: null,
+      willOpen: false,
+      rolesHidden: false,
+      namingMode: false,
+      trialStage: null,
+      trialNom: null,
+      lastTrialResult: null,
+      lastVictory: null,
+      picker: null,
+      seatOverlay: false,
+      logsOpen: false,
+      swapMode: false,
+      swapSel: null,
+      names: {},
+      endReveal: null,
+      timerDeadline: null
+    }
+  };
+
+  function defaultCfg() {
+    var keys = E.PRESETS ? Object.keys(E.PRESETS) : ['p1'];
+    var preset = E.PRESETS[keys[0]] || { town: [], mafia: [], neutral: [] };
+    var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[8]) || { town: 5, mafia: 2, neutral: 1 };
+    return {
+      playerCount: 8,
+      presetId: keys[0],
+      houseRules: { noKillN1: false, noLynchD1: false, classicReveal: false },
+      layout: (E.SEAT_LAYOUTS && E.SEAT_LAYOUTS[0]) || 'circle',
+      teamCounts: { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral },
+      civilians: null,
+      deckConfig: {
+        town: (preset.town || []).slice(),
+        mafia: (preset.mafia || []).slice(),
+        neutral: (preset.neutral || []).slice()
+      }
+    };
+  }
+
+  function mergeCfg(base, saved) {
+    var out = JSON.parse(JSON.stringify(base));
+    if (saved.playerCount) out.playerCount = saved.playerCount;
+    if (saved.presetId) out.presetId = saved.presetId;
+    if (saved.houseRules) out.houseRules = Object.assign({}, out.houseRules, saved.houseRules);
+    if (saved.layout) out.layout = saved.layout;
+    if (saved.teamCounts && saved.teamCounts.town != null) {
+      out.teamCounts = { town: saved.teamCounts.town, mafia: saved.teamCounts.mafia, neutral: saved.teamCounts.neutral };
+    } else {
+      var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[out.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+      out.teamCounts = { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral };
+    }
+    if (saved.civilians != null) out.civilians = saved.civilians;
+    if (saved.deckConfig) {
+      out.deckConfig = {
+        town: (saved.deckConfig.town || []).slice(),
+        mafia: (saved.deckConfig.mafia || []).slice(),
+        neutral: (saved.deckConfig.neutral || []).slice()
+      };
+    }
+    return out;
+  }
+
+  function teamCountsObj() {
+    return APP.cfg.teamCounts || (E.RATIO_TABLE && E.RATIO_TABLE[APP.cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+  }
+
+  function teamLabel(t) {
+    return { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral' }[t] || t;
+  }
+
+  function deckList(team) { return APP.cfg.deckConfig[String(team).toLowerCase()]; }
+
+  function teamAddAllowed(team) {
+    var tc = teamCountsObj();
+    var key = team.toLowerCase();
+    var slots = tc[key] || 0;
+    var list = deckList(team);
+    if (team === 'TOWN') {
+      var civs = APP.cfg.civilians == null ? 0 : Math.max(0, Math.min(slots, Number(APP.cfg.civilians) || 0));
+      return list.length < Math.max(0, slots - civs);
+    }
+    return list.length < slots;
+  }
+
+  function townLeftoverCivilians() {
+    var slots = teamCountsObj().town || 0;
+    return Math.max(0, slots - Math.min(deckList('TOWN').length, slots));
+  }
+
+  function resetAppFlags() {
+    APP.app.wizard = null;
+    APP.app.willOpen = false;
+    APP.app.rolesHidden = false;
+    APP.app.namingMode = false;
+    APP.app.trialStage = null;
+    APP.app.trialNom = null;
+    APP.app.lastTrialResult = null;
+    APP.app.lastVictory = null;
+    APP.app.picker = null;
+    APP.app.seatOverlay = false;
+    APP.app.logsOpen = false;
+    APP.app.swapMode = false;
+    APP.app.swapSel = null;
+    APP.app.names = {};
+    APP.app.endReveal = null;
+  }
+
+  APP.defaultCfg = defaultCfg;
+  APP.mergeCfg = mergeCfg;
+  APP.teamCountsObj = teamCountsObj;
+  APP.teamLabel = teamLabel;
+  APP.deckList = deckList;
+  APP.teamAddAllowed = teamAddAllowed;
+  APP.townLeftoverCivilians = townLeftoverCivilians;
+  APP.resetAppFlags = resetAppFlags;
+  APP.init = function () {
+    APP.state = null;
+    APP.cfg = APP.defaultCfg();
+  };
+
+  window.APP = APP;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var APP = window.APP;
+
+  function save() {
+    var app = APP.app;
+    var ui = {
+      rolesHidden: app.rolesHidden,
+      willOpen: app.willOpen,
+      namingMode: app.namingMode,
+      wizardIdx: app.wizard ? app.wizard.idx : 0
+    };
+    var payload = { cfg: APP.cfg, ui: ui, game: APP.state ? E.serialize(APP.state) : null };
+    try {
+      localStorage.setItem(APP.SAVE_KEY, JSON.stringify(payload));
+    } catch (e) { }
+  }
+
+  function renderResumeBanner() {
+    var host = APP.el('resume-banner');
+    var data = null;
+    try { data = JSON.parse(localStorage.getItem(APP.SAVE_KEY) || 'null'); } catch (e) { data = null; }
+    if (data && data.game) {
+      host.innerHTML = '<div class="resume-banner"><strong>Saved game found</strong>' +
+        '<span class="muted small">A game is in progress. Resume it or start fresh.</span>' +
+        '<div class="btn-row"><button class="btn btn-primary" data-action="resume-game">Resume</button>' +
+        '<button class="btn" data-action="new-game">New Game</button></div></div>';
+    } else {
+      host.innerHTML = '';
+    }
+  }
+
+  function afterMutation() {
+    save();
+    APP.renderScreen(APP.app.screen);
+  }
+
+  function loadSave() {
+    var data = null;
+    try { data = JSON.parse(localStorage.getItem(APP.SAVE_KEY) || 'null'); } catch (e) { data = null; }
+    return data;
+  }
+
+  function clearSave() {
+    try { localStorage.removeItem(APP.SAVE_KEY); } catch (e) { }
+  }
+
+  APP.save = save;
+  APP.renderResumeBanner = renderResumeBanner;
+  APP.afterMutation = afterMutation;
+  APP.loadSave = loadSave;
+  APP.clearSave = clearSave;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var UI = window.UI || {};
+  var APP = window.APP;
+
+  function el(id) { return document.getElementById(id); }
+
+  function renderSetupOnly() {
+    el('setup-body').innerHTML = UI.renderSetup(APP.cfg);
+    APP.renderResumeBanner();
+  }
+
+  function renderGame() {
+    var out = UI.renderGame(APP.state, APP.cfg, APP.app);
+    el('game-header').innerHTML = UI.renderGameHeader(APP.state, APP.cfg, APP.app);
+    el('game-body').innerHTML = out.body;
+    el('game-bar').innerHTML = out.bar;
+    startTimers();
+  }
+
+  function renderScreen(name) {
+    if (!APP.state) {
+      renderSetupOnly();
+      return;
+    }
+    if (name === 'setup') renderSetupOnly();
+    else if (name === 'seats') el('seats-body').innerHTML = UI.renderSeats(APP.state, APP.cfg, APP.app);
+    else if (name === 'game') renderGame();
+    else if (name === 'end') el('end-body').innerHTML = UI.renderEnd(APP.state, APP.cfg, APP.app);
+  }
+
+  function goto(name) {
+    APP.app.screen = name;
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.classList.toggle('active', s.getAttribute('data-screen') === name);
+    });
+    renderScreen(name);
+    window.scrollTo(0, 0);
+  }
+
+  function refreshSetup() {
+    APP.save();
+    renderSetupOnly();
+  }
+
+  var timerId = null;
+
+  function clearTimer() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+  }
+
+  function onTimerDone(kind) {
+    APP.app.timerDeadline = null;
+    if (kind === 'will') {
+      APP.app.willOpen = false;
+      UI.toast('Pencils down! Wills are locked.');
+      APP.afterMutation();
+    } else {
+      UI.toast('Time is up.');
+    }
+  }
+
+  function startTimers() {
+    clearTimer();
+    var t = document.querySelector('[data-timer-seconds]');
+    if (!t) { APP.app.timerDeadline = null; return; }
+    var total = Number(t.getAttribute('data-timer-seconds')) || 0;
+    var kind = t.getAttribute('data-timer-kind') || 'step';
+    if (APP.app.timerDeadline == null) APP.app.timerDeadline = Date.now() + total * 1000;
+    var tick = function () {
+      var remain = Math.max(0, Math.round((APP.app.timerDeadline - Date.now()) / 1000));
+      t.textContent = remain + 's';
+      if (remain <= 0) {
+        clearTimer();
+        APP.app.timerDeadline = null;
+        onTimerDone(kind);
+      }
+    };
+    tick();
+    if (t.textContent !== '0s') timerId = setInterval(tick, 1000);
+  }
+
+  APP.el = el;
+  APP.goto = goto;
+  APP.renderScreen = renderScreen;
+  APP.renderSetupOnly = renderSetupOnly;
+  APP.renderGame = renderGame;
+  APP.refreshSetup = refreshSetup;
+  APP.startTimers = startTimers;
+  APP.clearTimer = clearTimer;
+  APP.onTimerDone = onTimerDone;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI || {};
+  var APP = window.APP;
+
+  function selectPreset(id) {
+    APP.cfg.presetId = id;
+    var p = E.PRESETS[id];
+    if (p) {
+      APP.cfg.deckConfig = {
+        town: (p.town || []).slice(),
+        mafia: (p.mafia || []).slice(),
+        neutral: (p.neutral || []).slice()
+      };
+    }
+  }
+
+  function addRole(team) {
+    if (!APP.teamAddAllowed(team)) {
+      var tc = APP.teamCountsObj();
+      var slots = tc[String(team).toLowerCase()] || 0;
+      var reason;
+      if (team === 'TOWN' && APP.cfg.civilians != null && APP.cfg.civilians > 0) {
+        var free = Math.max(0, slots - Math.min(slots, Number(APP.cfg.civilians) || 0));
+        reason = 'Only ' + free + ' named Town slot' + (free === 1 ? '' : 's') + ' remain (' +
+          APP.cfg.civilians + ' civilian' + (APP.cfg.civilians === 1 ? '' : 's') + ' reserved).';
+      } else {
+        reason = 'All ' + slots + ' ' + APP.teamLabel(team) + ' slot' + (slots === 1 ? '' : 's') + ' are assigned.';
+      }
+      UI.toast(reason);
+      return;
+    }
+    var sel = APP.el('add-' + team);
+    if (!sel) return;
+    var id = sel.value;
+    var list = APP.deckList(team);
+    if (list.indexOf(id) === -1) list.push(id);
+  }
+
+  function removeRole(team, index) {
+    var list = APP.deckList(team);
+    if (index >= 0 && index < list.length) list.splice(index, 1);
+  }
+
+  function moveRole(team, index, dir) {
+    var list = APP.deckList(team);
+    var j = index + dir;
+    if (index < 0 || j < 0 || index >= list.length || j >= list.length) return;
+    var tmp = list[index];
+    list[index] = list[j];
+    list[j] = tmp;
+  }
+
+  function teamInc(team) {
+    var tc = APP.teamCountsObj();
+    var total = (tc.town || 0) + (tc.mafia || 0) + (tc.neutral || 0);
+    if (total >= APP.cfg.playerCount) {
+      UI.toast('Team totals cannot exceed the player count (' + APP.cfg.playerCount + '). Lower another team first.');
+      return;
+    }
+    APP.cfg.teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
+    APP.cfg.teamCounts[String(team).toLowerCase()] += 1;
+    APP.refreshSetup();
+  }
+
+  function teamDec(team) {
+    var tc = APP.teamCountsObj();
+    var key = String(team).toLowerCase();
+    if ((tc[key] || 0) <= 0) return;
+    APP.cfg.teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
+    APP.cfg.teamCounts[key] -= 1;
+    APP.refreshSetup();
+  }
+
+  function civInc() {
+    var slots = APP.teamCountsObj().town || 0;
+    var cur = APP.cfg.civilians == null ? APP.townLeftoverCivilians() : Number(APP.cfg.civilians) || 0;
+    if (cur >= slots) {
+      UI.toast('Civilian count cannot exceed the Town slot count (' + slots + ').');
+      return;
+    }
+    APP.cfg.civilians = cur + 1;
+    APP.refreshSetup();
+  }
+
+  function civDec() {
+    var cur = APP.cfg.civilians == null ? APP.townLeftoverCivilians() : Number(APP.cfg.civilians) || 0;
+    if (cur <= 0) {
+      UI.toast('Civilian count cannot go below zero.');
+      return;
+    }
+    APP.cfg.civilians = cur - 1;
+    APP.refreshSetup();
+  }
+
+  function startGame() {
+    var tc = APP.cfg.teamCounts;
+    if (tc) {
+      var total = (tc.town || 0) + (tc.mafia || 0) + (tc.neutral || 0);
+      if (total !== APP.cfg.playerCount) {
+        UI.toast('Team totals must equal the player count (' + APP.cfg.playerCount + '), currently ' + total + '.');
+        return;
+      }
+    }
+    try {
+      APP.state = E.createGame({
+        playerCount: APP.cfg.playerCount,
+        presetId: APP.cfg.presetId,
+        houseRules: APP.cfg.houseRules,
+        town: APP.cfg.deckConfig.town,
+        mafia: APP.cfg.deckConfig.mafia,
+        neutral: APP.cfg.deckConfig.neutral,
+        teamCounts: tc || undefined,
+        civilians: APP.cfg.civilians == null ? undefined : APP.cfg.civilians
+      });
+      APP.resetAppFlags();
+      APP.save();
+      APP.goto('seats');
+    } catch (e) {
+      UI.toast('Setup error: ' + e.message);
+    }
+  }
+
+  function newGame() {
+    APP.clearSave();
+    APP.state = null;
+    APP.cfg = APP.defaultCfg();
+    APP.resetAppFlags();
+    APP.goto('setup');
+  }
+
+  function resumeGame() {
+    var data = APP.loadSave();
+    if (!data || !data.game) { UI.toast('No saved game found.'); return; }
+    try {
+      APP.state = E.deserialize(data.game);
+      if (data.cfg) APP.cfg = APP.mergeCfg(APP.cfg, data.cfg);
+      APP.app.rolesHidden = !!(data.ui && data.ui.rolesHidden);
+      APP.app.willOpen = false;
+      APP.app.namingMode = false;
+      APP.app.lastTrialResult = null;
+      APP.app.lastVictory = null;
+      APP.app.picker = null;
+      APP.app.seatOverlay = false;
+      APP.app.swapMode = false;
+      APP.app.swapSel = null;
+      APP.app.endReveal = null;
+      if (APP.state.phase === 'MORNING') APP.app.willOpen = !!(data.ui && data.ui.willOpen);
+      if (APP.state.phase === 'NIGHT') {
+        APP.app.wizard = {
+          steps: E.getNightSteps(APP.state),
+          idx: Math.min((data.ui && data.ui.wizardIdx) || 0, Math.max(0, E.getNightSteps(APP.state).length - 1)),
+          actor: null,
+          pending: null
+        };
+      } else {
+        APP.app.wizard = null;
+      }
+      var screen = { SETUP: 'setup', SEATS: 'seats', NIGHT: 'game', MORNING: 'game', DAY: 'game', END: 'end' }[APP.state.phase] || 'setup';
+      APP.goto(screen);
+      UI.toast('Game restored.');
+    } catch (e) {
+      UI.toast('Could not restore save.');
+    }
+  }
+
+  APP.selectPreset = selectPreset;
+  APP.addRole = addRole;
+  APP.removeRole = removeRole;
+  APP.moveRole = moveRole;
+  APP.teamInc = teamInc;
+  APP.teamDec = teamDec;
+  APP.civInc = civInc;
+  APP.civDec = civDec;
+  APP.startGame = startGame;
+  APP.newGame = newGame;
+  APP.resumeGame = resumeGame;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI || {};
+  var APP = window.APP;
+
+  function playerBySeat(seat) {
+    return (APP.state.players || []).find(function (p) { return String(p.seat) === String(seat); }) || null;
+  }
+
+  function dealRoles() {
+    var names = [];
+    for (var s = 1; s <= (APP.state.playerCount || APP.cfg.playerCount); s++) {
+      names.push({ seat: s, name: (APP.app.names[s] || '').trim() || ('Player ' + s) });
+    }
+    E.setPlayerNames(APP.state, names);
+    E.dealRoles(APP.state);
+    APP.app.namingMode = false;
+    APP.afterMutation();
+  }
+
+  function swapSelect(seat) {
+    if (!APP.app.swapMode) return;
+    var p = playerBySeat(seat);
+    if (!p) return;
+    if (APP.app.swapSel == null) {
+      APP.app.swapSel = Number(seat);
+      APP.afterMutation();
+      return;
+    }
+    if (Number(APP.app.swapSel) === Number(seat)) {
+      APP.app.swapSel = null;
+      APP.afterMutation();
+      return;
+    }
+    var a = playerBySeat(APP.app.swapSel);
+    try {
+      E.swapRoles(APP.state, a.id, p.id);
+      APP.app.swapMode = false;
+      APP.app.swapSel = null;
+      UI.toast('Roles swapped.');
+      APP.afterMutation();
+    } catch (e) {
+      UI.toast(e.message);
+    }
+  }
+
+  function editNames() {
+    APP.app.names = {};
+    (APP.state.players || []).forEach(function (p) {
+      APP.app.names[p.seat] = p.name || '';
+    });
+    APP.app.namingMode = true;
+    APP.save();
+    APP.renderScreen('seats');
+  }
+
+  function beginNight() {
+    APP.state.phase = 'NIGHT';
+    APP.app.namingMode = false;
+    APP.app.wizard = { steps: E.getNightSteps(APP.state), idx: 0, actor: null, pending: null };
+    APP.afterMutation();
+    APP.goto('game');
+  }
+
+  APP.dealRoles = dealRoles;
+  APP.swapSelect = swapSelect;
+  APP.editNames = editNames;
+  APP.beginNight = beginNight;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI || {};
+  var APP = window.APP;
+
+  function findPlayer(id) {
+    var out = null;
+    (APP.state.players || []).forEach(function (p) {
+      if (String(p.id) === String(id)) out = p;
+    });
+    return out;
+  }
+
+  function resolveId(id) {
+    var p = findPlayer(id);
+    return p ? p.id : id;
+  }
+
+  function roleHolder(roleId) {
+    var out = null;
+    (APP.state.players || []).forEach(function (p) {
+      if (p.isAlive && p.assignedRole === roleId) out = p;
+    });
+    return out;
+  }
+
+  function wiz() { return APP.app.wizard; }
+
+  function curStep() { return wiz().steps[Math.min(wiz().idx, wiz().steps.length - 1)]; }
+
+  function recordWizard(role, playerId, targetId, extra) {
+    var step = curStep();
+    var action = {
+      position: step.position,
+      roleId: role,
+      playerId: playerId,
+      targetId: targetId
+    };
+    if (extra) action.extra = extra;
+    E.recordNightAction(APP.state, action);
+    APP.afterMutation();
+  }
+
+  function wizNext() {
+    wiz().idx = Math.min(wiz().idx + 1, Math.max(0, wiz().steps.length - 1));
+    wiz().actor = null;
+    wiz().pending = null;
+    APP.afterMutation();
+  }
+
+  function wizBack() {
+    wiz().idx = Math.max(0, wiz().idx - 1);
+    wiz().actor = null;
+    wiz().pending = null;
+    APP.afterMutation();
+  }
+
+  function wizActor(role, playerId) {
+    var p = findPlayer(playerId);
+    wiz().actor = { role: role, player: p ? p.id : playerId };
+    wiz().pending = null;
+    APP.afterMutation();
+  }
+
+  function wizActorBack() {
+    wiz().actor = null;
+    wiz().pending = null;
+    APP.afterMutation();
+  }
+
+  function wizTarget(targetId) {
+    var w = wiz();
+    var role = w.actor.role;
+    var pid = w.actor.player;
+    if (targetId === '__none__') {
+      recordWizard(role, pid, null, undefined);
+      w.actor = null;
+      w.pending = null;
+      APP.afterMutation();
+      return;
+    }
+    targetId = resolveId(targetId);
+    if (role === 'witch') {
+      if (!w.pending || !w.pending.control) {
+        w.pending = { control: targetId };
+        APP.afterMutation();
+        return;
+      }
+      recordWizard(role, pid, w.pending.control, { controlRedirect: targetId });
+    } else if (role === 'jailor') {
+      w.pending = { jail: targetId };
+      APP.afterMutation();
+      return;
+    } else if (role === 'forger') {
+      w.pending = { forge: targetId };
+      APP.afterMutation();
+      return;
+    } else {
+      recordWizard(role, pid, targetId, undefined);
+    }
+    w.actor = null;
+    w.pending = null;
+    APP.afterMutation();
+  }
+
+  function wizAlert(alerting) {
+    var w = wiz();
+    recordWizard('veteran', w.actor.player, w.actor.player, { alert: alerting });
+    w.actor = null;
+    w.pending = null;
+    APP.afterMutation();
+  }
+
+  function wizJailorDecision(decision) {
+    var w = wiz();
+    recordWizard('jailor', w.actor.player, w.pending.jail, { jailorDecision: decision });
+    w.actor = null;
+    w.pending = null;
+    APP.afterMutation();
+  }
+
+  function wizForgeConfirm() {
+    var w = wiz();
+    var txtInput = APP.el('forge-will');
+    var txt = txtInput ? txtInput.value : '';
+    recordWizard('forger', w.actor.player, w.pending.forge, { will: txt });
+    w.actor = null;
+    w.pending = null;
+    APP.afterMutation();
+  }
+
+  function resolveNight() {
+    try {
+      E.resolveNight(APP.state);
+      APP.state.phase = 'MORNING';
+      APP.app.wizard = null;
+      APP.app.willOpen = true;
+      APP.app.timerDeadline = null;
+      APP.afterMutation();
+      checkEnd();
+    } catch (e) {
+      UI.toast('Night error: ' + e.message);
+    }
+  }
+
+  function beginDay() {
+    try {
+      E.beginDay(APP.state);
+      APP.app.willOpen = false;
+      APP.afterMutation();
+      checkEnd();
+    } catch (e) {
+      UI.toast('Day error: ' + e.message);
+    }
+  }
+
+  function checkEnd() {
+    if (APP.state.phase === 'END' || APP.state.winner) {
+      finish(APP.app.lastVictory);
+      return true;
+    }
+    var v = E.checkVictory(APP.state);
+    if (v) {
+      finish(v);
+      return true;
+    }
+    return false;
+  }
+
+  function finish(v) {
+    APP.app.lastVictory = v || APP.app.lastVictory;
+    if (v && v.winner) APP.state.winner = v.winner;
+    try {
+      if (APP.state.phase !== 'END') {
+        var er = E.endGame(APP.state);
+        APP.app.endReveal = er && er.reveal ? er.reveal : null;
+      }
+    } catch (e) { }
+    APP.state.phase = 'END';
+    APP.app.wizard = null;
+    APP.afterMutation();
+    APP.goto('end');
+  }
+
+  function startTrial(accusedId) {
+    try {
+      E.startTrial(APP.state, resolveId(accusedId), resolveId(APP.app.trialNom));
+      APP.app.trialStage = null;
+      APP.app.trialNom = null;
+      APP.app.lastTrialResult = null;
+      APP.afterMutation();
+    } catch (e) {
+      UI.toast('Trial error: ' + e.message);
+    }
+  }
+
+  function castVote(btn) {
+    if (!APP.state.trial || !APP.state.trial.active) return;
+    try {
+      E.castVote(APP.state, {
+        voterId: resolveId(btn.getAttribute('data-voter')),
+        verdict: btn.getAttribute('data-verdict'),
+        ghostToken: btn.getAttribute('data-ghost') === '1'
+      });
+      APP.afterMutation();
+    } catch (e) {
+      UI.toast(e.message);
+    }
+  }
+
+  function resolveTrial() {
+    try {
+      var res = E.resolveTrial(APP.state);
+      APP.app.lastTrialResult = res || {};
+      if (APP.state.trial && APP.state.trial.active) APP.state.trial.active = false;
+      APP.afterMutation();
+      checkEnd();
+    } catch (e) {
+      UI.toast('Trial error: ' + e.message);
+    }
+  }
+
+  function openDayAbility(ability) {
+    if (ability === 'mayor') {
+      var may = roleHolder('mayor');
+      if (may) doDayAbility('mayor', null);
+      return;
+    }
+    var titles = {
+      vigilante: 'Vigilante - choose a target',
+      deputy: 'Deputy - choose a target'
+    };
+    APP.app.picker = {
+      title: titles[ability] || ability,
+      sub: 'Pick a living player.',
+      ability: ability
+    };
+    APP.afterMutation();
+  }
+
+  function doDayAbility(ability, targetId) {
+    APP.app.picker = null;
+    try {
+      if (ability === 'vigilante') {
+        var vig = roleHolder('vigilante');
+        if (vig) E.vigilanteShoot(APP.state, vig.id, resolveId(targetId));
+      } else if (ability === 'deputy') {
+        var dep = roleHolder('deputy');
+        if (dep) E.deputyShoot(APP.state, dep.id, resolveId(targetId));
+      } else if (ability === 'mayor') {
+        var may = roleHolder('mayor');
+        if (may) E.mayorReveal(APP.state, may.id);
+      }
+      APP.afterMutation();
+      checkEnd();
+    } catch (e) {
+      UI.toast(e.message);
+      APP.afterMutation();
+    }
+  }
+
+  function endDay() {
+    if (checkEnd()) return;
+    APP.state.phase = 'NIGHT';
+    APP.app.trialStage = null;
+    APP.app.trialNom = null;
+    APP.app.lastTrialResult = null;
+    APP.app.picker = null;
+    APP.app.wizard = { steps: E.getNightSteps(APP.state), idx: 0, actor: null, pending: null };
+    APP.afterMutation();
+    APP.goto('game');
+  }
+
+  APP.wizNext = wizNext;
+  APP.wizBack = wizBack;
+  APP.wizActor = wizActor;
+  APP.wizActorBack = wizActorBack;
+  APP.wizTarget = wizTarget;
+  APP.wizAlert = wizAlert;
+  APP.wizJailorDecision = wizJailorDecision;
+  APP.wizForgeConfirm = wizForgeConfirm;
+  APP.resolveNight = resolveNight;
+  APP.beginDay = beginDay;
+  APP.checkEnd = checkEnd;
+  APP.finish = finish;
+  APP.startTrial = startTrial;
+  APP.castVote = castVote;
+  APP.resolveTrial = resolveTrial;
+  APP.openDayAbility = openDayAbility;
+  APP.doDayAbility = doDayAbility;
+  APP.endDay = endDay;
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI || {};
+  var APP = window.APP;
+
+  function dispatch(action, btn) {
+    var cfg = APP.cfg;
+    var state = APP.state;
+    var app = APP.app;
+    switch (action) {
+      case 'count-dec':
+        if (cfg.playerCount > 6) {
+          cfg.playerCount--;
+          var r1 = (E.RATIO_TABLE && E.RATIO_TABLE[cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+          cfg.teamCounts = { town: r1.town, mafia: r1.mafia, neutral: r1.neutral };
+          APP.refreshSetup();
+        }
+        break;
+      case 'count-inc':
+        if (cfg.playerCount < 15) {
+          cfg.playerCount++;
+          var r2 = (E.RATIO_TABLE && E.RATIO_TABLE[cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+          cfg.teamCounts = { town: r2.town, mafia: r2.mafia, neutral: r2.neutral };
+          APP.refreshSetup();
+        }
+        break;
+      case 'preset-select':
+        APP.selectPreset(btn.getAttribute('data-preset'));
+        APP.refreshSetup();
+        break;
+      case 'rule-toggle': {
+        var rule = btn.getAttribute('data-rule');
+        cfg.houseRules[rule] = !cfg.houseRules[rule];
+        APP.refreshSetup();
+        break;
+      }
+      case 'layout-select':
+        cfg.layout = btn.getAttribute('data-layout');
+        APP.refreshSetup();
+        break;
+      case 'deck-add':
+        APP.addRole(btn.getAttribute('data-team'));
+        APP.refreshSetup();
+        break;
+      case 'team-count-inc':
+        APP.teamInc(btn.getAttribute('data-team'));
+        break;
+      case 'team-count-dec':
+        APP.teamDec(btn.getAttribute('data-team'));
+        break;
+      case 'civ-inc':
+        APP.civInc();
+        break;
+      case 'civ-dec':
+        APP.civDec();
+        break;
+      case 'deck-remove':
+        APP.removeRole(btn.getAttribute('data-team'), Number(btn.getAttribute('data-index')));
+        APP.refreshSetup();
+        break;
+      case 'deck-up':
+        APP.moveRole(btn.getAttribute('data-team'), Number(btn.getAttribute('data-index')), -1);
+        APP.refreshSetup();
+        break;
+      case 'deck-down':
+        APP.moveRole(btn.getAttribute('data-team'), Number(btn.getAttribute('data-index')), 1);
+        APP.refreshSetup();
+        break;
+      case 'start-game':
+        APP.startGame();
+        break;
+      case 'resume-game':
+        APP.resumeGame();
+        break;
+      case 'new-game':
+        APP.newGame();
+        break;
+
+      case 'deal-roles':
+        APP.dealRoles();
+        break;
+      case 'redeal':
+        try { E.redeal(state); APP.afterMutation(); } catch (e) { UI.toast(e.message); }
+        break;
+      case 'edit-names':
+        APP.editNames();
+        break;
+      case 'toggle-roles':
+        app.rolesHidden = !app.rolesHidden;
+        APP.save();
+        APP.renderScreen('seats');
+        break;
+      case 'witch-side':
+        state.witchSide = btn.getAttribute('data-side') === 'TOWN' ? 'TOWN' : 'MAFIA';
+        APP.afterMutation();
+        break;
+      case 'begin-night':
+        APP.beginNight();
+        break;
+      case 'goto-setup':
+        APP.goto('setup');
+        break;
+      case 'swap-mode':
+        app.swapMode = !app.swapMode;
+        if (!app.swapMode) app.swapSel = null;
+        APP.afterMutation();
+        break;
+      case 'swap-cancel':
+        app.swapMode = false;
+        app.swapSel = null;
+        APP.afterMutation();
+        break;
+      case 'swap-select':
+        APP.swapSelect(btn.getAttribute('data-seat'));
+        break;
+
+      case 'wizard-next':
+        APP.wizNext();
+        break;
+      case 'wizard-back':
+        APP.wizBack();
+        break;
+      case 'wizard-skip':
+        APP.wizNext();
+        break;
+      case 'wizard-actor':
+        APP.wizActor(btn.getAttribute('data-role'), btn.getAttribute('data-player'));
+        break;
+      case 'wizard-actor-back':
+        APP.wizActorBack();
+        break;
+      case 'wizard-target':
+        APP.wizTarget(btn.getAttribute('data-target'));
+        break;
+      case 'wizard-alert':
+        APP.wizAlert(btn.getAttribute('data-alert') === 'true');
+        break;
+      case 'wizard-decision':
+        APP.wizJailorDecision(btn.getAttribute('data-decision'));
+        break;
+      case 'wizard-forge':
+        APP.wizForgeConfirm();
+        break;
+      case 'resolve-night':
+        APP.resolveNight();
+        break;
+      case 'pencils-down':
+        app.willOpen = false;
+        app.timerDeadline = null;
+        UI.toast('Pencils down! Wills are locked.');
+        APP.afterMutation();
+        break;
+      case 'begin-day':
+        APP.beginDay();
+        break;
+
+      case 'start-trial':
+        app.trialStage = 'nominator';
+        app.lastTrialResult = null;
+        APP.afterMutation();
+        break;
+      case 'pick-nom':
+        app.trialNom = btn.getAttribute('data-target');
+        app.trialStage = 'accused';
+        APP.afterMutation();
+        break;
+      case 'pick-acc':
+        APP.startTrial(btn.getAttribute('data-target'));
+        break;
+      case 'cast-vote':
+        APP.castVote(btn);
+        break;
+      case 'resolve-trial':
+        APP.resolveTrial();
+        break;
+      case 'clear-trial':
+        app.lastTrialResult = null;
+        app.trialStage = null;
+        APP.afterMutation();
+        break;
+
+      case 'day-ability':
+        APP.openDayAbility(btn.getAttribute('data-ability'));
+        break;
+      case 'pick-day-target':
+        APP.doDayAbility(btn.getAttribute('data-ability'), btn.getAttribute('data-target'));
+        break;
+      case 'picker-cancel':
+        app.picker = null;
+        APP.afterMutation();
+        break;
+      case 'end-day':
+        APP.endDay();
+        break;
+
+      case 'toggle-seat-overlay':
+        app.seatOverlay = !app.seatOverlay;
+        APP.afterMutation();
+        break;
+      case 'toggle-logs':
+        app.logsOpen = !app.logsOpen;
+        APP.afterMutation();
+        break;
+      default:
+        break;
+    }
+  }
+
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
+    if (!btn) return;
+    var action = btn.getAttribute('data-action');
+    if (action === 'will-input') return;
+    dispatch(action, btn);
+  });
+
+  document.addEventListener('input', function (ev) {
+    var t = ev.target;
+    if (!t || !t.getAttribute) return;
+    if (t.classList && t.classList.contains('seat-name-input')) {
+      APP.app.names[Number(t.getAttribute('data-seat'))] = t.value;
+      return;
+    }
+    if (t.getAttribute('data-action') === 'will-input') {
+      if (APP.state && APP.state.phase === 'MORNING' && APP.app.willOpen) {
+        try {
+          E.updateWill(APP.state, t.getAttribute('data-player'), t.value);
+          APP.save();
+        } catch (e) { }
+      }
+    }
+  });
+})();
+
+</script>
+<script>
+'use strict';
+
+(function () {
+  var APP = window.APP;
+  if ('serviceWorker' in navigator && location.protocol.indexOf('https') === 0) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+  APP.init();
+  APP.goto('setup');
+})();
+
+</script>
+</body>
+</html>

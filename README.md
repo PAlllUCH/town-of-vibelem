@@ -33,6 +33,16 @@ python -m http.server 8000
 node --test --test-reporter=dot tests/engine.test.js
 ```
 
+## Offline and phone usage
+
+**Option 1 — GitHub Pages.** Push the repo, enable Pages in your repository settings with *Source: GitHub Actions*, and open the deployed URL. On your phone, use *Add to Home Screen* so it installs like an app and works fully offline after the first visit.
+
+**Option 2 — fully offline, no internet.** Run `node scripts/bundle.js`, copy `dist/village-pub-offline.html` to your phone, and open it from the Files app or Downloads. Android handles this well; iOS file saves can be flaky, so test first.
+
+**Option 3 — Android zip.** Download the repo as a zip, extract it, and open `index.html` in Chrome.
+
+Game saves live in the browser on the device and are **not** synced between devices.
+
 ## How a game flows
 
 1. **Setup** — pick player count, preset, team structure, house rules, and seat layout.
