@@ -1,0 +1,10 @@
+/* End screen */
+.end-banner {
+  text-align: center;
+  padding: 22px 12px;
+  margin: 14px 0;
+  background: linear-gradient(180deg, rgba(79, 163, 227, .18), transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.end-banner h1 { font-size: 1.6rem; margin: 0; }

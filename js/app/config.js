@@ -1,0 +1,131 @@
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var APP = {
+    SAVE_KEY: 'villagepub-save',
+    state: null,
+    cfg: null,
+    app: {
+      screen: 'setup',
+      wizard: null,
+      willOpen: false,
+      rolesHidden: false,
+      namingMode: false,
+      trialStage: null,
+      trialNom: null,
+      lastTrialResult: null,
+      lastVictory: null,
+      picker: null,
+      seatOverlay: false,
+      logsOpen: false,
+      swapMode: false,
+      swapSel: null,
+      names: {},
+      endReveal: null,
+      timerDeadline: null
+    }
+  };
+
+  function defaultCfg() {
+    var keys = E.PRESETS ? Object.keys(E.PRESETS) : ['p1'];
+    var preset = E.PRESETS[keys[0]] || { town: [], mafia: [], neutral: [] };
+    var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[8]) || { town: 5, mafia: 2, neutral: 1 };
+    return {
+      playerCount: 8,
+      presetId: keys[0],
+      houseRules: { noKillN1: false, noLynchD1: false, classicReveal: false },
+      layout: (E.SEAT_LAYOUTS && E.SEAT_LAYOUTS[0]) || 'circle',
+      teamCounts: { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral },
+      civilians: null,
+      deckConfig: {
+        town: (preset.town || []).slice(),
+        mafia: (preset.mafia || []).slice(),
+        neutral: (preset.neutral || []).slice()
+      }
+    };
+  }
+
+  function mergeCfg(base, saved) {
+    var out = JSON.parse(JSON.stringify(base));
+    if (saved.playerCount) out.playerCount = saved.playerCount;
+    if (saved.presetId) out.presetId = saved.presetId;
+    if (saved.houseRules) out.houseRules = Object.assign({}, out.houseRules, saved.houseRules);
+    if (saved.layout) out.layout = saved.layout;
+    if (saved.teamCounts && saved.teamCounts.town != null) {
+      out.teamCounts = { town: saved.teamCounts.town, mafia: saved.teamCounts.mafia, neutral: saved.teamCounts.neutral };
+    } else {
+      var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[out.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+      out.teamCounts = { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral };
+    }
+    if (saved.civilians != null) out.civilians = saved.civilians;
+    if (saved.deckConfig) {
+      out.deckConfig = {
+        town: (saved.deckConfig.town || []).slice(),
+        mafia: (saved.deckConfig.mafia || []).slice(),
+        neutral: (saved.deckConfig.neutral || []).slice()
+      };
+    }
+    return out;
+  }
+
+  function teamCountsObj() {
+    return APP.cfg.teamCounts || (E.RATIO_TABLE && E.RATIO_TABLE[APP.cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
+  }
+
+  function teamLabel(t) {
+    return { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral' }[t] || t;
+  }
+
+  function deckList(team) { return APP.cfg.deckConfig[String(team).toLowerCase()]; }
+
+  function teamAddAllowed(team) {
+    var tc = teamCountsObj();
+    var key = team.toLowerCase();
+    var slots = tc[key] || 0;
+    var list = deckList(team);
+    if (team === 'TOWN') {
+      var civs = APP.cfg.civilians == null ? 0 : Math.max(0, Math.min(slots, Number(APP.cfg.civilians) || 0));
+      return list.length < Math.max(0, slots - civs);
+    }
+    return list.length < slots;
+  }
+
+  function townLeftoverCivilians() {
+    var slots = teamCountsObj().town || 0;
+    return Math.max(0, slots - Math.min(deckList('TOWN').length, slots));
+  }
+
+  function resetAppFlags() {
+    APP.app.wizard = null;
+    APP.app.willOpen = false;
+    APP.app.rolesHidden = false;
+    APP.app.namingMode = false;
+    APP.app.trialStage = null;
+    APP.app.trialNom = null;
+    APP.app.lastTrialResult = null;
+    APP.app.lastVictory = null;
+    APP.app.picker = null;
+    APP.app.seatOverlay = false;
+    APP.app.logsOpen = false;
+    APP.app.swapMode = false;
+    APP.app.swapSel = null;
+    APP.app.names = {};
+    APP.app.endReveal = null;
+  }
+
+  APP.defaultCfg = defaultCfg;
+  APP.mergeCfg = mergeCfg;
+  APP.teamCountsObj = teamCountsObj;
+  APP.teamLabel = teamLabel;
+  APP.deckList = deckList;
+  APP.teamAddAllowed = teamAddAllowed;
+  APP.townLeftoverCivilians = townLeftoverCivilians;
+  APP.resetAppFlags = resetAppFlags;
+  APP.init = function () {
+    APP.state = null;
+    APP.cfg = APP.defaultCfg();
+  };
+
+  window.APP = APP;
+})();

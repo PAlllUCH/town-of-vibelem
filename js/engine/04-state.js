@@ -1,0 +1,246 @@
+'use strict';
+(function (root) {
+  var E = root.VillageEngine;
+
+  E._byId = function (state, id) {
+    return state.players[id - 1] || null;
+  };
+
+  function resetTransient(state) {
+    state.graveyard = [];
+    state.ghosts = { ledgerEnabled: true };
+    state.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+    state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
+    state.dayNumber = 0;
+    state.winner = null;
+    state.logs = [];
+    state.executionerConverted = false;
+    state.jester = { haunted: false, hauntTarget: null };
+    state.retributionist = { used: false };
+    state.amnesiac = { used: false, rememberedRole: null };
+    state.pendingInheritanceNote = '';
+    state.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null };
+    state.players.forEach(function (p) {
+      p.inheritedRole = null;
+      p.isAlive = true;
+      p.isDrunk = false;
+      p.hasGhostVote = false;
+      p.ghostVoteSpent = false;
+      p.lastWill = '';
+      p.nightTarget = null;
+      p.jailorDecision = null;
+      p.isRoleblocked = false;
+      p.isProtected = false;
+      p.framed = false;
+      p.blackmailed = false;
+      p.jailed = false;
+      p.poisoned = false;
+      p.alerted = false;
+      p.cleaned = false;
+      p.revealed = false;
+      p.shotsFired = 0;
+      p.executionsUsed = 0;
+      p.alertsUsed = 0;
+      p.usedOncePerGame = false;
+      p.guiltPending = false;
+    });
+  }
+
+  function assignSetupInfo(state) {
+    state.executionerTarget = null;
+    var townPlayers = state.players.filter(function (p) { return E.ROLES[p.assignedRole].team === 'TOWN'; });
+    if (state.deck.indexOf('executioner') !== -1 && townPlayers.length > 0) {
+      state.executionerTarget = townPlayers[E._randInt(townPlayers.length)].id;
+    }
+    state.gfBluffs = [];
+    if (state.deck.indexOf('godfather') !== -1) {
+      var pool = Object.keys(E.ROLES).filter(function (id) {
+        return E.ROLES[id].team === 'TOWN' && state.deck.indexOf(id) === -1;
+      });
+      state.gfBluffs = E._shuffle(pool).slice(0, 3);
+    }
+    state.witchSide = 'MAFIA';
+  }
+
+  function dealCommon(state, label) {
+    state.deck = E._shuffle(state.deck.slice());
+    state.players.forEach(function (p, i) { p.assignedRole = state.deck[i]; });
+    resetTransient(state);
+    assignSetupInfo(state);
+    state.phase = 'SEATS';
+    state.logs.push(label);
+    return state;
+  }
+
+  E.createGame = function (opts) {
+    opts = opts || {};
+    var playerCount = opts.playerCount || 8;
+    if (!Number.isInteger(playerCount) || playerCount < 6 || playerCount > 15) {
+      throw new Error('playerCount must be an integer between 6 and 15');
+    }
+    var presetId = opts.presetId || 'p1';
+    if (!E.PRESETS[presetId]) throw new Error('Unknown preset: ' + presetId);
+    var houseRules = {
+      noKillN1: !!(opts.houseRules && opts.houseRules.noKillN1),
+      noLynchD1: !!(opts.houseRules && opts.houseRules.noLynchD1),
+      classicReveal: !!(opts.houseRules && opts.houseRules.classicReveal)
+    };
+    var teamCounts = null;
+    if (opts.teamCounts != null) {
+      var tc = opts.teamCounts;
+      if (!tc || typeof tc.town !== 'number' || typeof tc.mafia !== 'number' ||
+          typeof tc.neutral !== 'number' ||
+          !Number.isInteger(tc.town) || !Number.isInteger(tc.mafia) || !Number.isInteger(tc.neutral) ||
+          tc.town < 0 || tc.mafia < 0 || tc.neutral < 0) {
+        throw new Error('teamCounts must be an object { town, mafia, neutral } of non-negative integers');
+      }
+      if (tc.town + tc.mafia + tc.neutral !== playerCount) {
+        throw new Error('teamCounts must sum to the player count (' + playerCount +
+          '), got ' + (tc.town + tc.mafia + tc.neutral));
+      }
+      teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
+    }
+    var deck = E._buildDeck(playerCount, presetId, teamCounts
+      ? { town: opts.town, mafia: opts.mafia, neutral: opts.neutral, civilians: opts.civilians, teamCounts: teamCounts }
+      : opts);
+    var players = [];
+    for (var i = 1; i <= playerCount; i += 1) {
+      players.push({
+        id: i, name: '', seat: i,
+        assignedRole: null, inheritedRole: null,
+        isAlive: true, isDrunk: false,
+        hasGhostVote: false, ghostVoteSpent: false,
+        lastWill: '', nightTarget: null, jailorDecision: null,
+        isRoleblocked: false, isProtected: false, framed: false, blackmailed: false,
+        jailed: false, poisoned: false, alerted: false, cleaned: false,
+        revealed: false,
+        shotsFired: 0, executionsUsed: 0, alertsUsed: 0,
+        usedOncePerGame: false, guiltPending: false
+      });
+    }
+    var state = {
+      version: 1,
+      playerCount: playerCount,
+      presetId: presetId,
+      houseRules: houseRules,
+      deck: deck,
+      players: players,
+      graveyard: [],
+      ghosts: { ledgerEnabled: true },
+      trial: { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 },
+      night: { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null },
+      phase: 'SETUP',
+      dayNumber: 0,
+      logs: [],
+      winner: null,
+      executionerTarget: null,
+      executionerConverted: false,
+      gfBluffs: [],
+      witchSide: 'MAFIA',
+      jester: { haunted: false, hauntTarget: null },
+      retributionist: { used: false },
+      amnesiac: { used: false, rememberedRole: null },
+      pendingInheritanceNote: '',
+      morning: { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null }
+    };
+    state.logs.push('Game created: ' + playerCount + ' players, preset ' + presetId + '.');
+    return state;
+  };
+
+  E.swapRoles = function (state, aId, bId) {
+    var a = E._byId(state, aId);
+    var b = E._byId(state, bId);
+    if (!a || !b) throw new Error('swapRoles: unknown player id ' + aId + ' or ' + bId);
+    if (String(aId) === String(bId)) throw new Error('swapRoles: cannot swap a player with themself');
+    var tmp = a.assignedRole;
+    a.assignedRole = b.assignedRole;
+    b.assignedRole = tmp;
+    var oldTarget = state.executionerTarget;
+    if (oldTarget != null && (String(oldTarget) === String(aId) || String(oldTarget) === String(bId))) {
+      var target = E._byId(state, oldTarget);
+      var isLivingTown = target && target.isAlive &&
+        E.ROLES[target.assignedRole] && E.ROLES[target.assignedRole].team === 'TOWN';
+      if (!isLivingTown) {
+        var next = state.players.find(function (p) {
+          return p.isAlive && String(p.id) !== String(oldTarget) &&
+            E.ROLES[p.assignedRole] && E.ROLES[p.assignedRole].team === 'TOWN';
+        });
+        if (next) {
+          state.executionerTarget = next.id;
+          state.logs.push('The Executioner\'s target was reassigned to ' + next.name + ' after a role swap.');
+        } else {
+          state.executionerTarget = null;
+        }
+      }
+    }
+    var ra = E.ROLES[a.assignedRole] || { name: a.assignedRole };
+    var rb = E.ROLES[b.assignedRole] || { name: b.assignedRole };
+    state.logs.push(a.name + ' and ' + b.name + ' swapped roles (' + ra.name + ' / ' + rb.name + ').');
+    return state;
+  };
+
+  E.setPlayerNames = function (state, entries) {
+    if (!entries) return state;
+    for (var i = 0; i < entries.length; i += 1) {
+      var e = entries[i];
+      var p = state.players.find(function (pl) { return pl.seat === e.seat; });
+      if (p && typeof e.name === 'string') p.name = e.name;
+    }
+    state.logs.push('Player names recorded.');
+    return state;
+  };
+
+  E.dealRoles = function (state) {
+    return dealCommon(state, 'Roles dealt. The game is ready to begin.');
+  };
+
+  E.redeal = function (state) {
+    return dealCommon(state, 'Roles redealt.');
+  };
+
+  E.serialize = function (state) {
+    return JSON.stringify(state);
+  };
+
+  E.deserialize = function (jsonString) {
+    var data;
+    try {
+      data = JSON.parse(jsonString);
+    } catch (e) {
+      throw new Error('Invalid save data: not valid JSON');
+    }
+    if (!data || typeof data !== 'object') throw new Error('Invalid save data: not an object');
+    if (!Number.isInteger(data.playerCount) || data.playerCount < 6 || data.playerCount > 15) {
+      throw new Error('Invalid save data: playerCount');
+    }
+    if (!Array.isArray(data.players) || data.players.length !== data.playerCount) {
+      throw new Error('Invalid save data: players');
+    }
+    if (!Array.isArray(data.deck)) throw new Error('Invalid save data: deck');
+    for (var i = 0; i < data.players.length; i += 1) {
+      var p = data.players[i];
+      if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > data.playerCount) {
+        throw new Error('Invalid save data: player id');
+      }
+      if (typeof p.name !== 'string') throw new Error('Invalid save data: player name');
+      if (typeof p.isAlive !== 'boolean') throw new Error('Invalid save data: player isAlive');
+      ['jailed', 'poisoned', 'alerted', 'cleaned'].forEach(function (flag) {
+        if (typeof p[flag] !== 'boolean') p[flag] = false;
+      });
+    }
+    if (!data.houseRules || typeof data.houseRules !== 'object') data.houseRules = {};
+    if (!Array.isArray(data.graveyard)) data.graveyard = [];
+    if (!data.trial || typeof data.trial !== 'object') {
+      data.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+    }
+    if (!data.night || typeof data.night !== 'object') {
+      data.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
+    }
+    if (!data.jester || typeof data.jester !== 'object') data.jester = { haunted: false, hauntTarget: null };
+    if (!data.retributionist || typeof data.retributionist !== 'object') data.retributionist = { used: false };
+    if (!data.amnesiac || typeof data.amnesiac !== 'object') data.amnesiac = { used: false, rememberedRole: null };
+    if (!Array.isArray(data.logs)) data.logs = [];
+    if (data.version == null) data.version = 1;
+    return data;
+  };
+})(typeof window !== 'undefined' ? window : globalThis);

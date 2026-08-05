@@ -1,0 +1,249 @@
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI;
+
+  UI.renderGameHeader = function (state, cfg, app) {
+    var label = 'Game';
+    if (state.phase === 'NIGHT') label = 'Night ' + Math.max(1, (state.dayNumber || 0) + 1);
+    else if (state.phase === 'MORNING') label = 'Morning ' + Math.max(1, state.dayNumber || 1);
+    else if (state.phase === 'DAY') label = 'Day ' + Math.max(1, state.dayNumber || 1);
+    else if (state.phase === 'END') label = 'Game Over';
+    return '<div class="card card-head" style="padding:10px 14px;">' +
+      '<span class="tag tag-accent">' + UI.esc(state.phase) + '</span>' +
+      '<strong>' + label + '</strong>' +
+      '<button class="btn btn-sm" data-action="toggle-seat-overlay">Seats</button>' +
+      '<button class="btn btn-sm" data-action="toggle-logs">Log</button></div>' +
+      UI.flowStrip(state.phase);
+  };
+
+  UI.renderGame = function (state, cfg, app) {
+    var body = '';
+    var bar = '';
+    if (app.seatOverlay) {
+      body += '<div class="card"><div class="card-head"><h2>Seat Grid</h2>' +
+        '<button class="btn btn-sm" data-action="toggle-seat-overlay">Close</button></div>' +
+        UI.seatTiles(state, app.rolesHidden) + '</div>';
+    }
+    if (state.phase === 'NIGHT') {
+      body += UI.nightWizard(state, cfg, app);
+      bar = '<button class="btn btn-primary btn-bar" data-action="resolve-night">Resolve Night</button>';
+    } else if (state.phase === 'MORNING') {
+      body += morningView(state, cfg, app);
+      bar = app.willOpen
+        ? '<button class="btn btn-primary btn-bar" data-action="pencils-down">Pencils Down</button>'
+        : '<button class="btn btn-primary btn-bar" data-action="begin-day">Begin Day</button>';
+    } else if (state.phase === 'DAY') {
+      body += dayView(state, cfg, app);
+      bar = dayBar(state, app);
+    } else {
+      body += '<p class="muted">Game over.</p>';
+    }
+    body += logsCard(state, app);
+    return { body: body, bar: bar };
+  };
+
+  function morningView(state, cfg, app) {
+    var html = '';
+    if (app.willOpen) {
+      html += '<div class="card"><div class="card-head"><h2>Last Will Window</h2>' +
+        '<div class="timer" data-timer-seconds="30" data-timer-kind="will"></div></div>';
+      html += '<p class="muted small">Take 30 seconds to update wills silently, then tap <strong>Pencils Down</strong> below.</p>';
+      UI.living(state.players).forEach(function (p) {
+        html += '<label class="will-row"><span class="will-name">' + UI.esc(p.name) + '</span>' +
+          '<textarea class="will-input" data-action="will-input" data-player="' + UI.esc(p.id) +
+          '" rows="2" placeholder="Last will...">' + UI.esc(p.lastWill || '') + '</textarea></label>';
+      });
+      html += '</div>';
+      return html;
+    }
+    var ann;
+    try { ann = E.getMorningAnnouncement(state); } catch (e) { ann = {}; }
+    ann = ann || {};
+    html += '<div class="card"><h2>Morning Announcement</h2>';
+    if (ann.revivals && ann.revivals.length) {
+      html += '<div class="notice ok"><strong>Revived:</strong> ' + ann.revivals.map(UI.esc).join(', ') + '</div>';
+    }
+    if (ann.inheritanceNote) {
+      html += '<div class="notice accent">' + UI.esc(ann.inheritanceNote) + '</div>';
+    }
+    if (ann.deaths && ann.deaths.length) {
+      ann.deaths.forEach(function (d) {
+        html += '<div class="death-card"><div class="death-head">' +
+          '<strong>' + UI.esc(d.name) + '</strong><span class="tag tag-bad">DEAD</span></div>' +
+          '<div class="death-will">"' + UI.esc(d.will || 'No will') + '"</div>' +
+          '<div class="death-role">' + UI.esc(d.roleShown || '?? UNKNOWN ??') + '</div></div>';
+      });
+    } else {
+      html += '<div class="notice">No deaths last night.</div>';
+    }
+    html += '</div>';
+    html += '<div class="card"><p class="muted">Wills are locked until tomorrow morning. Tap <strong>Begin Day</strong> below to open discussion.</p></div>';
+    return html;
+  }
+
+  function dayAbilities(state) {
+    var html = '<div class="btn-col">';
+    var vig = null, dep = null, may = null;
+    (state.players || []).forEach(function (p) {
+      if (!p.isAlive) return;
+      if (p.assignedRole === 'vigilante') vig = p;
+      if (p.assignedRole === 'deputy') dep = p;
+      if (p.assignedRole === 'mayor') may = p;
+    });
+    if (vig) {
+      var maxUses = (E.ROLES && E.ROLES.vigilante && E.ROLES.vigilante.maxUses) || 3;
+      var left = Math.max(0, maxUses - (vig.shotsFired || 0));
+      html += '<button class="btn" data-action="day-ability" data-ability="vigilante" ' +
+        (left > 0 ? '' : 'disabled') + '>Vigilante Shot (' + left + ' left)</button>';
+    }
+    if (dep && !dep.usedOncePerGame) {
+      html += '<button class="btn" data-action="day-ability" data-ability="deputy">Deputy Shoot (once)</button>';
+    }
+    if (may && !may.revealed) {
+      html += '<button class="btn" data-action="day-ability" data-ability="mayor">Mayor Reveal</button>';
+    }
+    if (!vig && !dep && !may) {
+      html += '<p class="muted">No day abilities available.</p>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function tallyChips(state) {
+    var votes = (state.trial && state.trial.votes) || [];
+    var g = 0, i = 0, a = 0;
+    votes.forEach(function (v) {
+      var voter = UI.findPlayer(state, v.voterId);
+      var weight = 1;
+      if (voter && voter.isAlive && voter.revealed && voter.assignedRole === 'mayor') weight = 3;
+      if (v.verdict === 'GUILTY') g += weight;
+      else if (v.verdict === 'INNOCENT') i += weight;
+      else a += weight;
+    });
+    return '<div class="tally">' +
+      '<span class="tally-chip g">GUILTY ' + g + '</span>' +
+      '<span class="tally-chip i">INNOCENT ' + i + '</span>' +
+      '<span class="tally-chip a">ABSTAIN ' + a + '</span></div>';
+  }
+
+  function ghostTokens(state) {
+    var holders = UI.dead(state.players).filter(function (p) {
+      return p.hasGhostVote && !p.ghostVoteSpent;
+    });
+    if (!holders.length) return '';
+    return '<p class="muted small">Ghost tokens: ' +
+      holders.map(function (p) { return UI.esc(p.name); }).join(', ') + '</p>';
+  }
+
+  function trialView(state, cfg, app) {
+    var tr = state.trial;
+    var html = '<div class="card"><div class="card-head"><h2>Trial</h2></div>';
+    if (app.lastTrialResult) {
+      var r = app.lastTrialResult;
+      html += '<div class="notice ' + (r.lynchedId ? 'bad' : 'ok') + '">' +
+        (r.lynchedId ? '<strong>Lynched:</strong> ' + UI.esc(UI.nameOf(state, r.lynchedId)) :
+          '<strong>Acquitted:</strong> no one was lynched') +
+        (r.jesterWin ? '<br><strong>The Jester wins!</strong>' : '') +
+        (r.executionerWin ? '<br><strong>The Executioner wins!</strong>' : '') +
+        (r.victory ? '<br>' + UI.esc(r.victory.winner || 'Victory!') : '') +
+        '</div>';
+      html += '<button class="btn btn-block" data-action="clear-trial">OK</button>';
+      html += '</div>';
+      return html;
+    }
+    if (!tr || !tr.active) {
+      if (app.trialStage === 'nominator') {
+        html += '<p class="wizard-label">Who nominates?</p>' + livingBtns(state, 'pick-nom');
+      } else if (app.trialStage === 'accused') {
+        html += '<p class="wizard-label">Who is accused?</p>' + livingBtns(state, 'pick-acc', app.trialNom);
+      } else {
+        html += '<button class="btn btn-block" data-action="start-trial">Start Trial</button>';
+        html += '<p class="muted small">At most one lynch per day. Guilty must strictly exceed all other votes.</p>';
+      }
+    } else {
+      html += '<p><strong>Accused:</strong> ' + UI.esc(UI.nameOf(state, tr.accusedId)) +
+        ' &nbsp;<strong>Nominated by:</strong> ' + UI.esc(UI.nameOf(state, tr.nominatorId)) + '</p>';
+      html += tallyChips(state);
+      html += ghostTokens(state);
+      var voters = [];
+      UI.living(state.players).forEach(function (p) {
+        voters.push({ p: p, ghost: false });
+      });
+      UI.dead(state.players).forEach(function (p) {
+        if (p.hasGhostVote && !p.ghostVoteSpent) voters.push({ p: p, ghost: true });
+      });
+      var votesBy = {};
+      (tr.votes || []).forEach(function (v) {
+        votesBy[String(v.voterId) + (v.ghostToken ? 'g' : 'l')] = v.verdict;
+      });
+      voters.forEach(function (v) {
+        var key = String(v.p.id) + (v.ghost ? 'g' : 'l');
+        var cur = votesBy[key];
+        html += '<div class="voter-row' + (v.ghost ? ' ghost-voter' : '') + '">' +
+          '<span class="voter-name">' + UI.esc(v.p.name) + (v.ghost ? ' <span class="muted">(ghost)</span>' : '') + '</span>' +
+          '<span class="vote-btns">' +
+          '<button class="btn btn-vote' + (cur === 'GUILTY' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+          UI.esc(v.p.id) + '" data-verdict="GUILTY" data-ghost="' + (v.ghost ? '1' : '0') + '">Guilty</button>' +
+          '<button class="btn btn-vote' + (cur === 'INNOCENT' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+          UI.esc(v.p.id) + '" data-verdict="INNOCENT" data-ghost="' + (v.ghost ? '1' : '0') + '">Innocent</button>' +
+          (v.ghost ? '' :
+            '<button class="btn btn-vote' + (cur === 'ABSTAIN' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+            UI.esc(v.p.id) + '" data-verdict="ABSTAIN" data-ghost="0">Abstain</button>') +
+          '</span></div>';
+      });
+      html += '<p class="muted small">Ghost votes spend the ghost token. A revealed Mayor counts as 3.</p>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function dayView(state, cfg, app) {
+    var html = '';
+    html += '<div class="card"><h2>Day Abilities</h2>' + dayAbilities(state) + '</div>';
+    if (app.picker) {
+      html += '<div class="card picker-card"><h2>' + UI.esc(app.picker.title) + '</h2>' +
+        '<p class="muted small">' + UI.esc(app.picker.sub || '') + '</p>' +
+        livingBtns(state, 'pick-day-target') +
+        '<button class="btn btn-block" data-action="picker-cancel">Cancel</button></div>';
+    }
+    html += trialView(state, cfg, app);
+    return html;
+  }
+
+  function dayBar(state, app) {
+    var b = '';
+    if (app.picker) {
+      b += '<button class="btn btn-bar" data-action="picker-cancel">Cancel</button>';
+    }
+    if (state.trial && state.trial.active && !app.lastTrialResult) {
+      b += '<button class="btn btn-primary btn-bar" data-action="resolve-trial">Resolve Trial</button>';
+    }
+    b += '<button class="btn btn-primary btn-bar" data-action="end-day">End Day</button>';
+    return b;
+  }
+
+  function logsCard(state, app) {
+    var logs = state.logs || [];
+    var html = '<div class="card">' +
+      '<button class="btn btn-sm" data-action="toggle-logs">Event Log (' + logs.length + ')</button>' +
+      '<div class="logs' + (app.logsOpen ? ' open' : '') + '">' +
+      (logs.length ? '<ul>' + logs.slice().reverse().map(function (l) {
+        return '<li>' + UI.esc(l) + '</li>';
+      }).join('') + '</ul>' : '<p class="muted small">No events yet.</p>') +
+      '</div></div>';
+    return html;
+  }
+
+  function livingBtns(state, action, exclude) {
+    var html = '<div class="btn-col">';
+    UI.living(state.players).forEach(function (p) {
+      if (exclude != null && String(exclude) === String(p.id)) return;
+      html += '<button class="btn btn-actor" data-action="' + action + '" data-target="' + UI.esc(p.id) + '">' +
+        UI.esc(p.name) + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+})();

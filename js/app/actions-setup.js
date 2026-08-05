@@ -1,0 +1,180 @@
+'use strict';
+
+(function () {
+  var E = window.VillageEngine || {};
+  var UI = window.UI || {};
+  var APP = window.APP;
+
+  function selectPreset(id) {
+    APP.cfg.presetId = id;
+    var p = E.PRESETS[id];
+    if (p) {
+      APP.cfg.deckConfig = {
+        town: (p.town || []).slice(),
+        mafia: (p.mafia || []).slice(),
+        neutral: (p.neutral || []).slice()
+      };
+    }
+  }
+
+  function addRole(team) {
+    if (!APP.teamAddAllowed(team)) {
+      var tc = APP.teamCountsObj();
+      var slots = tc[String(team).toLowerCase()] || 0;
+      var reason;
+      if (team === 'TOWN' && APP.cfg.civilians != null && APP.cfg.civilians > 0) {
+        var free = Math.max(0, slots - Math.min(slots, Number(APP.cfg.civilians) || 0));
+        reason = 'Only ' + free + ' named Town slot' + (free === 1 ? '' : 's') + ' remain (' +
+          APP.cfg.civilians + ' civilian' + (APP.cfg.civilians === 1 ? '' : 's') + ' reserved).';
+      } else {
+        reason = 'All ' + slots + ' ' + APP.teamLabel(team) + ' slot' + (slots === 1 ? '' : 's') + ' are assigned.';
+      }
+      UI.toast(reason);
+      return;
+    }
+    var sel = APP.el('add-' + team);
+    if (!sel) return;
+    var id = sel.value;
+    var list = APP.deckList(team);
+    if (list.indexOf(id) === -1) list.push(id);
+  }
+
+  function removeRole(team, index) {
+    var list = APP.deckList(team);
+    if (index >= 0 && index < list.length) list.splice(index, 1);
+  }
+
+  function moveRole(team, index, dir) {
+    var list = APP.deckList(team);
+    var j = index + dir;
+    if (index < 0 || j < 0 || index >= list.length || j >= list.length) return;
+    var tmp = list[index];
+    list[index] = list[j];
+    list[j] = tmp;
+  }
+
+  function teamInc(team) {
+    var tc = APP.teamCountsObj();
+    var total = (tc.town || 0) + (tc.mafia || 0) + (tc.neutral || 0);
+    if (total >= APP.cfg.playerCount) {
+      UI.toast('Team totals cannot exceed the player count (' + APP.cfg.playerCount + '). Lower another team first.');
+      return;
+    }
+    APP.cfg.teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
+    APP.cfg.teamCounts[String(team).toLowerCase()] += 1;
+    APP.refreshSetup();
+  }
+
+  function teamDec(team) {
+    var tc = APP.teamCountsObj();
+    var key = String(team).toLowerCase();
+    if ((tc[key] || 0) <= 0) return;
+    APP.cfg.teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
+    APP.cfg.teamCounts[key] -= 1;
+    APP.refreshSetup();
+  }
+
+  function civInc() {
+    var slots = APP.teamCountsObj().town || 0;
+    var cur = APP.cfg.civilians == null ? APP.townLeftoverCivilians() : Number(APP.cfg.civilians) || 0;
+    if (cur >= slots) {
+      UI.toast('Civilian count cannot exceed the Town slot count (' + slots + ').');
+      return;
+    }
+    APP.cfg.civilians = cur + 1;
+    APP.refreshSetup();
+  }
+
+  function civDec() {
+    var cur = APP.cfg.civilians == null ? APP.townLeftoverCivilians() : Number(APP.cfg.civilians) || 0;
+    if (cur <= 0) {
+      UI.toast('Civilian count cannot go below zero.');
+      return;
+    }
+    APP.cfg.civilians = cur - 1;
+    APP.refreshSetup();
+  }
+
+  function startGame() {
+    var tc = APP.cfg.teamCounts;
+    if (tc) {
+      var total = (tc.town || 0) + (tc.mafia || 0) + (tc.neutral || 0);
+      if (total !== APP.cfg.playerCount) {
+        UI.toast('Team totals must equal the player count (' + APP.cfg.playerCount + '), currently ' + total + '.');
+        return;
+      }
+    }
+    try {
+      APP.state = E.createGame({
+        playerCount: APP.cfg.playerCount,
+        presetId: APP.cfg.presetId,
+        houseRules: APP.cfg.houseRules,
+        town: APP.cfg.deckConfig.town,
+        mafia: APP.cfg.deckConfig.mafia,
+        neutral: APP.cfg.deckConfig.neutral,
+        teamCounts: tc || undefined,
+        civilians: APP.cfg.civilians == null ? undefined : APP.cfg.civilians
+      });
+      APP.resetAppFlags();
+      APP.save();
+      APP.goto('seats');
+    } catch (e) {
+      UI.toast('Setup error: ' + e.message);
+    }
+  }
+
+  function newGame() {
+    APP.clearSave();
+    APP.state = null;
+    APP.cfg = APP.defaultCfg();
+    APP.resetAppFlags();
+    APP.goto('setup');
+  }
+
+  function resumeGame() {
+    var data = APP.loadSave();
+    if (!data || !data.game) { UI.toast('No saved game found.'); return; }
+    try {
+      APP.state = E.deserialize(data.game);
+      if (data.cfg) APP.cfg = APP.mergeCfg(APP.cfg, data.cfg);
+      APP.app.rolesHidden = !!(data.ui && data.ui.rolesHidden);
+      APP.app.willOpen = false;
+      APP.app.namingMode = false;
+      APP.app.lastTrialResult = null;
+      APP.app.lastVictory = null;
+      APP.app.picker = null;
+      APP.app.seatOverlay = false;
+      APP.app.swapMode = false;
+      APP.app.swapSel = null;
+      APP.app.endReveal = null;
+      if (APP.state.phase === 'MORNING') APP.app.willOpen = !!(data.ui && data.ui.willOpen);
+      if (APP.state.phase === 'NIGHT') {
+        APP.app.wizard = {
+          steps: E.getNightSteps(APP.state),
+          idx: Math.min((data.ui && data.ui.wizardIdx) || 0, Math.max(0, E.getNightSteps(APP.state).length - 1)),
+          actor: null,
+          pending: null
+        };
+      } else {
+        APP.app.wizard = null;
+      }
+      var screen = { SETUP: 'setup', SEATS: 'seats', NIGHT: 'game', MORNING: 'game', DAY: 'game', END: 'end' }[APP.state.phase] || 'setup';
+      APP.goto(screen);
+      UI.toast('Game restored.');
+    } catch (e) {
+      UI.toast('Could not restore save.');
+    }
+  }
+
+  APP.selectPreset = selectPreset;
+  APP.addRole = addRole;
+  APP.removeRole = removeRole;
+  APP.moveRole = moveRole;
+  APP.teamInc = teamInc;
+  APP.teamDec = teamDec;
+  APP.civInc = civInc;
+  APP.civDec = civDec;
+  APP.startGame = startGame;
+  APP.newGame = newGame;
+  APP.resumeGame = resumeGame;
+})();

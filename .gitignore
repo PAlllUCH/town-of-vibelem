@@ -1,0 +1,11 @@
+# Crush tooling and local state
+.crush/
+
+# SQLite artifacts
+*.db
+*.db-shm
+*.db-wal
+
+# OS junk
+Thumbs.db
+.DS_Store

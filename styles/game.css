@@ -1,0 +1,88 @@
+.notice {
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+  font-size: .9rem;
+  background: rgba(255, 255, 255, .05);
+  border-left: 4px solid var(--accent);
+}
+.notice.ok { border-left-color: var(--ok); }
+.notice.accent { border-left-color: var(--accent); }
+.notice.bad { border-left-color: var(--bad); }
+
+/* Wizard */
+.wizard-progress { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+.wizard-title { font-size: 1.2rem; }
+.wizard-prompt { font-size: 1.06rem; line-height: 1.5; background: var(--bg2); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 12px; }
+.wizard-label { color: var(--muted); font-size: .88rem; text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 6px; }
+.actor-done { opacity: .45; }
+.timer {
+  display: inline-block;
+  background: rgba(79, 163, 227, .14);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: .95rem;
+  font-weight: 700;
+  margin: 8px 0;
+}
+
+/* Death cards */
+.death-card {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--bad);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+.death-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.death-will { font-style: italic; color: var(--text); font-size: .9rem; margin: 4px 0; }
+.death-role { color: var(--muted); font-size: .85rem; }
+
+/* Will window */
+.will-row { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+.will-name { font-weight: 600; font-size: .9rem; }
+.will-input {
+  min-height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: .92rem;
+  font-family: inherit;
+  resize: vertical;
+  width: 100%;
+}
+.will-input:disabled { opacity: .5; }
+
+/* Voting */
+.voter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  margin: 6px 0;
+}
+.ghost-voter { border-style: dashed; }
+.voter-name { flex: 1; font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vote-btns { display: flex; gap: 4px; }
+.tally { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+.tally-chip { font-size: .78rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
+.tally-chip.g { color: var(--ok); border-color: var(--ok); }
+.tally-chip.i { color: var(--bad); border-color: var(--bad); }
+.tally-chip.a { color: var(--muted); }
+
+/* Picker */
+.picker-card { border: 2px solid var(--accent); }
+
+/* Logs */
+.logs { display: none; }
+.logs.open { display: block; }
+.logs ul { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; color: var(--muted); }
+.logs li { margin: 3px 0; }
