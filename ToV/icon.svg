@@ -1,9 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect x="16" y="16" width="480" height="480" rx="112" fill="#12171a"/>
-  <rect x="150" y="210" width="190" height="190" rx="18" fill="#e0b23c"/>
-  <path d="M340 238 h18 a42 42 0 0 1 0 84 h-18" fill="none" stroke="#e0b23c" stroke-width="20" stroke-linecap="round"/>
-  <rect x="132" y="182" width="226" height="52" rx="26" fill="#ffffff"/>
-  <circle cx="188" cy="176" r="24" fill="#ffffff"/>
-  <circle cx="262" cy="172" r="28" fill="#ffffff"/>
-  <circle cx="330" cy="178" r="22" fill="#ffffff"/>
+  <rect width="512" height="512" rx="112" fill="#100e0c"/>
+  <rect x="196" y="160" width="120" height="240" rx="6" fill="#ede8de"/>
+  <polygon points="176,168 256,96 336,168" fill="#ede8de"/>
+  <rect x="244" y="128" width="24" height="48" rx="4" fill="#ede8de"/>
+  <circle cx="256" cy="240" r="44" fill="#d48a3c"/>
+  <circle cx="256" cy="240" r="36" fill="#100e0c"/>
+  <circle cx="256" cy="240" r="4" fill="#d48a3c"/>
+  <line x1="256" y1="240" x2="256" y2="212" stroke="#d48a3c" stroke-width="4" stroke-linecap="round"/>
+  <line x1="256" y1="240" x2="276" y2="248" stroke="#d48a3c" stroke-width="3.5" stroke-linecap="round"/>
+  <rect x="176" y="396" width="160" height="16" rx="4" fill="#ede8de"/>
+  <rect x="220" y="310" width="28" height="40" rx="3" fill="#d48a3c"/>
+  <rect x="264" y="310" width="28" height="40" rx="3" fill="#d48a3c"/>
 </svg>

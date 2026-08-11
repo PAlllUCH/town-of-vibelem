@@ -5,7 +5,7 @@
   E.ROLES = {
     jailor: {
       id: 'jailor', name: 'Jailor', team: 'TOWN', category: 'Town Killing',
-      blurb: 'Jails a player each night, reads their will, then EXECUTES (Unstoppable, max 3) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
+      blurb: 'Jails a player each night, then EXECUTES (Unstoppable, max 3) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: 3
     },
     undertaker: {
@@ -115,7 +115,7 @@
     },
     forger: {
       id: 'forger', name: 'Forger', team: 'MAFIA', category: 'Mafia Deception',
-      blurb: 'Each night, forges a false last will for one player. Shown instead of their true will if they die before the next morning.',
+      blurb: 'Each night, forges a false last will for one player. If that player dies before the next morning, the moderator reads the forged will from the player\'s card.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     serialkiller: {

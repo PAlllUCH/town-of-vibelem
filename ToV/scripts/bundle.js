@@ -20,6 +20,6 @@ var bundled = html
   });
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
-var dest = path.join(root, 'dist', 'village-pub-offline.html');
+var dest = path.join(root, 'dist', 'town-of-vibelm-offline.html');
 fs.writeFileSync(dest, bundled);
 console.log(Buffer.byteLength(bundled, 'utf8') + ' bytes');

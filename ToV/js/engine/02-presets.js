@@ -80,8 +80,12 @@
       prompt: 'Jailor, open your eyes. Point to your target. Do you EXECUTE, thumbs down, or SPARE, thumbs up?'
     },
     {
-      position: 4, title: 'Escort / Consort', roles: ['escort', 'consort'],
-      prompt: 'Escort, or Consort, open your eyes. Point to your roleblock target.'
+      position: 4, title: 'Escort', roles: ['escort'],
+      prompt: 'Escort, open your eyes. Point to your roleblock target.'
+    },
+    {
+      position: 4, title: 'Consort', roles: ['consort'],
+      prompt: 'Consort, open your eyes. Point to your roleblock target.'
     },
     {
       position: 5, title: 'Doctor', roles: ['doctor'],
@@ -92,8 +96,12 @@
       prompt: 'Mafia: Godfather and Mafioso, open your eyes. Godfather, point to your kill target.'
     },
     {
-      position: 7, title: 'Janitor and Forger', roles: ['janitor', 'forger'],
-      prompt: 'Janitor and Forger, open your eyes. Janitor, point to the corpse you clean. Forger, point to the player whose will you forge.'
+      position: 7, title: 'Janitor', roles: ['janitor'],
+      prompt: 'Janitor, open your eyes. Point to the corpse you clean.'
+    },
+    {
+      position: 7, title: 'Forger', roles: ['forger'],
+      prompt: 'Forger, open your eyes. Point to the player whose will you forge.'
     },
     {
       position: 8, title: 'Blackmailer', roles: ['blackmailer'],
@@ -108,12 +116,32 @@
       prompt: 'Framer, open your eyes. Point to the player you frame.'
     },
     {
-      position: 11, title: 'Investigators', roles: ['sheriff', 'deputy', 'tracker', 'lookout', 'consigliere', 'undertaker'],
-      prompt: 'Investigators: Sheriff, or inherited Deputy, Tracker, Lookout, Consigliere, and Undertaker, open your eyes.'
+      position: 11, title: 'Sheriff', roles: ['sheriff'],
+      prompt: 'Sheriff, open your eyes. Point to the player you check.'
     },
     {
-      position: 12, title: 'Retributionist', roles: ['retributionist', 'amnesiac'],
-      prompt: 'Retributionist, open your eyes. Point to the corpse you revive. Amnesiac, if you choose to remember, point to the corpse whose role you remember.'
+      position: 11, title: 'Tracker', roles: ['tracker'],
+      prompt: 'Tracker, open your eyes. Point to the player you follow.'
+    },
+    {
+      position: 11, title: 'Lookout', roles: ['lookout'],
+      prompt: 'Lookout, open your eyes. Point to the player you watch.'
+    },
+    {
+      position: 11, title: 'Consigliere', roles: ['consigliere'],
+      prompt: 'Consigliere, open your eyes. Point to the player you inspect.'
+    },
+    {
+      position: 11, title: 'Undertaker', roles: ['undertaker'],
+      prompt: 'Undertaker, open your eyes. Point to the corpse you inspect.'
+    },
+    {
+      position: 12, title: 'Retributionist', roles: ['retributionist'],
+      prompt: 'Retributionist, open your eyes. Point to the corpse you revive.'
+    },
+    {
+      position: 12, title: 'Amnesiac', roles: ['amnesiac'],
+      prompt: 'Amnesiac, if you choose to remember, open your eyes. Point to the corpse whose role you remember.'
     },
     {
       position: 13, title: 'Medium and Ghosts', roles: ['medium'],
@@ -122,15 +150,6 @@
     {
       position: 14, title: 'Morning', roles: [],
       prompt: 'Everyone, open your eyes. Morning has broken.'
-    },
-    {
-      position: 15, title: 'Last Will Window', roles: [],
-      prompt: 'Take 30 seconds to update your Last Wills silently.',
-      timerSeconds: 30
-    },
-    {
-      position: 16, title: 'Pencils Down', roles: [],
-      prompt: 'Pencils down! Last night, the dead are announced. The day begins.'
     }
   ];
 

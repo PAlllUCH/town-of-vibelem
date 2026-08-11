@@ -30,7 +30,6 @@ function assignRoles(roles, opts) {
     p.isDrunk = false;
     p.hasGhostVote = false;
     p.ghostVoteSpent = false;
-    p.lastWill = '';
     p.nightTarget = null;
     p.jailorDecision = null;
     p.isRoleblocked = false;
@@ -45,6 +44,7 @@ function assignRoles(roles, opts) {
     p.guiltPending = false;
   });
   state.graveyard = [];
+  state.deathLog = [];
   state.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
   state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
   state.dayNumber = 0;
@@ -56,7 +56,7 @@ function assignRoles(roles, opts) {
   state.retributionist = { used: false };
   state.amnesiac = { used: false, rememberedRole: null };
   state.pendingInheritanceNote = '';
-  state.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null };
+  state.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] };
   state.phase = 'NIGHT';
   return state;
 }
@@ -269,6 +269,25 @@ describe('night resolution order and the attack/defense model', () => {
     assert.strictEqual(result.deaths.length, 0);
   });
 
+  test('the Doctor may protect themselves', () => {
+    const state = assignRoles(['doctor', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    act(state, 5, 'doctor', 1, 1);
+    act(state, 6, 'godfather', 2, 3);
+    const result = night(state);
+    assert.strictEqual(pid(state, 1).isProtected, true);
+    assert.strictEqual(pid(state, 1).isAlive, true);
+    assert.strictEqual(deathCauses(result)[3], 'killed by the Mafia');
+  });
+
+  test('the Mafia may kill a fellow Mafia member', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 2);
+    const result = night(state);
+    assert.strictEqual(deathCauses(result)[2], 'killed by the Mafia');
+    assert.ok(graveyardEntry(state, 2));
+    assert.ok(!logText(state).includes('kill failed'));
+  });
+
   test('two Basic attacks on an unprotected target: the first kills, the second is void', () => {
     const state = assignRoles(['doctor', 'civilian', 'godfather', 'mafioso', 'serialkiller', 'civilian']);
     act(state, 6, 'godfather', 3, 2);
@@ -390,12 +409,27 @@ describe('night wizard steps', () => {
   test('steps are filtered to living roles and note the night-1 jailor rule', () => {
     const state = assignRoles(['jailor', 'veteran', 'godfather', 'mafioso', 'serialkiller', 'civilian']);
     const steps = engine.getNightSteps(state);
-    assert.deepStrictEqual(steps.map((s) => s.position), [0, 3, 6, 9, 14, 15, 16]);
+    assert.deepStrictEqual(steps.map((s) => s.position), [0, 3, 6, 9, 14]);
     assert.deepStrictEqual(steps.find((s) => s.position === 0).roles, ['veteran']);
     assert.ok(steps.find((s) => s.position === 3).prompt.includes('cannot execute'));
     night(state);
     const steps2 = engine.getNightSteps(state);
     assert.ok(!steps2.find((s) => s.position === 3).prompt.includes('cannot execute'));
+  });
+
+  test('split investigator steps: sheriff, tracker, and undertaker get separate steps', () => {
+    const state = assignRoles(['sheriff', 'tracker', 'undertaker', 'godfather', 'mafioso', 'civilian']);
+    const pos11 = engine.getNightSteps(state).filter((s) => s.position === 11);
+    assert.deepStrictEqual(pos11.map((s) => s.roles), [['sheriff'], ['tracker'], ['undertaker']]);
+  });
+
+  test('an inherited Deputy produces a Sheriff step with roles [deputy]', () => {
+    const state = assignRoles(['sheriff', 'deputy', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 3, 1);
+    night(state);
+    const sheriffStep = engine.getNightSteps(state).find((s) => s.position === 11 && s.title === 'Sheriff');
+    assert.ok(sheriffStep);
+    assert.deepStrictEqual(sheriffStep.roles, ['deputy']);
   });
 });
 
@@ -529,7 +563,7 @@ describe('Drunk status engine', () => {
 // ---------------------------------------------------------------------------
 
 describe('Jailor', () => {
-  test('night 1: jails and reads the will but cannot execute', () => {
+  test('night 1: jails but cannot execute', () => {
     const state = assignRoles(['jailor', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
     act(state, 3, 'jailor', 1, 2, { jailorDecision: 'EXECUTE' });
     act(state, 6, 'godfather', 6, 5);
@@ -537,7 +571,7 @@ describe('Jailor', () => {
     assert.strictEqual(pid(state, 2).isAlive, true);
     assert.strictEqual(pid(state, 1).executionsUsed, 0);
     assert.strictEqual(state.night.lastJailTarget, 2);
-    assert.ok(logText(state).includes('jailed P2 and read their will'));
+    assert.ok(logText(state).includes('jailed P2'));
     assert.ok(!logText(state).includes('executed by the Jailor'));
   });
 
@@ -571,6 +605,15 @@ describe('Jailor', () => {
     night(state);
     assert.strictEqual(pid(state, 2).isAlive, true);
     assert.strictEqual(pid(state, 1).executionsUsed, 3);
+  });
+
+  test('cannot jail themselves (recordNightAction rejects self-targets)', () => {
+    const state = assignRoles(['jailor', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    const ok = engine.recordNightAction(state, {
+      position: 3, roleId: 'jailor', playerId: 1, targetId: 1, extra: { jailorDecision: 'SPARE' }
+    });
+    assert.strictEqual(ok, false);
+    assert.strictEqual(state.night.actions.length, 0);
   });
 });
 
@@ -623,13 +666,23 @@ describe('Witch control', () => {
     assert.ok(logText(state).includes('The Witch controls P2 and learns their role: Godfather.'));
   });
 
-  test('a redirect onto a Mafia player makes the Mafia kill fail', () => {
+  test('a redirect onto a Mafia player kills them', () => {
     const state = assignRoles(['witch', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
     act(state, 2, 'witch', 1, 2, { controlRedirect: 3 });
     act(state, 6, 'godfather', 2, 4);
     const result = night(state);
-    assert.strictEqual(result.deaths.length, 0);
-    assert.ok(logText(state).includes('The Mafia kill failed: P3 is Mafia-aligned.'));
+    assert.strictEqual(deathCauses(result)[3], 'killed by the Mafia');
+    assert.ok(graveyardEntry(state, 3));
+    assert.ok(!logText(state).includes('kill failed'));
+  });
+
+  test('the Witch cannot control herself', () => {
+    const state = assignRoles(['witch', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    const ok = engine.recordNightAction(state, {
+      position: 2, roleId: 'witch', playerId: 1, targetId: 1, extra: { controlRedirect: 4 }
+    });
+    assert.strictEqual(ok, false);
+    assert.strictEqual(state.night.actions.length, 0);
   });
 
   test('controlling the Serial Killer redirects his kill', () => {
@@ -782,7 +835,7 @@ describe('mystery deaths vs Classic Reveal mode', () => {
     assert.strictEqual(ann.deaths[0].roleShown, '?? UNKNOWN ??');
   });
 
-  test('classicReveal shows the true role alongside the will', () => {
+  test('classicReveal shows the true role in the morning announcement', () => {
     const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian'],
       { houseRules: { classicReveal: true } });
     act(state, 6, 'godfather', 1, 3);
@@ -818,6 +871,29 @@ describe('Retributionist', () => {
     const r2 = night(state);
     assert.ok(!r2.logs.some((l) => l.includes('will revive')));
     assert.strictEqual(pid(state, 6).isAlive, false);
+  });
+
+  test('removes the revived player from the graveyard so corpse pickers skip them', () => {
+    const state = assignRoles(['retributionist', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 2, 5);
+    act(state, 12, 'retributionist', 1, 5);
+    night(state);
+    assert.strictEqual(pid(state, 5).isAlive, true);
+    assert.strictEqual(graveyardEntry(state, 5), null);
+    assert.ok(!state.graveyard.some((e) => e.playerId === 5));
+  });
+
+  test('a revived player who dies again gets no second ghost vote token', () => {
+    const state = assignRoles(['retributionist', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 2, 5);
+    act(state, 12, 'retributionist', 1, 5);
+    night(state);
+    assert.strictEqual(pid(state, 5).isAlive, true);
+    assert.strictEqual(pid(state, 5).hasGhostVote, false);
+    act(state, 6, 'godfather', 2, 5);
+    night(state);
+    assert.strictEqual(pid(state, 5).isAlive, false);
+    assert.strictEqual(pid(state, 5).hasGhostVote, false);
   });
 });
 
@@ -1073,6 +1149,52 @@ describe('victory conditions', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Session recap: death log
+// ---------------------------------------------------------------------------
+
+describe('deathLog', () => {
+  test('a Mafia night kill appends exactly one entry with name and cause', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    act(state, 6, 'godfather', 6, 2);
+    night(state);
+    assert.strictEqual(state.deathLog.length, 1);
+    const entry = state.deathLog[0];
+    assert.strictEqual(entry.night, 'N1');
+    assert.strictEqual(entry.playerId, 2);
+    assert.strictEqual(entry.name, 'P2');
+    assert.strictEqual(entry.cause, 'killed by the Mafia');
+    assert.strictEqual(entry.roleShown, 'Civilian');
+  });
+
+  test('a lynch appends a Day entry', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 6, 1));
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    engine.resolveTrial(state);
+    assert.strictEqual(state.deathLog.length, 1);
+    const entry = state.deathLog[0];
+    assert.strictEqual(entry.night, 'Day 1');
+    assert.strictEqual(entry.playerId, 6);
+    assert.strictEqual(entry.name, 'P6');
+    assert.strictEqual(entry.cause, 'lynched by the town');
+  });
+
+  test('survives a serialize/deserialize round trip', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    act(state, 6, 'godfather', 6, 2);
+    night(state);
+    const restored = engine.deserialize(engine.serialize(state));
+    assert.deepStrictEqual(restored.deathLog, state.deathLog);
+    const legacy = JSON.parse(engine.serialize(state));
+    delete legacy.deathLog;
+    const backfilled = engine.deserialize(JSON.stringify(legacy));
+    assert.deepStrictEqual(backfilled.deathLog, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Regression tests: engine bug fixes
 // ---------------------------------------------------------------------------
 
@@ -1158,23 +1280,24 @@ describe('failed jail attempts', () => {
     act(state, 3, 'jailor', 1, 3, { jailorDecision: 'SPARE' }); // jailing P3 again is now allowed
     act(state, 6, 'godfather', 6, 2);
     night(state);
-    const jailedLogs = logText(state).match(/jailed P3 and read their will/g) || [];
+    const jailedLogs = logText(state).match(/jailed P3/g) || [];
     assert.strictEqual(jailedLogs.length, 2);
   });
 });
 
 describe('forged wills', () => {
-  test('a forged will is shown for a Serial Killer victim who dies after the Forger acts', () => {
+  test('records the Forger target and reminds the moderator at resolve', () => {
     const state = assignRoles(['forger', 'serialkiller', 'civilian', 'civilian', 'civilian', 'civilian']);
-    act(state, 7, 'forger', 1, 3, { will: 'FORGED WILL TEXT' });
+    act(state, 7, 'forger', 1, 3);
     act(state, 9, 'serialkiller', 2, 3);
     const result = night(state);
     assert.strictEqual(deathCauses(result)[3], 'killed by the Serial Killer');
-    const d3 = result.deaths.find((d) => d.playerId === 3);
-    assert.strictEqual(d3.will, 'FORGED WILL TEXT');
-    assert.strictEqual(graveyardEntry(state, 3).willShown, 'FORGED WILL TEXT');
+    assert.ok(logText(state).includes('forged a will for P3'));
+    assert.strictEqual(state.morning.forgedWills.length, 1);
+    assert.strictEqual(state.morning.forgedWills[0].targetId, 3);
+    assert.strictEqual(state.morning.forgedWills[0].targetName, 'P3');
     const ann = engine.getMorningAnnouncement(state);
-    assert.strictEqual(ann.deaths[0].will, 'FORGED WILL TEXT');
+    assert.strictEqual(ann.forgedWills[0].targetName, 'P3');
   });
 });
 
@@ -1198,7 +1321,7 @@ describe('roleblock interactions', () => {
     const result = night(state);
     assert.strictEqual(deathCauses(result)[5], 'killed by the Serial Killer'); // only P4 was jailed
     assert.strictEqual(pid(state, 4).isAlive, true); // P4 was jailed and spared
-    assert.ok(logText(state).includes('jailed P4 and read their will'));
+    assert.ok(logText(state).includes('jailed P4'));
   });
 });
 
@@ -1360,5 +1483,64 @@ describe('swapRoles', () => {
     const state = assignRoles(['jailor', 'sheriff', 'godfather', 'mafioso', 'civilian', 'civilian']);
     assert.throws(() => engine.swapRoles(state, 1, 99), /unknown player/);
     assert.throws(() => engine.swapRoles(state, 1, 1), /themself/);
+  });
+});
+
+describe('assignRoles', () => {
+  test('valid full assignment assigns each seat, sets phase to SEATS and runs setup info', () => {
+    const state = assignRoles(['executioner', 'jailor', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    engine.assignRoles(state, {
+      1: 'executioner', 2: 'jailor', 3: 'civilian',
+      4: 'godfather', 5: 'mafioso', 6: 'civilian'
+    });
+    assert.strictEqual(state.phase, 'SEATS');
+    assert.strictEqual(pid(state, 1).assignedRole, 'executioner');
+    assert.strictEqual(pid(state, 2).assignedRole, 'jailor');
+    assert.strictEqual(pid(state, 3).assignedRole, 'civilian');
+    assert.strictEqual(pid(state, 4).assignedRole, 'godfather');
+    assert.strictEqual(pid(state, 5).assignedRole, 'mafioso');
+    assert.strictEqual(pid(state, 6).assignedRole, 'civilian');
+    const target = pid(state, state.executionerTarget);
+    assert.ok(target, 'executioner target is set');
+    assert.ok(target.isAlive, 'executioner target is alive');
+    assert.strictEqual(engine.ROLES[target.assignedRole].team, 'TOWN');
+    assert.strictEqual(state.gfBluffs.length, 3, 'Godfather gets 3 bluffs');
+    state.gfBluffs.forEach((b) => {
+      assert.strictEqual(engine.ROLES[b].team, 'TOWN', 'bluff is a Town role');
+      assert.ok(state.deck.indexOf(b) === -1, 'bluff is not in the deck');
+    });
+    assert.ok(logText(state).includes('Roles assigned.'));
+  });
+
+  test('civilian repeats are allowed', () => {
+    const state = assignRoles(['jailor', 'civilian', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    engine.assignRoles(state, {
+      1: 'jailor', 2: 'civilian', 3: 'civilian', 4: 'civilian', 5: 'godfather', 6: 'mafioso'
+    });
+    assert.strictEqual(pid(state, 2).assignedRole, 'civilian');
+    assert.strictEqual(pid(state, 3).assignedRole, 'civilian');
+    assert.strictEqual(pid(state, 4).assignedRole, 'civilian');
+    assert.strictEqual(state.phase, 'SEATS');
+  });
+
+  test('throws when a seat is missing', () => {
+    const state = assignRoles(['jailor', 'sheriff', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    assert.throws(() => engine.assignRoles(state, {
+      1: 'jailor', 2: 'sheriff', 3: 'godfather', 5: 'civilian', 6: 'civilian'
+    }), /seat 4 is missing/);
+  });
+
+  test('throws when a role is not in the deck', () => {
+    const state = assignRoles(['sheriff', 'doctor', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    assert.throws(() => engine.assignRoles(state, {
+      1: 'jailor', 2: 'doctor', 3: 'godfather', 4: 'mafioso', 5: 'civilian', 6: 'civilian'
+    }), /role jailor is not in the deck/);
+  });
+
+  test('throws when the assigned multiset differs from the deck', () => {
+    const state = assignRoles(['jailor', 'sheriff', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    assert.throws(() => engine.assignRoles(state, {
+      1: 'jailor', 2: 'sheriff', 3: 'godfather', 4: 'mafioso', 5: 'sheriff', 6: 'civilian'
+    }), /do not match the deck/);
   });
 });

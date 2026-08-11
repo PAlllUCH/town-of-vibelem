@@ -8,6 +8,7 @@ if (typeof module !== 'undefined' && module.exports) {
   require('./engine/05-night-steps.js');
   require('./engine/06-night-actions.js');
   require('./engine/07-night-resolution.js');
+  require('./engine/07b-night-resolution.js');
   require('./engine/08-ghosts.js');
   require('./engine/09-day.js');
   require('./engine/10-victory.js');

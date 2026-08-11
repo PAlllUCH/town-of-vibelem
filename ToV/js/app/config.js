@@ -9,7 +9,6 @@
     app: {
       screen: 'setup',
       wizard: null,
-      willOpen: false,
       rolesHidden: false,
       namingMode: false,
       trialStage: null,
@@ -22,8 +21,14 @@
       swapMode: false,
       swapSel: null,
       names: {},
+      pendingRoles: {},
       endReveal: null,
-      timerDeadline: null
+      timerDeadline: null,
+      dayTimerEnds: null,
+      dayTimerTotal: null,
+      referenceOpen: false,
+      referenceQuery: '',
+      referenceDetail: null
     }
   };
 
@@ -98,7 +103,6 @@
 
   function resetAppFlags() {
     APP.app.wizard = null;
-    APP.app.willOpen = false;
     APP.app.rolesHidden = false;
     APP.app.namingMode = false;
     APP.app.trialStage = null;
@@ -111,7 +115,13 @@
     APP.app.swapMode = false;
     APP.app.swapSel = null;
     APP.app.names = {};
+    APP.app.pendingRoles = {};
     APP.app.endReveal = null;
+    APP.app.dayTimerEnds = null;
+    APP.app.dayTimerTotal = null;
+    APP.app.referenceOpen = false;
+    APP.app.referenceQuery = '';
+    APP.app.referenceDetail = null;
   }
 
   APP.defaultCfg = defaultCfg;

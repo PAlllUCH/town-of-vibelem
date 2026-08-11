@@ -16,6 +16,7 @@
           var r1 = (E.RATIO_TABLE && E.RATIO_TABLE[cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
           cfg.teamCounts = { town: r1.town, mafia: r1.mafia, neutral: r1.neutral };
           APP.refreshSetup();
+          APP.bumpStepper(btn);
         }
         break;
       case 'count-inc':
@@ -24,6 +25,7 @@
           var r2 = (E.RATIO_TABLE && E.RATIO_TABLE[cfg.playerCount]) || { town: 0, mafia: 0, neutral: 0 };
           cfg.teamCounts = { town: r2.town, mafia: r2.mafia, neutral: r2.neutral };
           APP.refreshSetup();
+          APP.bumpStepper(btn);
         }
         break;
       case 'preset-select':
@@ -45,16 +47,16 @@
         APP.refreshSetup();
         break;
       case 'team-count-inc':
-        APP.teamInc(btn.getAttribute('data-team'));
+        APP.teamInc(btn.getAttribute('data-team'), btn);
         break;
       case 'team-count-dec':
-        APP.teamDec(btn.getAttribute('data-team'));
+        APP.teamDec(btn.getAttribute('data-team'), btn);
         break;
       case 'civ-inc':
-        APP.civInc();
+        APP.civInc(btn);
         break;
       case 'civ-dec':
-        APP.civDec();
+        APP.civDec(btn);
         break;
       case 'deck-remove':
         APP.removeRole(btn.getAttribute('data-team'), Number(btn.getAttribute('data-index')));
@@ -78,11 +80,14 @@
         APP.newGame();
         break;
 
-      case 'deal-roles':
-        APP.dealRoles();
+      case 'auto-fill':
+        APP.autoFill();
+        break;
+      case 'lock-roles':
+        APP.lockRoles();
         break;
       case 'redeal':
-        try { E.redeal(state); APP.afterMutation(); } catch (e) { UI.toast(e.message); }
+        try { E.redeal(state); APP.afterMutation(); } catch (e) { UI.toast(e.message, 'error'); }
         break;
       case 'edit-names':
         APP.editNames();
@@ -134,23 +139,17 @@
       case 'wizard-target':
         APP.wizTarget(btn.getAttribute('data-target'));
         break;
+      case 'wizard-mafia-target':
+        APP.wizMafiaTarget(btn.getAttribute('data-target'));
+        break;
       case 'wizard-alert':
         APP.wizAlert(btn.getAttribute('data-alert') === 'true');
         break;
       case 'wizard-decision':
         APP.wizJailorDecision(btn.getAttribute('data-decision'));
         break;
-      case 'wizard-forge':
-        APP.wizForgeConfirm();
-        break;
       case 'resolve-night':
         APP.resolveNight();
-        break;
-      case 'pencils-down':
-        app.willOpen = false;
-        app.timerDeadline = null;
-        UI.toast('Pencils down! Wills are locked.');
-        APP.afterMutation();
         break;
       case 'begin-day':
         APP.beginDay();
@@ -194,6 +193,16 @@
       case 'end-day':
         APP.endDay();
         break;
+      case 'start-day-timer':
+        app.dayTimerEnds = Date.now() + (Number(btn.getAttribute('data-seconds')) || 0) * 1000;
+        app.dayTimerTotal = Number(btn.getAttribute('data-seconds')) || 0;
+        APP.afterMutation();
+        break;
+      case 'stop-day-timer':
+        app.dayTimerEnds = null;
+        app.dayTimerTotal = null;
+        APP.afterMutation();
+        break;
 
       case 'toggle-seat-overlay':
         app.seatOverlay = !app.seatOverlay;
@@ -203,17 +212,66 @@
         app.logsOpen = !app.logsOpen;
         APP.afterMutation();
         break;
+      case 'toggle-reference':
+        app.referenceOpen = !app.referenceOpen;
+        APP.updateReferencePanel();
+        APP.renderScreen(app.screen);
+        break;
+      case 'close-reference':
+        if (!app.referenceOpen) break;
+        app.referenceOpen = false;
+        APP.updateReferencePanel();
+        APP.renderScreen(app.screen);
+        break;
+      case 'reference-search':
+        if (!app.referenceOpen) break;
+        app.referenceQuery = btn.value || '';
+        APP.updateReferenceList();
+        break;
+      case 'reference-detail': {
+        if (!app.referenceOpen) break;
+        var rid = btn.getAttribute('data-role');
+        app.referenceDetail = app.referenceDetail === rid ? null : rid;
+        APP.updateReferenceList();
+        break;
+      }
       default:
         break;
+    }
+  }
+
+  function updateReferenceList() {
+    var list = document.querySelector('#reference-panel .reference-list');
+    if (!list || !APP.app.referenceOpen) return;
+    list.innerHTML = UI.renderReferenceList(APP.app);
+  }
+
+  function updateReferencePanel() {
+    var panel = document.getElementById('reference-panel');
+    if (!panel) return;
+    if (APP.app.referenceOpen) {
+      panel.innerHTML = UI.renderRoleReference(APP.state, APP.app);
+      panel.classList.add('open');
+      document.body.classList.add('reference-open');
+    } else {
+      panel.classList.remove('open');
+      panel.innerHTML = '';
+      document.body.classList.remove('reference-open');
     }
   }
 
   document.addEventListener('click', function (ev) {
     var btn = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
     if (!btn) return;
-    var action = btn.getAttribute('data-action');
-    if (action === 'will-input') return;
-    dispatch(action, btn);
+    dispatch(btn.getAttribute('data-action'), btn);
+  });
+
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (!t || !t.getAttribute) return;
+    if (t.getAttribute('data-action') === 'seat-role') {
+      APP.seatRole(t.getAttribute('data-seat'), t.value);
+    }
   });
 
   document.addEventListener('input', function (ev) {
@@ -221,15 +279,13 @@
     if (!t || !t.getAttribute) return;
     if (t.classList && t.classList.contains('seat-name-input')) {
       APP.app.names[Number(t.getAttribute('data-seat'))] = t.value;
-      return;
     }
-    if (t.getAttribute('data-action') === 'will-input') {
-      if (APP.state && APP.state.phase === 'MORNING' && APP.app.willOpen) {
-        try {
-          E.updateWill(APP.state, t.getAttribute('data-player'), t.value);
-          APP.save();
-        } catch (e) { }
-      }
+    if (t.getAttribute('data-action') === 'reference-search') {
+      APP.app.referenceQuery = t.value || '';
+      APP.updateReferenceList();
     }
   });
+
+  APP.updateReferencePanel = updateReferencePanel;
+  APP.updateReferenceList = updateReferenceList;
 })();

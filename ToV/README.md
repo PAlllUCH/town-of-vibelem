@@ -1,4 +1,4 @@
-# Village Pub
+# Town of Vibelm
 
 A **moderator assistant web app** for a social deduction game that blends the mechanical spine of *Town of Salem* with the social tabletop soul of *Blood on the Clocktower*.
 
@@ -37,7 +37,7 @@ node --test --test-reporter=dot tests/engine.test.js
 
 **Option 1 — GitHub Pages.** Push the repo, enable Pages in your repository settings with *Source: GitHub Actions*, and open the deployed URL. On your phone, use *Add to Home Screen* so it installs like an app and works fully offline after the first visit.
 
-**Option 2 — fully offline, no internet.** Run `node scripts/bundle.js`, copy `dist/village-pub-offline.html` to your phone, and open it from the Files app or Downloads. Android handles this well; iOS file saves can be flaky, so test first.
+**Option 2 — fully offline, no internet.** Run `node scripts/bundle.js`, copy `dist/town-of-vibelm-offline.html` to your phone, and open it from the Files app or Downloads. Android handles this well; iOS file saves can be flaky, so test first.
 
 **Option 3 — Android zip.** Download the repo as a zip, extract it, and open `index.html` in Chrome.
 

@@ -5,11 +5,11 @@
   var UI = window.UI;
 
   UI.renderGameHeader = function (state, cfg, app) {
-    var label = 'Game';
+    var label = 'Session';
     if (state.phase === 'NIGHT') label = 'Night ' + Math.max(1, (state.dayNumber || 0) + 1);
     else if (state.phase === 'MORNING') label = 'Morning ' + Math.max(1, state.dayNumber || 1);
     else if (state.phase === 'DAY') label = 'Day ' + Math.max(1, state.dayNumber || 1);
-    else if (state.phase === 'END') label = 'Game Over';
+    else if (state.phase === 'END') label = 'Session Over';
     return '<div class="card card-head" style="padding:10px 14px;">' +
       '<span class="tag tag-accent">' + UI.esc(state.phase) + '</span>' +
       '<strong>' + label + '</strong>' +
@@ -24,44 +24,34 @@
     if (app.seatOverlay) {
       body += '<div class="card"><div class="card-head"><h2>Seat Grid</h2>' +
         '<button class="btn btn-sm" data-action="toggle-seat-overlay">Close</button></div>' +
-        UI.seatTiles(state, app.rolesHidden) + '</div>';
+        UI.seatTiles(state, app.rolesHidden, cfg) + '</div>';
     }
     if (state.phase === 'NIGHT') {
       body += UI.nightWizard(state, cfg, app);
       bar = '<button class="btn btn-primary btn-bar" data-action="resolve-night">Resolve Night</button>';
     } else if (state.phase === 'MORNING') {
       body += morningView(state, cfg, app);
-      bar = app.willOpen
-        ? '<button class="btn btn-primary btn-bar" data-action="pencils-down">Pencils Down</button>'
-        : '<button class="btn btn-primary btn-bar" data-action="begin-day">Begin Day</button>';
+      bar = '<button class="btn btn-primary btn-bar" data-action="begin-day">Begin Day</button>';
     } else if (state.phase === 'DAY') {
       body += dayView(state, cfg, app);
       bar = dayBar(state, app);
     } else {
-      body += '<p class="muted">Game over.</p>';
+      body += '<p class="muted">Session over.</p>';
     }
     body += logsCard(state, app);
     return { body: body, bar: bar };
   };
 
   function morningView(state, cfg, app) {
-    var html = '';
-    if (app.willOpen) {
-      html += '<div class="card"><div class="card-head"><h2>Last Will Window</h2>' +
-        '<div class="timer" data-timer-seconds="30" data-timer-kind="will"></div></div>';
-      html += '<p class="muted small">Take 30 seconds to update wills silently, then tap <strong>Pencils Down</strong> below.</p>';
-      UI.living(state.players).forEach(function (p) {
-        html += '<label class="will-row"><span class="will-name">' + UI.esc(p.name) + '</span>' +
-          '<textarea class="will-input" data-action="will-input" data-player="' + UI.esc(p.id) +
-          '" rows="2" placeholder="Last will...">' + UI.esc(p.lastWill || '') + '</textarea></label>';
-      });
-      html += '</div>';
-      return html;
-    }
     var ann;
     try { ann = E.getMorningAnnouncement(state); } catch (e) { ann = {}; }
     ann = ann || {};
-    html += '<div class="card"><h2>Morning Announcement</h2>';
+    var html = '<div class="card"><h2>Morning Announcement</h2>';
+    if (ann.forgedWills && ann.forgedWills.length) {
+      ann.forgedWills.forEach(function (f) {
+        html += '<div class="notice accent">A will was forged for ' + UI.esc(f.targetName) + '.</div>';
+      });
+    }
     if (ann.revivals && ann.revivals.length) {
       html += '<div class="notice ok"><strong>Revived:</strong> ' + ann.revivals.map(UI.esc).join(', ') + '</div>';
     }
@@ -72,14 +62,12 @@
       ann.deaths.forEach(function (d) {
         html += '<div class="death-card"><div class="death-head">' +
           '<strong>' + UI.esc(d.name) + '</strong><span class="tag tag-bad">DEAD</span></div>' +
-          '<div class="death-will">"' + UI.esc(d.will || 'No will') + '"</div>' +
           '<div class="death-role">' + UI.esc(d.roleShown || '?? UNKNOWN ??') + '</div></div>';
       });
     } else {
       html += '<div class="notice">No deaths last night.</div>';
     }
     html += '</div>';
-    html += '<div class="card"><p class="muted">Wills are locked until tomorrow morning. Tap <strong>Begin Day</strong> below to open discussion.</p></div>';
     return html;
   }
 
@@ -199,13 +187,37 @@
     return html;
   }
 
+  function dayTimerView(app) {
+    var running = !!app.dayTimerEnds;
+    var html = '<div class="card"><h2>Discussion Timer</h2>' +
+      '<div class="timer-wrap">' +
+      '<div class="timer-ring' + (running ? '' : ' idle') + '"' +
+      (running ? ' data-timer-seconds="180" data-timer-kind="day"' : '') +
+      ' style="--p:100">' +
+      '<span class="timer-count">' + (running ? '' : '--') + '</span></div>' +
+      '<div class="btn-row timer-btns">' +
+      '<button class="btn" data-action="start-day-timer" data-seconds="60">60s</button>' +
+      '<button class="btn" data-action="start-day-timer" data-seconds="120">120s</button>' +
+      '<button class="btn" data-action="start-day-timer" data-seconds="180">180s</button>' +
+      (running ? '<button class="btn" data-action="stop-day-timer">Stop</button>' : '') +
+      '</div></div></div>';
+    return html;
+  }
+
   function dayView(state, cfg, app) {
     var html = '';
+    html += dayTimerView(app);
     html += '<div class="card"><h2>Day Abilities</h2>' + dayAbilities(state) + '</div>';
     if (app.picker) {
+      var holder = null;
+      if (app.picker.ability === 'vigilante' || app.picker.ability === 'deputy') {
+        (state.players || []).forEach(function (pl) {
+          if (pl.isAlive && pl.assignedRole === app.picker.ability) holder = pl;
+        });
+      }
       html += '<div class="card picker-card"><h2>' + UI.esc(app.picker.title) + '</h2>' +
         '<p class="muted small">' + UI.esc(app.picker.sub || '') + '</p>' +
-        livingBtns(state, 'pick-day-target') +
+        livingBtns(state, 'pick-day-target', holder ? holder.id : null, app.picker.ability) +
         '<button class="btn btn-block" data-action="picker-cancel">Cancel</button></div>';
     }
     html += trialView(state, cfg, app);
@@ -236,11 +248,12 @@
     return html;
   }
 
-  function livingBtns(state, action, exclude) {
+  function livingBtns(state, action, exclude, ability) {
     var html = '<div class="btn-col">';
     UI.living(state.players).forEach(function (p) {
       if (exclude != null && String(exclude) === String(p.id)) return;
-      html += '<button class="btn btn-actor" data-action="' + action + '" data-target="' + UI.esc(p.id) + '">' +
+      html += '<button class="btn btn-actor" data-action="' + action + '" data-target="' + UI.esc(p.id) + '"' +
+        (ability ? ' data-ability="' + UI.esc(ability) + '"' : '') + '>' +
         UI.esc(p.name) + '</button>';
     });
     html += '</div>';

@@ -48,17 +48,21 @@
 
   function clearTimer() {
     if (timerId) { clearInterval(timerId); timerId = null; }
+    var t = document.querySelector('[data-timer-seconds]');
+    if (t) t.classList.remove('timer-danger');
   }
 
   function onTimerDone(kind) {
-    APP.app.timerDeadline = null;
-    if (kind === 'will') {
-      APP.app.willOpen = false;
-      UI.toast('Pencils down! Wills are locked.');
+    if (kind === 'day') {
+      APP.app.timerDeadline = null;
+      APP.app.dayTimerEnds = null;
+      APP.app.dayTimerTotal = null;
+      UI.toast('Time\'s up!');
       APP.afterMutation();
-    } else {
-      UI.toast('Time is up.');
+      return;
     }
+    APP.app.timerDeadline = null;
+    UI.toast('Time is up.');
   }
 
   function startTimers() {
@@ -67,10 +71,26 @@
     if (!t) { APP.app.timerDeadline = null; return; }
     var total = Number(t.getAttribute('data-timer-seconds')) || 0;
     var kind = t.getAttribute('data-timer-kind') || 'step';
-    if (APP.app.timerDeadline == null) APP.app.timerDeadline = Date.now() + total * 1000;
+    if (kind === 'day') {
+      var ends = APP.app.dayTimerEnds;
+      if (ends == null) { APP.app.timerDeadline = null; return; }
+      if (ends <= Date.now()) { APP.app.dayTimerEnds = null; APP.app.timerDeadline = null; return; }
+      APP.app.timerDeadline = ends;
+    } else if (APP.app.timerDeadline == null) {
+      APP.app.timerDeadline = Date.now() + total * 1000;
+    }
     var tick = function () {
       var remain = Math.max(0, Math.round((APP.app.timerDeadline - Date.now()) / 1000));
-      t.textContent = remain + 's';
+      var count = t.querySelector('.timer-count');
+      if (count) count.textContent = remain + 's';
+      else t.textContent = remain + 's';
+      if (kind === 'day') {
+        var full = APP.app.dayTimerTotal || total;
+        var pct = full > 0 ? Math.max(0, Math.min(100, (remain / full) * 100)) : 0;
+        t.style.setProperty('--p', pct);
+        if (remain <= 30) t.classList.add('timer-danger');
+        else t.classList.remove('timer-danger');
+      }
       if (remain <= 0) {
         clearTimer();
         APP.app.timerDeadline = null;

@@ -53,7 +53,7 @@
     list[j] = tmp;
   }
 
-  function teamInc(team) {
+  function teamInc(team, btn) {
     var tc = APP.teamCountsObj();
     var total = (tc.town || 0) + (tc.mafia || 0) + (tc.neutral || 0);
     if (total >= APP.cfg.playerCount) {
@@ -63,18 +63,20 @@
     APP.cfg.teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
     APP.cfg.teamCounts[String(team).toLowerCase()] += 1;
     APP.refreshSetup();
+    bumpStepper(btn);
   }
 
-  function teamDec(team) {
+  function teamDec(team, btn) {
     var tc = APP.teamCountsObj();
     var key = String(team).toLowerCase();
     if ((tc[key] || 0) <= 0) return;
     APP.cfg.teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
     APP.cfg.teamCounts[key] -= 1;
     APP.refreshSetup();
+    bumpStepper(btn);
   }
 
-  function civInc() {
+  function civInc(btn) {
     var slots = APP.teamCountsObj().town || 0;
     var cur = APP.cfg.civilians == null ? APP.townLeftoverCivilians() : Number(APP.cfg.civilians) || 0;
     if (cur >= slots) {
@@ -83,9 +85,10 @@
     }
     APP.cfg.civilians = cur + 1;
     APP.refreshSetup();
+    bumpStepper(btn);
   }
 
-  function civDec() {
+  function civDec(btn) {
     var cur = APP.cfg.civilians == null ? APP.townLeftoverCivilians() : Number(APP.cfg.civilians) || 0;
     if (cur <= 0) {
       UI.toast('Civilian count cannot go below zero.');
@@ -93,6 +96,25 @@
     }
     APP.cfg.civilians = cur - 1;
     APP.refreshSetup();
+    bumpStepper(btn);
+  }
+
+  function bumpStepper(btn) {
+    if (!btn) return;
+    var action = btn.getAttribute('data-action') || '';
+    var team = btn.getAttribute('data-team') || '';
+    var strong = null;
+    if (action === 'civ-inc' || action === 'civ-dec') {
+      strong = document.querySelector('.civ-stepper-num strong');
+    } else if (action === 'count-inc' || action === 'count-dec') {
+      strong = document.querySelector('.stepper-num strong');
+    } else if (action === 'team-count-inc' || action === 'team-count-dec') {
+      var dot = document.querySelector('.team-stepper .team-dot.team-' + team);
+      if (dot && dot.parentNode) strong = dot.parentNode.querySelector('.team-stepper-num strong');
+    }
+    if (!strong) return;
+    strong.classList.add('bump');
+    setTimeout(function () { strong.classList.remove('bump'); }, 300);
   }
 
   function startGame() {
@@ -119,7 +141,7 @@
       APP.save();
       APP.goto('seats');
     } catch (e) {
-      UI.toast('Setup error: ' + e.message);
+      UI.toast('Setup error: ' + e.message, 'error');
     }
   }
 
@@ -138,8 +160,13 @@
       APP.state = E.deserialize(data.game);
       if (data.cfg) APP.cfg = APP.mergeCfg(APP.cfg, data.cfg);
       APP.app.rolesHidden = !!(data.ui && data.ui.rolesHidden);
-      APP.app.willOpen = false;
       APP.app.namingMode = false;
+      APP.app.pendingRoles = (data.ui && data.ui.pendingRoles) || {};
+      APP.app.names = (data.ui && data.ui.names) || {};
+      APP.app.dayTimerEnds = (data.ui && data.ui.dayTimerEnds) || null;
+      if (APP.app.dayTimerEnds && APP.app.dayTimerEnds <= Date.now()) APP.app.dayTimerEnds = null;
+      APP.app.dayTimerTotal = (data.ui && data.ui.dayTimerTotal) || null;
+      if (!APP.app.dayTimerEnds) APP.app.dayTimerTotal = null;
       APP.app.lastTrialResult = null;
       APP.app.lastVictory = null;
       APP.app.picker = null;
@@ -147,7 +174,6 @@
       APP.app.swapMode = false;
       APP.app.swapSel = null;
       APP.app.endReveal = null;
-      if (APP.state.phase === 'MORNING') APP.app.willOpen = !!(data.ui && data.ui.willOpen);
       if (APP.state.phase === 'NIGHT') {
         APP.app.wizard = {
           steps: E.getNightSteps(APP.state),
@@ -160,9 +186,9 @@
       }
       var screen = { SETUP: 'setup', SEATS: 'seats', NIGHT: 'game', MORNING: 'game', DAY: 'game', END: 'end' }[APP.state.phase] || 'setup';
       APP.goto(screen);
-      UI.toast('Game restored.');
+      UI.toast('Game restored.', 'success');
     } catch (e) {
-      UI.toast('Could not restore save.');
+      UI.toast('Could not restore save.', 'error');
     }
   }
 
@@ -174,6 +200,7 @@
   APP.teamDec = teamDec;
   APP.civInc = civInc;
   APP.civDec = civDec;
+  APP.bumpStepper = bumpStepper;
   APP.startGame = startGame;
   APP.newGame = newGame;
   APP.resumeGame = resumeGame;

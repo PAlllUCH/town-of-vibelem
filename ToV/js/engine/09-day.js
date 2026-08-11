@@ -9,13 +9,14 @@
       deaths: m.deaths.map(function (d) {
         var roleShown = '?? UNKNOWN ??';
         if (classic && !d.wasCleaned && E.ROLES[d.trueRole]) roleShown = E.ROLES[d.trueRole].name;
-        return { name: d.name, will: d.will || '', roleShown: roleShown };
+        return { name: d.name, roleShown: roleShown, cause: d.cause };
       }),
       revivals: m.revivals.map(function (id) {
         var p = E._byId(state, id);
         return p ? p.name : String(id);
       }),
-      inheritanceNote: m.inheritanceNote || ''
+      inheritanceNote: m.inheritanceNote || '',
+      forgedWills: m.forgedWills || []
     };
   };
 
@@ -31,14 +32,6 @@
     state.trial.dayTrialsDone = 0;
     var victory = E.checkVictory(state);
     return victory;
-  };
-
-  E.updateWill = function (state, playerId, willText) {
-    if (state.phase !== 'MORNING') return false;
-    var p = E._byId(state, playerId);
-    if (!p || !p.isAlive) return false;
-    p.lastWill = String(willText || '');
-    return true;
   };
 
   E.startTrial = function (state, accusedId, nominatorId) {

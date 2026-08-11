@@ -8,9 +8,12 @@
     var app = APP.app;
     var ui = {
       rolesHidden: app.rolesHidden,
-      willOpen: app.willOpen,
       namingMode: app.namingMode,
-      wizardIdx: app.wizard ? app.wizard.idx : 0
+      wizardIdx: app.wizard ? app.wizard.idx : 0,
+      pendingRoles: app.pendingRoles || {},
+      names: app.names || {},
+      dayTimerEnds: app.dayTimerEnds || null,
+      dayTimerTotal: app.dayTimerTotal || null
     };
     var payload = { cfg: APP.cfg, ui: ui, game: APP.state ? E.serialize(APP.state) : null };
     try {

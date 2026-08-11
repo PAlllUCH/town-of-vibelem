@@ -107,25 +107,31 @@
 
   function wizAlert(alerting) {
     var w = wiz();
-    recordWizard('veteran', w.actor.player, w.actor.player, { alert: alerting });
+    recordWizard('veteran', w.actor.player, null, { alert: alerting });
     w.actor = null;
     w.pending = null;
+    APP.afterMutation();
+  }
+
+  function wizMafiaTarget(targetId) {
+    var leader = E.mafiaKillActor(APP.state);
+    if (!leader) {
+      UI.toast('No Mafia killer available.');
+      return;
+    }
+    recordWizard(leader.assignedRole, leader.id, resolveId(targetId), undefined);
+    wiz().actor = null;
+    wiz().pending = null;
     APP.afterMutation();
   }
 
   function wizJailorDecision(decision) {
     var w = wiz();
-    recordWizard('jailor', w.actor.player, w.pending.jail, { jailorDecision: decision });
-    w.actor = null;
-    w.pending = null;
-    APP.afterMutation();
-  }
-
-  function wizForgeConfirm() {
-    var w = wiz();
-    var txtInput = APP.el('forge-will');
-    var txt = txtInput ? txtInput.value : '';
-    recordWizard('forger', w.actor.player, w.pending.forge, { will: txt });
+    if (decision === 'FORGE') {
+      recordWizard('forger', w.actor.player, w.pending.forge, undefined);
+    } else {
+      recordWizard('jailor', w.actor.player, w.pending.jail, { jailorDecision: decision });
+    }
     w.actor = null;
     w.pending = null;
     APP.afterMutation();
@@ -136,23 +142,21 @@
       E.resolveNight(APP.state);
       APP.state.phase = 'MORNING';
       APP.app.wizard = null;
-      APP.app.willOpen = true;
       APP.app.timerDeadline = null;
       APP.afterMutation();
       checkEnd();
     } catch (e) {
-      UI.toast('Night error: ' + e.message);
+      UI.toast('Night error: ' + e.message, 'error');
     }
   }
 
   function beginDay() {
     try {
       E.beginDay(APP.state);
-      APP.app.willOpen = false;
       APP.afterMutation();
       checkEnd();
     } catch (e) {
-      UI.toast('Day error: ' + e.message);
+      UI.toast('Day error: ' + e.message, 'error');
     }
   }
 
@@ -192,7 +196,7 @@
       APP.app.lastTrialResult = null;
       APP.afterMutation();
     } catch (e) {
-      UI.toast('Trial error: ' + e.message);
+      UI.toast('Trial error: ' + e.message, 'error');
     }
   }
 
@@ -206,7 +210,7 @@
       });
       APP.afterMutation();
     } catch (e) {
-      UI.toast(e.message);
+      UI.toast(e.message, 'error');
     }
   }
 
@@ -218,7 +222,7 @@
       APP.afterMutation();
       checkEnd();
     } catch (e) {
-      UI.toast('Trial error: ' + e.message);
+      UI.toast('Trial error: ' + e.message, 'error');
     }
   }
 
@@ -256,7 +260,7 @@
       APP.afterMutation();
       checkEnd();
     } catch (e) {
-      UI.toast(e.message);
+      UI.toast(e.message, 'error');
       APP.afterMutation();
     }
   }
@@ -264,6 +268,7 @@
   function endDay() {
     if (checkEnd()) return;
     APP.state.phase = 'NIGHT';
+    APP.app.dayTimerEnds = null;
     APP.app.trialStage = null;
     APP.app.trialNom = null;
     APP.app.lastTrialResult = null;
@@ -279,8 +284,8 @@
   APP.wizActorBack = wizActorBack;
   APP.wizTarget = wizTarget;
   APP.wizAlert = wizAlert;
+  APP.wizMafiaTarget = wizMafiaTarget;
   APP.wizJailorDecision = wizJailorDecision;
-  APP.wizForgeConfirm = wizForgeConfirm;
   APP.resolveNight = resolveNight;
   APP.beginDay = beginDay;
   APP.checkEnd = checkEnd;

@@ -1,10 +1,10 @@
-# Village Pub
+# Town of Vibelm
 
 ## Game Design Document (Authoritative)
 
 **Version 1.0**
 
-This document supersedes CONCEPT.md and is the single source of truth for the rules of Village Pub, a hybrid social deduction game played in person by a group of friends with one human moderator assisted by a web app. All resolution rules in this document are unambiguous and internally consistent.
+This document supersedes CONCEPT.md and is the single source of truth for the rules of Town of Vibelm, a hybrid social deduction game played in person by a group of friends with one human moderator assisted by a web app. All resolution rules in this document are unambiguous and internally consistent.
 
 **Table of contents**
 
@@ -27,7 +27,7 @@ This document supersedes CONCEPT.md and is the single source of truth for the ru
 
 ### 1.1 The hybrid premise
 
-Village Pub layers the social engagement engine of *Blood on the Clocktower* on top of the mechanical engine of *Town of Salem*:
+Town of Vibelm layers the social engagement engine of *Blood on the Clocktower* on top of the mechanical engine of *Town of Salem*:
 
 - **The Town of Salem layer** supplies the sharp, fair, mechanical spine: a fixed role catalog with exact night and day abilities, a mathematically balanced alignment ratio for every player count, a fixed nightly action order, and exact, countable victory conditions.
 - **The Blood on the Clocktower layer** supplies the soul: players sit around one table, talk openly, whisper in corners, and argue; the dead become ghosts who haunt the living; deaths are announced as mysteries; and a human moderator runs the show with a scripted night wizard.
@@ -43,7 +43,7 @@ Village Pub layers the social engagement engine of *Blood on the Clocktower* on 
 Every game day is one cycle of four phases:
 
 1. **Night**: everyone closes their eyes; the moderator walks the night wizard; players act by gesture; the app records and resolves all actions.
-2. **Morning**: the dead are announced with their last wills shown, their true roles unknown (mystery deaths); the town gets 30 seconds to update wills silently.
+2. **Morning**: the dead are announced with their last wills read from the players' cards, their true roles unknown (mystery deaths).
 3. **Day**: open discussion, day abilities, trials, voting, and at most one lynch.
 4. **Night** begins again, and the cycle repeats until a victory condition triggers.
 
@@ -64,7 +64,7 @@ Every game day is one cycle of four phases:
 
 General rules that apply to every role:
 
-- No player may target themselves unless the ability is explicitly self-directed (Doctor may protect themselves; the Veteran's alert and the Mayor's reveal are self-declarations).
+- No player may target themselves unless the ability is explicitly self-directed (Doctor may protect themselves; the Veteran's alert and the Mayor's reveal are self-declarations; the Mafia kill is a single pick by the kill leader and may target any other player, including fellow Mafia members, but never the leader themselves).
 - Dead players (ghosts) cannot be targeted by night actions except by corpse-targeting abilities (Undertaker, Janitor, Retributionist, Amnesiac).
 - A roleblocked player's night action fails. A Drunk player's ability behaves per Section 6.
 
@@ -72,7 +72,7 @@ General rules that apply to every role:
 
 | Role | Category | Ability |
 |---|---|---|
-| **Jailor** | Town Killing | Each night, choose a living player to jail. The jailed player is roleblocked for the night, the Jailor reads the jailed player's last will, then the Jailor chooses EXECUTE (thumbs down) or SPARE (thumbs up). Execution is an Unstoppable kill. The Jailor has a maximum of three executions per game and cannot execute on Night 1; jailing and reading the will still work on Night 1. The Jailor cannot jail the same player on two consecutive nights. |
+| **Jailor** | Town Killing | Each night, choose a living player to jail. The jailed player is roleblocked for the night, the Jailor reads the jailed player's last will from their card, then the Jailor chooses EXECUTE (thumbs down) or SPARE (thumbs up). Execution is an Unstoppable kill. The Jailor has a maximum of three executions per game and cannot execute on Night 1; jailing and reading the will still work on Night 1. The Jailor cannot jail the same player on two consecutive nights. |
 | **Undertaker** | Town Investigative | Each night, choose one corpse; the moderator privately reveals its true role to you (shown on the app). Cannot inspect a corpse cleaned by the Janitor. |
 | **Medium** | Town Support | Alive: each night, during the Medium and Ghosts step, read the Ghost Ledger for 30 seconds. Dead: each night, during the Medium and Ghosts step, whisper with one living player of your choice for 60 seconds. |
 | **Doctor** | Town Protective | Each night, choose a living player (including yourself) to protect. Protection blocks the first Basic attack against them that night. Fails if the Doctor is Drunk or roleblocked. |
@@ -91,7 +91,7 @@ General rules that apply to every role:
 
 | Role | Category | Ability |
 |---|---|---|
-| **Godfather** | Mafia Killing | Leads the Mafia kill and chooses the night's target. Night immune: Basic defense blocks Basic attacks. Reads INNOCENT to the Sheriff. If the Mafioso is dead, performs the kill alone. If roleblocked, the Mafioso performs the kill. The Mafia kill cannot target a Mafia-aligned player. At setup, the Godfather is privately given three Town bluff roles, chosen from Town roles that are NOT in the current game deck, and may claim any of them during the game; the app shows the bluffs to the moderator at setup so the moderator can whisper them to the Godfather. |
+| **Godfather** | Mafia Killing | Leads the Mafia kill and chooses the night's target. Night immune: Basic defense blocks Basic attacks. Reads INNOCENT to the Sheriff. If the Mafioso is dead, performs the kill alone. If roleblocked, the Mafioso performs the kill. The Mafia kill may target any living player other than the kill leader, including fellow Mafia members. At setup, the Godfather is privately given three Town bluff roles, chosen from Town roles that are NOT in the current game deck, and may claim any of them during the game; the app shows the bluffs to the moderator at setup so the moderator can whisper them to the Godfather. |
 | **Mafioso** | Mafia Killing | Carries out the Mafia kill at the Godfather's chosen target. If the Godfather is dead or roleblocked, performs the kill alone. When the Godfather dies, the Mafioso becomes the new Godfather: night immune and reads INNOCENT to the Sheriff. |
 | **Janitor** | Mafia Deception | Each night, choose one corpse to clean. A cleaned corpse's true role can never be learned by the Undertaker (and in Classic Reveal Mode its role stays hidden on the morning announcement). Fails if the Janitor is Drunk or roleblocked. |
 | **Consigliere** | Mafia Support | Each night, choose a living player and learn their exact role. If Drunk, receives a false role (selected at random from roles of a different alignment). |
@@ -99,7 +99,7 @@ General rules that apply to every role:
 | **Poisoner** | Mafia Deception | Each night, choose a living player to poison: the target is Drunk for one cycle (Section 6). |
 | **Blackmailer** | Mafia Deception | Each night, choose one living player to blackmail. That player cannot speak during the next day: no table talk, no whisper window, no trial defense. They may still vote by hand gesture and may still use gesture-based day abilities. A player cannot be blackmailed on consecutive nights. |
 | **Framer** | Mafia Deception | Each night, choose one living player to frame. A framed player reads SUSPICIOUS to the Sheriff or the inherited Deputy for that night. The frame sets the base result to SUSPICIOUS; a Drunk Sheriff then inverts that result (Section 6). |
-| **Forger** | Mafia Deception | Each night, choose one player and forge a false last will for them. If that player dies before the next morning, the forged will is shown instead of their true will. |
+| **Forger** | Mafia Deception | Each night, choose one player and forge a false last will for them. If that player dies before the next morning, the moderator reads the forged will from the player's card instead of their true will. |
 
 ### 2.3 Neutral roles
 
@@ -218,20 +218,25 @@ Actions are recorded in the scripted night wizard order (the moderator wakes pla
 | 0 | **Veteran** (pre-night) | Declares ALERT (max 3 per game); while alert, visitors die (Unstoppable) and the Veteran cannot be killed (Section 5.3). |
 | 1 | **Poisoner** | Poisons the target: Drunk for one cycle (Section 6). |
 | 2 | **Witch** | Chooses a living player to control and a redirect target. Cannot control a player who is currently jailed (the jail voids the control). On a successful control, learns the controlled player's exact role. The controlled player's targeting night action is redirected (a controlled Poisoner has already acted and is unaffected). Controlling the Godfather redirects the Mafia kill target (resolved per 5.4); controlling the Serial Killer redirects his kill; controlling the Jailor redirects only the jail target, and the EXECUTE or SPARE decision stays with the Jailor. |
-| 3 | **Jailor** | Jails a player: roleblocked, will shown to the Jailor, then EXECUTE (Unstoppable kill, resolves immediately) or SPARE. Max 3 executions per game; on Night 1 the Jailor jails and reads the will but cannot execute. |
-| 4 | **Escort / Consort** | Roleblocks the chosen player. |
+| 3 | **Jailor** | Jails a player: roleblocked, the Jailor reads the jailed player's will from their card, then EXECUTE (Unstoppable kill, resolves immediately) or SPARE. Max 3 executions per game; on Night 1 the Jailor jails and reads the will but cannot execute. |
+| 4 | **Escort** | Roleblocks the chosen player. |
+| 4 | **Consort** | Roleblocks the chosen player. |
 | 5 | **Doctor** | Protects the chosen player (fails if Drunk or roleblocked). |
-| 6 | **Mafia** | The Godfather and Mafioso choose the kill target; the kill is carried out per 5.4 (redirected if the Godfather is controlled by the Witch). |
-| 7 | **Janitor and Forger** | Janitor cleans a corpse (fails if Drunk or roleblocked); Forger forges a will for one player. |
+| 6 | **Mafia** | The Mafia makes a single kill pick per night, chosen by the kill leader (the living Godfather, or the living Mafioso if the Godfather is dead); the kill is carried out per 5.4 (redirected if the Godfather is controlled by the Witch). |
+| 7 | **Janitor** | Cleans a corpse (fails if Drunk or roleblocked). |
+| 7 | **Forger** | Forges a will for one player. |
 | 8 | **Blackmailer** | Blackmails the chosen player: cannot speak during the next day (no table talk, no whisper window, no trial defense); may still vote by hand gesture (Section 2.2). |
 | 9 | **Serial Killer** | Kills the chosen player (Basic attack; fails if roleblocked; redirected if controlled by the Witch). |
 | 10 | **Framer** | Frames the chosen player: reads SUSPICIOUS to the Sheriff or inherited Deputy for that night (a Drunk Sheriff then inverts the result). |
-| 11 | **Investigators** | Sheriff (or the Deputy with the inherited badge), Tracker, Lookout, Consigliere, and Undertaker act. Results are delivered privately by the app or by moderator gesture. Sheriff and Consigliere results invert if the actor is Drunk; the Undertaker's inspection is not affected by drunkenness. |
+| 11 | **Sheriff** | Checks one player: SUSPICIOUS if Mafia-aligned (except the Godfather) or the Serial Killer, INNOCENT otherwise; inverted if the Sheriff is Drunk. The Deputy with the inherited badge performs this check from the night after the Sheriff dies. |
+| 11 | **Tracker** | Follows one player and learns which player, if any, they targeted that night. |
+| 11 | **Lookout** | Watches one player and learns which players targeted them that night. |
+| 11 | **Consigliere** | Inspects one player and learns their exact role (a false role if Drunk). |
+| 11 | **Undertaker** | Inspects one corpse and learns its true role (unaffected by drunkenness; fails on Janitor-cleaned corpses). |
 | 12 | **Retributionist** | Records the corpse to revive (once per game); the revival takes effect at morning. |
+| 12 | **Amnesiac** | Once per game, records the corpse whose role is remembered; permanently becomes that role. |
 | 13 | **Medium and Ghosts** | Ghosts write in the Ghost Ledger; the alive Medium reads it for 30 seconds; a dead Medium whispers with one living target for 60 seconds (Section 8). |
 | 14 | **Morning** | Revivals take effect, deaths are applied in order, and the morning announcement is prepared (Section 7). |
-| 15 | **Last will window** | 30 seconds to update last wills silently (Section 12.3). |
-| 16 | **Pencils down and death announcement** | The deaths, wills, revivals, and badge inheritance are announced; the day begins and victory is checked. |
 
 Notes on order:
 
@@ -276,6 +281,7 @@ Every kill in the game is one of two attack types; every target has one of two d
 
 ### 5.4 The Mafia kill (Godfather and Mafioso)
 
+- The Mafia night action is a **single kill pick**: one target per night, chosen by the kill leader (the living Godfather, or the living Mafioso when the Godfather is dead or roleblocked).
 - The target is chosen by the Godfather; the Mafioso carries the kill out. If the Godfather is dead, the Mafioso chooses the target and carries the kill out alone.
 - **If the Mafioso dies, the Godfather performs the kill alone.**
 - **If the Godfather is roleblocked, the Mafioso performs the kill.**
@@ -284,7 +290,7 @@ Every kill in the game is one of two attack types; every target has one of two d
 - When the Godfather dies, the Mafioso becomes the new Godfather: night immune (Basic defense) and reads INNOCENT to the Sheriff.
 - The Mafia kill is a Basic attack: it is blocked by Doctor protection and by the target's Basic defense, and it is cancelled if the town kills the only available killer before the Mafia step resolves.
 - If the **Witch controls the Godfather**, the kill target becomes the Witch's chosen target; every other Mafia kill rule above still applies (Section 2.3).
-- The Mafia kill cannot target a Mafia-aligned player, including a target redirected by the Witch.
+- The Mafia kill may target any living player other than the kill leader, including fellow Mafia members (a target redirected by the Witch is subject to the same rule).
 
 ---
 
@@ -328,16 +334,16 @@ A player holding **The Drunk** role is permanently Drunk, which means **all of t
 
 ### 7.1 Morning announcements (mystery mode)
 
-- The morning announcement lists the dead from the night, in death order. For each victim the app shows **their name and their last will**, and the true role is shown as **"?? UNKNOWN ??"**.
-- A player's **last will** is a short written note they maintain throughout the game. Wills may only be updated in the morning 30-second window (Section 12), silently and privately. On death, the will is shown exactly as written.
+- The morning announcement lists the dead from the night, in death order. For each victim the moderator announces **their name and reads their last will from the player's card**, and the true role is shown as **"?? UNKNOWN ??"**.
+- A player's **last will** is a short written note they keep on their paper card. On death, the moderator reads it exactly as written. The app never records or displays wills.
 - The cause of death may be described in flavor ("shot", "found in the night"), but the role is never revealed.
 - Deaths are final and public: every player sees who died and what their will says.
 
 ### 7.2 Last wills
 
 - Every living player maintains a last will.
-- The Jailor reads the jailed player's will during the jail (position 3 of the night order).
-- The **Forger** may, each night, choose one player and forge a false last will. If that player dies before the next morning, the forged will is shown instead of their true will; the true will is lost.
+- The Jailor reads the jailed player's will from their card during the jail (position 3 of the night order).
+- The **Forger** may, each night, choose one player and forge a false last will. If that player dies before the next morning, the moderator reads the forged will from the player's card instead of their true will; the true will is lost. The app only reminds the moderator that a will was forged.
 
 ### 7.3 The Undertaker
 
@@ -348,7 +354,7 @@ A player holding **The Drunk** role is permanently Drunk, which means **all of t
 ### 7.4 Deputy inheritance
 
 - The Deputy's base ability is a single-use day execution (Section 2.1).
-- **When the Sheriff dies while the Deputy is alive, the Deputy permanently inherits the Sheriff's badge.** From the next night, the Deputy performs the Sheriff's nightly check, and is woken in the Investigators step.
+- **When the Sheriff dies while the Deputy is alive, the Deputy permanently inherits the Sheriff's badge.** From the next night, the Deputy performs the Sheriff's nightly check, and is woken in the Sheriff step (position 11).
 - The inheritance is checked at the end of every night resolution and after every lynch, and is **announced publicly** at the next morning: "The Deputy has inherited the Sheriff's badge."
 - If the Deputy is dead when the Sheriff dies, there is no inheritance.
 
@@ -447,7 +453,7 @@ The moderator app offers three toggles, selectable at setup:
 |---|---|
 | **No Kill on Night One** | All night kills on night 1 are void: the Mafia kill, the Serial Killer's kill, the Jailor's execution, and the Veteran's alert kills resolve to nothing (an alerted Veteran is still safe). Poisoning, roleblocking, blackmailing, framing, protection, investigation, cleaning, forging, controlling, reviving, and the seance resolve normally. Day kills (Vigilante, Deputy) are unaffected. |
 | **No Lynch on Day One** | No trial may end in a lynch on day 1. The town may still discuss and hold informational votes, and day abilities still work. |
-| **Classic Reveal Mode** | Replaces mystery deaths: the morning announcement shows each victim's **true role** alongside their last will. A Janitor-cleaned corpse still shows as unknown and still cannot be inspected by the Undertaker. The Undertaker's private inspection remains available. |
+| **Classic Reveal Mode** | Replaces mystery deaths: the morning announcement shows each victim's **true role**; the moderator reads their last will from the player's card. A Janitor-cleaned corpse still shows as unknown and still cannot be inspected by the Undertaker. The Undertaker's private inspection remains available. |
 
 ---
 
@@ -473,9 +479,9 @@ There is no post-game play: victory ends the game on the spot. The one exception
 | **Setup** | Select player count (6 to 15) and preset (1 to 6); toggle house rules (Section 10). The app shows the computed alignment ratio and a deck preview. |
 | **Deck generation** | The app fills team slots from the preset's priority lists (Section 4), appends Civilians to fill Town overflow, ensures no duplicate roles, and shuffles the deck. If the deck contains the Executioner, the app secretly assigns a Town-aligned target. If it contains the Godfather, the app shows the moderator three Town bluff roles, chosen from Town roles NOT in the deck, to whisper to the Godfather at role dealing. If it contains the Witch, her victory side defaults to Mafia (editable before the game starts). |
 | **Role dealing** | The moderator deals one role per player in private (face-down cards or a one-at-a-time app reveal). Each player knows only their own role. The moderator records names and seat numbers. The Executioner is told their target privately; the Godfather is whispered their three Town bluff roles; the Witch is asked (in private) whether she sides with Town or stays with Mafia by default. |
-| **Night wizard** | The scripted sequence below. The app records every target, shows the Jailor the jailed player's will, resolves the night (Section 5), and prepares the morning announcement. |
+| **Night wizard** | The scripted sequence below. The app records every target, resolves the night (Section 5), and prepares the morning announcement. |
 | **Seat grid** | One tile per player, showing name and moderator-only role, with status tags: [ALIVE], [GHOST], [DRUNK], [INHERITED SHERIFF], plus [JAILED], [PROTECTED], [POISONED], [ALERT], [REVEALED] (Mayor), and [CLEANED] as applicable. |
-| **Day phase** | Morning announcements (deaths, wills, revivals, badge inheritance); the 30-second last-will window; open discussion; whisper windows (Section 12.3); day abilities (Vigilante secret shot, max 3 per game, Deputy public shot, Mayor reveal); trials and voting as described in 12.3; victory checks after the lynch, after any day kill, and after the morning announcements. |
+| **Day phase** | Morning announcements (deaths, with wills read from the players' cards, revivals, badge inheritance); open discussion; whisper windows (Section 12.3); day abilities (Vigilante secret shot, max 3 per game, Deputy public shot, Mayor reveal); trials and voting as described in 12.3; victory checks after the lynch, after any day kill, and after the morning announcements. |
 | **End of game** | Full reveal and winner announcement (Section 11). |
 
 ### 12.2 Table protocol
@@ -486,7 +492,7 @@ There is no post-game play: victory ends the game on the spot. The one exception
 
 ### 12.3 Day phase and trials
 
-- The day begins with the morning announcement, then the **30-second last-will window**: "Take 30 seconds to update your Last Wills silently." Wills may be edited only during this window. Then: "Pencils down!"
+- The day begins with the morning announcement: the moderator announces the dead and reads each victim's last will from their card. Players keep their own last wills privately on paper cards; the app never records or shows them.
 - Open discussion follows. Day abilities may be used at any point: the Vigilante signals a secret shot to the moderator (max 3 shots per game); the Deputy's shot is public; the Mayor may reveal. **Victory is checked immediately after any day kill**, such as a Vigilante shot or a Deputy shot.
 - At any point during the day, the moderator may call a **two-minute whisper window**: any two living players may pair up and talk privately, roaming the room. Ghosts may not join, and blackmailed players may not join.
 - A **blackmailed player** cannot speak during the day: no table talk, no whisper window, no trial defense. They may still vote by hand gesture and may still use gesture-based day abilities (Section 2.2).
@@ -504,15 +510,19 @@ The moderator reads this aloud every night. Bracketed instructions are for the m
 
 **Position 2. Witch**: "Witch, open your eyes. Point to the player you control, then point to your target." (Record; reveal the controlled player's exact role to the Witch. The control fails if the controlled player is currently jailed: if the Jailor later jails the Witch's controlled player, the control is void.) "Witch, close your eyes."
 
-**Position 3. Jailor**: "Jailor, open your eyes. Point to your target." (Record: target roleblocked. Show the target's last will to the Jailor.) "Do you EXECUTE, thumbs down, or SPARE, thumbs up?" (Record the choice; execution is Unstoppable. On Night 1 there is no execution: the Jailor only jails and reads the will.) "Jailor, close your eyes."
+**Position 3. Jailor**: "Jailor, open your eyes. Point to your target." (Record: target roleblocked. The Jailor reads the target's last will from their card.) "Do you EXECUTE, thumbs down, or SPARE, thumbs up?" (Record the choice; execution is Unstoppable. On Night 1 there is no execution: the Jailor only jails and reads the will.) "Jailor, close your eyes."
 
-**Position 4. Escort / Consort**: "Escort, or Consort, open your eyes. Point to your roleblock target." (Record.) "Close your eyes."
+**Position 4. Escort**: "Escort, open your eyes. Point to your roleblock target." (Record.) "Escort, close your eyes."
+
+**Position 4. Consort**: "Consort, open your eyes. Point to your roleblock target." (Record.) "Consort, close your eyes."
 
 **Position 5. Doctor**: "Doctor, open your eyes. Point to the player you protect." (Record. Fails if the Doctor is Drunk.) "Doctor, close your eyes."
 
 **Position 6. Mafia**: "Mafia: Godfather and Mafioso, open your eyes. Godfather, point to your kill target." (Record. Resolve per 5.4; the kill target is the Witch's chosen target if the Witch controls the Godfather.) "Mafia, close your eyes."
 
-**Position 7. Janitor and Forger**: "Janitor and Forger, open your eyes. Janitor, point to the corpse you clean. Forger, point to the player whose will you forge." (Record. The clean fails if the Janitor is Drunk.) "Close your eyes."
+**Position 7. Janitor**: "Janitor, open your eyes. Point to the corpse you clean." (Record. The clean fails if the Janitor is Drunk.) "Janitor, close your eyes."
+
+**Position 7. Forger**: "Forger, open your eyes. Point to the player whose will you forge." (Record.) "Forger, close your eyes."
 
 **Position 8. Blackmailer**: "Blackmailer, open your eyes. Point to the player you blackmail." (Record: that player cannot speak during the next day; no consecutive-night blackmail.) "Blackmailer, close your eyes."
 
@@ -520,17 +530,23 @@ The moderator reads this aloud every night. Bracketed instructions are for the m
 
 **Position 10. Framer**: "Framer, open your eyes. Point to the player you frame." (Record: that player reads SUSPICIOUS to the Sheriff or inherited Deputy tonight; a Drunk Sheriff inverts that result.) "Framer, close your eyes."
 
-**Position 11. Investigators**: "Investigators: Sheriff, or inherited Deputy, Tracker, Lookout, Consigliere, and Undertaker, open your eyes." (Process each action; deliver results by gesture or app display. Invert Sheriff and Consigliere results if the actor is Drunk; the Undertaker's inspection is unaffected by drunkenness.) "Investigators, close your eyes."
+**Position 11. Sheriff**: "Sheriff, open your eyes. Point to the player you check." (Record; deliver the result by gesture or app display: INNOCENT or SUSPICIOUS. The result inverts if the Sheriff is Drunk. If the Sheriff is dead, the Deputy with the inherited badge wakes here instead.) "Sheriff, close your eyes."
+
+**Position 11. Tracker**: "Tracker, open your eyes. Point to the player you follow." (Record; deliver the result by gesture or app display.) "Tracker, close your eyes."
+
+**Position 11. Lookout**: "Lookout, open your eyes. Point to the player you watch." (Record; deliver the result by gesture or app display.) "Lookout, close your eyes."
+
+**Position 11. Consigliere**: "Consigliere, open your eyes. Point to the player you inspect." (Record; deliver the exact role by gesture or app display. A false role is delivered if the Consigliere is Drunk.) "Consigliere, close your eyes."
+
+**Position 11. Undertaker**: "Undertaker, open your eyes. Point to the corpse you inspect." (Record; deliver the true role by gesture or app display. Unaffected by drunkenness; fails on Janitor-cleaned corpses.) "Undertaker, close your eyes."
 
 **Position 12. Retributionist**: "Retributionist, open your eyes. Point to the corpse you revive." (Record; once per game.) "Retributionist, close your eyes."
+
+**Position 12. Amnesiac**: "Amnesiac, if you choose to remember, open your eyes. Point to the corpse whose role you remember." (Record; once per game. The Amnesiac permanently becomes that role.) "Amnesiac, close your eyes."
 
 **Position 13. Medium and Ghosts**: "Medium, open your eyes. Ghost Council, open your eyes." (Alive Medium: allow 30 seconds to read the Ghost Ledger. Dead Medium: wake the dead Medium plus one living target and allow 60 seconds of whispered seance. Ghosts write in the ledger.) "Medium and Ghosts, close your eyes."
 
 **Position 14. Morning**: "Everyone, open your eyes. Morning has broken."
-
-**Position 15. Last will window**: "Take 30 seconds to update your Last Wills silently." (After 30 seconds:)
-
-**Position 16. Pencils down and death announcement**: "Pencils down! Last night, [names] died." (Announce each victim's name and last will; roles remain unknown. Announce any revival and any Deputy inheritance. The day begins; victory is checked.)
 
 ---
 

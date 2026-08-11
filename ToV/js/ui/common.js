@@ -92,18 +92,22 @@
     return html;
   }
 
-  function seatTiles(state, rolesHidden) {
-    var html = '<div class="seat-tiles">';
+  function seatTiles(state, rolesHidden, cfg) {
+    var n = (state.players || []).length;
+    var html = cfg ? seatLayoutOpen(cfg) : '<div class="seat-tiles">';
     playersBySeat(state.players).forEach(function (p) {
       var team = teamOf(p.assignedRole);
       var roleTxt = rolesHidden ? '&#8226;&#8226;&#8226;' : roleName(p.assignedRole);
-      html += '<div class="seat-tile team-' + team + '">' +
+      var tile = '<div class="seat-tile team-' + team + '">' +
         '<div class="seat-tile-top"><span class="seat-label">' + p.seat + '</span>' +
         '<span class="seat-name">' + esc(p.name) + '</span></div>' +
         '<div class="seat-role">' + roleTxt + '</div>' +
         '<div class="seat-tags">' + statusTags(p) + '</div></div>';
+      html += cfg
+        ? '<div class="seat-tile-wrap"' + seatPosAttr(cfg, p.seat, n) + '>' + tile + '</div>'
+        : tile;
     });
-    html += '</div>';
+    html += cfg ? seatLayoutClose() : '</div>';
     return html;
   }
 
@@ -126,12 +130,30 @@
 
   var toastTimer = null;
 
-  function toast(msg) {
+  function toast(msg, kind) {
     var t = document.getElementById('toast');
     t.textContent = msg;
+    if (kind === 'success' || kind === 'warn' || kind === 'error') {
+      t.classList.remove('toast-success', 'toast-warn', 'toast-error');
+      t.classList.add('toast-' + kind);
+    }
     t.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  function leftoverRoles(state, picks) {
+    var counts = {};
+    (state.deck || []).forEach(function (id) { counts[id] = (counts[id] || 0) + 1; });
+    Object.keys(picks || {}).forEach(function (seat) {
+      var id = picks[seat];
+      if (id && counts[id] != null) counts[id] = Math.max(0, counts[id] - 1);
+    });
+    var out = [];
+    Object.keys(counts).forEach(function (id) {
+      for (var c = 0; c < counts[id]; c += 1) out.push(id);
+    });
+    return out;
   }
 
   UI.esc = esc;
@@ -149,6 +171,7 @@
   UI.seatLayoutOpen = seatLayoutOpen;
   UI.seatLayoutClose = seatLayoutClose;
   UI.seatPosAttr = seatPosAttr;
+  UI.leftoverRoles = leftoverRoles;
   UI.toast = toast;
 
   window.UI = UI;

@@ -40,7 +40,7 @@
         ctx.setEff(ctx.jailor.id, jailTarget);
         var jailed = E._byId(ctx.state, jailTarget);
         jailed.jailed = true;
-        ctx.log(ctx.jailor.name + ' jailed ' + jailed.name + ' and read their will.');
+        ctx.log(ctx.jailor.name + ' jailed ' + jailed.name + '.');
         var decision = (ctx.jailAction.extra && ctx.jailAction.extra.jailorDecision) || 'SPARE';
         if (decision === 'EXECUTE' && ctx.nightNum !== 1 && !ctx.noKillN1 && ctx.jailor.executionsUsed < 3) {
           ctx.jailor.executionsUsed += 1;
@@ -100,16 +100,12 @@
           mTarget = ctx.control.redirect;
         }
         if (mTarget && ctx.alive(mTarget)) {
-          if (E._alignmentOf(ctx.state, E._byId(ctx.state, mTarget)) === 'MAFIA') {
-            ctx.log('The Mafia kill failed: ' + E._byId(ctx.state, mTarget).name + ' is Mafia-aligned.');
+          ctx.setEff(killer.id, mTarget);
+          if (ctx.noKillN1) {
+            ctx.log('The Mafia kill is void (No Kill on Night One): ' + E._byId(ctx.state, mTarget).name + ' is unharmed.');
           } else {
-            ctx.setEff(killer.id, mTarget);
-            if (ctx.noKillN1) {
-              ctx.log('The Mafia kill is void (No Kill on Night One): ' + E._byId(ctx.state, mTarget).name + ' is unharmed.');
-            } else {
-              ctx.applyAttack(mTarget, 'basic', 'killed by the Mafia');
-              ctx.log('The Mafia killed ' + E._byId(ctx.state, mTarget).name + '.');
-            }
+            ctx.applyAttack(mTarget, 'basic', 'killed by the Mafia');
+            ctx.log('The Mafia killed ' + E._byId(ctx.state, mTarget).name + '.');
           }
         }
       } else {
@@ -143,17 +139,8 @@
     if (forgerAction) {
       var forger = E._byId(ctx.state, forgerAction.playerId);
       if (forger && forger.isAlive && !ctx.isBlocked(forger.id) && !ctx.isVoided(forgerAction) && forgerAction.targetId) {
-        var willText = (forgerAction.extra && typeof forgerAction.extra.will === 'string')
-          ? forgerAction.extra.will
-          : '';
-        ctx.forgedWills[forgerAction.targetId] = willText;
+        ctx.forgedWills[forgerAction.targetId] = true;
         ctx.setEff(forger.id, forgerAction.targetId);
-        var fd = ctx.deaths.find(function (d) { return d.playerId === forgerAction.targetId; });
-        if (fd) {
-          fd.will = willText;
-          var fe = ctx.latestEntry(ctx.state, forgerAction.targetId);
-          if (fe) fe.willShown = willText;
-        }
         ctx.log(forger.name + ' forged a will for ' + E._byId(ctx.state, forgerAction.targetId).name + '.');
       }
     }

@@ -17,7 +17,7 @@
       WITCH: 'The Witch Wins',
       SURVIVOR: 'The Survivor Wins'
     };
-    var title = labels[w] || (w ? String(w) + ' Wins' : 'Game Over');
+    var title = labels[w] || (w ? String(w) + ' Wins' : 'Session Over');
     html += '<div class="end-banner"><h1>' + UI.esc(title) + '</h1>';
     if (app.lastVictory) {
       if (app.lastVictory.reason) html += '<p class="muted">' + UI.esc(app.lastVictory.reason) + '</p>';
@@ -28,6 +28,16 @@
       }
     }
     html += '</div>';
+
+    if (state.deathLog && state.deathLog.length) {
+      html += '<div class="card"><div class="card-head"><h2>Session Recap</h2></div><ul class="recap-list">';
+      state.deathLog.forEach(function (d) {
+        html += '<li><span class="recap-night">' + UI.esc(d.night) + '</span>' +
+          '<span class="recap-name">' + UI.esc(d.name) + '</span>' +
+          '<span class="recap-cause">' + UI.esc(d.cause) + '</span></li>';
+      });
+      html += '</ul></div>';
+    }
 
     html += '<div class="card"><div class="card-head"><h2>Role Reveal</h2></div>';
     if (app.endReveal && app.endReveal.length) {
@@ -46,7 +56,7 @@
       html += UI.seatTiles(state, false);
     }
     html += '<p class="muted small">Mystery deaths and Janitor cleaning are void: true roles are shown for everyone.</p></div>';
-    html += '<button class="btn btn-primary btn-block btn-big" data-action="new-game">New Game</button>';
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="new-game">New Session</button>';
     return html;
   };
 })();

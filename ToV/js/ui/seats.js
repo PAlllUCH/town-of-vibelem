@@ -2,6 +2,36 @@
 
 (function () {
   var UI = window.UI;
+  var E = window.VillageEngine || {};
+
+  function currentRole(state, app, seat) {
+    var pr = app.pendingRoles && app.pendingRoles[seat];
+    if (pr != null && pr !== '') return pr;
+    var p = state.players && state.players[seat - 1];
+    return p && p.assignedRole ? p.assignedRole : '';
+  }
+
+  function roleOptions(state, app, seat) {
+    var others = {};
+    Object.keys(app.pendingRoles || {}).forEach(function (s) {
+      if (String(s) !== String(seat)) {
+        var rid = app.pendingRoles[s];
+        if (rid && rid !== 'civilian') others[rid] = true;
+      }
+    });
+    var ids = ['civilian'];
+    (state.deck || []).forEach(function (rid) {
+      if (rid !== 'civilian' && ids.indexOf(rid) === -1 && !others[rid]) ids.push(rid);
+    });
+    var cur = currentRole(state, app, seat);
+    var out = '';
+    ids.forEach(function (rid) {
+      var r = E.ROLES[rid] || {};
+      out += '<option value="' + rid + '"' + (cur === rid ? ' selected' : '') +
+        ' title="' + UI.esc(r.blurb || '') + '">' + UI.roleName(rid) + '</option>';
+    });
+    return out;
+  }
 
   UI.renderSeats = function (state, cfg, app) {
     if (!app.namingMode && state.players && state.players.length &&
@@ -13,19 +43,32 @@
 
   UI.renderSeatsNaming = function (state, cfg, app) {
     var n = state.playerCount || cfg.playerCount;
+    var left = 0;
+    for (var seat = 1; seat <= n; seat++) {
+      if (!currentRole(state, app, seat)) left++;
+    }
     var html = '<div class="card">';
     html += '<div class="card-head"><h2>Name the Seats</h2>' +
       '<button class="btn btn-sm" data-action="goto-setup">Setup</button></div>';
+    html += '<div class="hint" data-role-remaining>' + left + ' seat' + (left === 1 ? '' : 's') +
+      ' left to assign</div>';
     html += UI.seatLayoutOpen(cfg);
-    for (var seat = 1; seat <= n; seat++) {
-      html += '<div class="seat-input-wrap"' + UI.seatPosAttr(cfg, seat, n) + '>' +
-        '<span class="seat-label">' + seat + '</span>' +
-        '<input class="seat-name-input" data-seat="' + seat +
-        '" value="' + UI.esc(app.names[seat] || ('Player ' + seat)) +
-        '" placeholder="Name" aria-label="Seat ' + seat + ' name"></div>';
+    for (var s = 1; s <= n; s++) {
+      html += '<div class="seat-input-wrap"' + UI.seatPosAttr(cfg, s, n) + '>' +
+        '<span class="seat-label">' + s + '</span>' +
+        '<input class="seat-name-input" data-seat="' + s +
+        '" value="' + UI.esc(app.names[s] || ('Player ' + s)) +
+        '" placeholder="Name" aria-label="Seat ' + s + ' name">' +
+        '<select class="select" data-action="seat-role" data-seat="' + s +
+        '" aria-label="Seat ' + s + ' role">' +
+        '<option value="">Pick a role...</option>' +
+        roleOptions(state, app, s) +
+        '</select></div>';
     }
     html += UI.seatLayoutClose();
-    html += '<button class="btn btn-primary btn-block btn-big" data-action="deal-roles">Deal Roles</button>' +
+    html += '<div class="btn-row">' +
+      '<button class="btn" data-action="auto-fill">Auto-fill rest</button>' +
+      '<button class="btn btn-primary" data-action="lock-roles">Lock Roles</button></div>' +
       '</div>';
     html += '<div class="hint">Deal one role per player in private. The app is moderator-only: keep the screen to yourself.</div>';
     return html;

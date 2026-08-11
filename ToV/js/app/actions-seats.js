@@ -9,15 +9,38 @@
     return (APP.state.players || []).find(function (p) { return String(p.seat) === String(seat); }) || null;
   }
 
-  function dealRoles() {
+  function seatRole(seat, roleId) {
+    var s = Number(seat);
+    if (roleId) APP.app.pendingRoles[s] = roleId;
+    else delete APP.app.pendingRoles[s];
+    APP.afterMutation();
+  }
+
+  function autoFill() {
+    var leftovers = UI.leftoverRoles(APP.state, APP.app.pendingRoles);
+    leftovers = E._shuffle(leftovers);
+    for (var s = 1; s <= APP.state.playerCount; s++) {
+      if (!APP.app.pendingRoles[s] && leftovers.length) {
+        APP.app.pendingRoles[s] = leftovers.pop();
+      }
+    }
+    APP.afterMutation();
+  }
+
+  function lockRoles() {
     var names = [];
     for (var s = 1; s <= (APP.state.playerCount || APP.cfg.playerCount); s++) {
       names.push({ seat: s, name: (APP.app.names[s] || '').trim() || ('Player ' + s) });
     }
     E.setPlayerNames(APP.state, names);
-    E.dealRoles(APP.state);
-    APP.app.namingMode = false;
-    APP.afterMutation();
+    try {
+      E.assignRoles(APP.state, APP.app.pendingRoles);
+      APP.app.namingMode = false;
+      UI.toast('Roles assigned.', 'success');
+      APP.afterMutation();
+    } catch (e) {
+      UI.toast(e.message, 'error');
+    }
   }
 
   function swapSelect(seat) {
@@ -39,17 +62,19 @@
       E.swapRoles(APP.state, a.id, p.id);
       APP.app.swapMode = false;
       APP.app.swapSel = null;
-      UI.toast('Roles swapped.');
+      UI.toast('Roles swapped.', 'success');
       APP.afterMutation();
     } catch (e) {
-      UI.toast(e.message);
+      UI.toast(e.message, 'error');
     }
   }
 
   function editNames() {
     APP.app.names = {};
+    APP.app.pendingRoles = {};
     (APP.state.players || []).forEach(function (p) {
       APP.app.names[p.seat] = p.name || '';
+      if (p.assignedRole) APP.app.pendingRoles[p.seat] = p.assignedRole;
     });
     APP.app.namingMode = true;
     APP.save();
@@ -64,7 +89,9 @@
     APP.goto('game');
   }
 
-  APP.dealRoles = dealRoles;
+  APP.seatRole = seatRole;
+  APP.autoFill = autoFill;
+  APP.lockRoles = lockRoles;
   APP.swapSelect = swapSelect;
   APP.editNames = editNames;
   APP.beginNight = beginNight;

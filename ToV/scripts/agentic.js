@@ -1,0 +1,598 @@
+'use strict';
+const engine = require('../js/engine.js');
+const PLAYER_COUNT = 11;
+const PRESET = 'p1';
+const MAX_DAYS = 25;
+function randInt(n) { return Math.floor(Math.random() * n); }
+function pick(arr) { return arr.length ? arr[randInt(arr.length)] : null; }
+function living(state) { return state.players.filter(function (p) { return p.isAlive; }); }
+function byId(state, id) { return state.players[id - 1] || null; }
+function pname(state, id) { const p = byId(state, id); return p ? p.name : 'P' + id; }
+function roleName(roleId) { const r = engine.ROLES[roleId]; return r ? r.name : String(roleId); }
+function teamOfRole(roleId) { const r = engine.ROLES[roleId]; return r ? r.team : 'NEUTRAL'; }
+const KILL_PRIORITY = { jailor: 1, sheriff: 2, doctor: 3, mayor: 4, vigilante: 5, retributionist: 6, medium: 7, undertaker: 8, tracker: 9, lookout: 10, escort: 11 };
+const KNOWN_POWER = {};
+Object.keys(KILL_PRIORITY).forEach(function (k) { KNOWN_POWER[k] = true; });
+
+function makeModels(state) {
+  const members = {};
+  state.players.forEach(function (p) { if (engine.ROLES[p.assignedRole].team === 'MAFIA') members[p.id] = true; });
+  return {
+    town: { sheriffResults: {}, undertakerResults: {}, confirmedTown: {}, deadById: {}, evidence: {}, inspectedBefore: {} },
+    mafia: { members: members, consigliereResults: {}, killTarget: null, lastKillTarget: null, lastBlackmailId: null, lastFramedId: null, avoid: {} },
+    lastJailId: null
+  };}
+function suspicionLevel(state, models, p) {
+  if (models.town.sheriffResults[p.id] === 'SUSPICIOUS') return 3;
+  const ur = models.town.undertakerResults[p.id];
+  if (ur && teamOfRole(ur) === 'MAFIA' && p.isAlive) return 2;
+  if (models.town.evidence[p.id]) return 1;
+  return 0;
+}
+function mostSuspicious(state, models, excludeIds, noConfirmed) {
+  const ex = excludeIds || [];
+  const cands = living(state).filter(function (p) {
+    return ex.indexOf(p.id) === -1 && !(noConfirmed && models.town.confirmedTown[p.id]);
+  });
+  if (!cands.length) return null;
+  let best = [];
+  let bestS = -1;
+  cands.forEach(function (p) {
+    const s = suspicionLevel(state, models, p);
+    if (s > bestS) { bestS = s; best = [p]; } else if (s === bestS) { best.push(p); }
+  });
+  return pick(best);
+}
+function livingByRole(state, roleOrder) {
+  for (let i = 0; i < roleOrder.length; i += 1) {
+    const p = state.players.find(function (x) { return x.isAlive && x.assignedRole === roleOrder[i]; });
+    if (p) return p;
+  }
+  return null;
+}
+function rec(state, action, recorded, notes, note) {
+  if (!engine.recordNightAction(state, action)) throw new Error('recordNightAction rejected ' + JSON.stringify(action));
+  recorded.push(action);
+  if (note) notes.push(typeof note === 'string' ? { pos: action.position, text: note } : note);
+}
+function mafiaKillTarget(state, models) {
+  const doctorAlive = state.players.some(function (p) { return p.isAlive && p.assignedRole === 'doctor'; });
+  const cands = living(state).filter(function (p) { return !models.mafia.members[p.id] && !(doctorAlive && models.mafia.avoid[p.id]); });
+  if (!cands.length) return null;
+  let best = [];
+  let bestS = 99;
+  cands.forEach(function (p) {
+    let s = KILL_PRIORITY[p.assignedRole] !== undefined ? KILL_PRIORITY[p.assignedRole] : (engine.ROLES[p.assignedRole].team === 'TOWN' ? 12 : 13);
+    const known = models.mafia.consigliereResults[p.id];
+    if (known && KNOWN_POWER[known]) s -= 1.5;
+    if (s < bestS) { bestS = s; best = [p]; } else if (s === bestS) { best.push(p); }
+  });
+  return pick(best);
+}
+function pickBestCorpse(state, gy) {
+  let best = null, bs = 99;
+  gy.forEach(function (e) {
+    if (e.wasCleaned) return;
+    const s = KILL_PRIORITY[e.trueRole] !== undefined ? KILL_PRIORITY[e.trueRole] : 13;
+    if (s < bs) { bs = s; best = e; }
+  });
+  return best;
+}
+function witchAction(state, models, actor, recorded, notes) {
+  const doc = livingByRole(state, ['doctor']);
+  const leader = engine.mafiaKillActor(state);
+  if (doc && leader) {
+    rec(state, { position: 2, roleId: 'witch', playerId: actor.id, targetId: doc.id, extra: { controlRedirect: leader.id } }, recorded, notes,
+      actor.name + ' (Witch) controlled ' + doc.name + ' (Doctor) redirect to ' + leader.name);
+    return;
+  }
+  const jailor = livingByRole(state, ['jailor']);
+  const sheriff = livingByRole(state, ['sheriff']);
+  if (jailor && sheriff && jailor.id !== actor.id && sheriff.id !== actor.id) {
+    rec(state, { position: 2, roleId: 'witch', playerId: actor.id, targetId: jailor.id, extra: { controlRedirect: sheriff.id } }, recorded, notes,
+      actor.name + ' (Witch) controlled ' + jailor.name + ' (Jailor) redirect to ' + sheriff.name);
+  }
+}
+function jailorAction(state, models, actor, recorded, notes) {
+  const ex = [actor.id];
+  if (models.lastJailId != null) ex.push(models.lastJailId);
+  const target = mostSuspicious(state, models, ex);
+  if (!target) return;
+  const known = models.mafia.consigliereResults[target.id];
+  const evil = known && teamOfRole(known) === 'MAFIA';
+  const decision = state.night.number === 1 ? 'SPARE' : (models.town.sheriffResults[target.id] === 'SUSPICIOUS' || evil ? 'EXECUTE' : 'SPARE');
+  rec(state, { position: 3, roleId: 'jailor', playerId: actor.id, targetId: target.id, extra: { jailorDecision: decision } }, recorded, notes,
+    actor.name + ' (Jailor) jailed ' + target.name + ', ' + decision.toLowerCase());
+  models.lastJailId = target.id;
+}
+function doctorAction(state, models, actor, recorded, notes) {
+  let target = livingByRole(state, ['sheriff', 'jailor', 'mayor', 'vigilante', 'retributionist']);
+  if (!target && models.mafia.lastKillTarget != null) {
+    const prev = byId(state, models.mafia.lastKillTarget);
+    if (prev && prev.isAlive) target = prev;
+  }
+  if (!target) target = actor;
+  rec(state, { position: 5, roleId: 'doctor', playerId: actor.id, targetId: target.id }, recorded, notes,
+    actor.name + ' (Doctor) protected ' + target.name + (target.id === actor.id ? ' (self)' : ''));
+}
+function janitorAction(state, models, actor, recorded, notes) {
+  if (!state.graveyard.length) return;
+  let target = null;
+  if (models.mafia.lastKillTarget != null && state.graveyard[state.graveyard.length - 1].playerId === models.mafia.lastKillTarget) {
+    target = state.graveyard[state.graveyard.length - 1];
+  }
+  if (!target) target = pickBestCorpse(state, state.graveyard);
+  if (target) {
+    rec(state, { position: 7, roleId: 'janitor', playerId: actor.id, targetId: target.playerId }, recorded, notes,
+      actor.name + ' (Janitor) cleaned ' + target.name + '\'s corpse');
+  }
+}
+function forgerAction(state, models, actor, recorded, notes) {
+  let target = models.mafia.killTarget != null ? byId(state, models.mafia.killTarget) : null;
+  if (!target || !target.isAlive) {
+    target = pick(living(state).filter(function (p) { return p.id !== actor.id && !models.mafia.members[p.id]; }));
+  }
+  if (target) {
+    rec(state, { position: 7, roleId: 'forger', playerId: actor.id, targetId: target.id }, recorded, notes,
+      actor.name + ' (Forger) forged ' + target.name + '\'s will');
+  }
+}
+function blackmailerAction(state, models, actor, recorded, notes) {
+  let target = livingByRole(state, ['mayor', 'jailor', 'sheriff']);
+  if (target && target.id === models.mafia.lastBlackmailId) target = null;
+  if (target) {
+    rec(state, { position: 8, roleId: 'blackmailer', playerId: actor.id, targetId: target.id }, recorded, notes,
+      actor.name + ' (Blackmailer) blackmailed ' + target.name);
+    models.mafia.lastBlackmailId = target.id;
+  }
+}
+function skAction(state, models, actor, recorded, notes) {
+  let target = null;
+  for (let i = 0; i < 5 && !target; i += 1) {
+    target = state.players.find(function (p) {
+      return p.isAlive && p.assignedRole === ['jailor', 'sheriff', 'doctor', 'vigilante', 'mayor'][i] && p.id !== actor.id;
+    });
+  }
+  if (!target) target = pick(living(state).filter(function (p) { return p.id !== actor.id; }));
+  if (target) {
+    rec(state, { position: 9, roleId: 'serialkiller', playerId: actor.id, targetId: target.id }, recorded, notes,
+      actor.name + ' (Serial Killer) attacked ' + target.name);
+  }
+}
+function framerAction(state, models, actor, recorded, notes) {
+  const target = pick(living(state).filter(function (p) {
+    return p.id !== actor.id && !models.mafia.members[p.id] && p.id !== models.mafia.lastFramedId;
+  }));
+  if (target) {
+    rec(state, { position: 10, roleId: 'framer', playerId: actor.id, targetId: target.id }, recorded, notes,
+      actor.name + ' (Framer) framed ' + target.name);
+    models.mafia.lastFramedId = target.id;
+  }
+}
+function invActor(state, models, role, actor, recorded, notes) {
+  const emit = function (targetId, kind, text) {
+    rec(state, { position: 11, roleId: role, playerId: actor.id, targetId: targetId }, recorded, notes,
+      { pos: 11, kind: kind, playerId: actor.id, targetId: targetId, text: text });
+  };
+  if (role === 'sheriff' || (role === 'deputy' && actor.inheritedRole === 'sheriff')) {
+    const checked = {};
+    const ex = [actor.id];
+    Object.keys(models.town.sheriffResults).forEach(function (k) { checked[Number(k)] = true; ex.push(Number(k)); });
+    let target = mostSuspicious(state, models, ex);
+    if (!target) {
+      target = state.players.filter(function (p) {
+        return p.isAlive && p.id !== actor.id && !checked[p.id] && KILL_PRIORITY[p.assignedRole] !== undefined;
+      }).sort(function (a, b) {
+        return (KILL_PRIORITY[a.assignedRole] || 99) - (KILL_PRIORITY[b.assignedRole] || 99);
+      })[0] || null;
+    }
+    if (target) emit(target.id, 'sheriff', actor.name + ' (' + (role === 'deputy' ? 'Deputy' : 'Sheriff') + ') checked ' + target.name + ':');
+    return;
+  }
+  if (role === 'tracker') {
+    const target = mostSuspicious(state, models, [actor.id]);
+    if (target) emit(target.id, 'tracker', actor.name + ' (Tracker) tracked ' + target.name);
+    return;
+  }
+  if (role === 'lookout') {
+    const target = livingByRole(state, ['sheriff']);
+    if (target) emit(target.id, 'lookout', actor.name + ' (Lookout) watched ' + target.name);
+    return;
+  }
+  if (role === 'consigliere') {
+    const known = {};
+    Object.keys(models.mafia.consigliereResults).forEach(function (k) { known[Number(k)] = true; });
+    let target = null;
+    ['jailor', 'sheriff', 'doctor', 'mayor'].forEach(function (r) {
+      if (!target) target = state.players.find(function (p) {
+        return p.isAlive && p.id !== actor.id && !models.mafia.members[p.id] && !known[p.id] && p.assignedRole === r;
+      });
+    });
+    if (!target) target = pick(living(state).filter(function (p) { return p.id !== actor.id && !models.mafia.members[p.id] && !known[p.id]; }));
+    if (target) emit(target.id, 'consigliere', actor.name + ' (Consigliere) inspected ' + target.name + ':');
+    return;
+  }
+  if (role === 'undertaker') {
+    const jan = recorded.find(function (a) { return a.position === 7 && a.roleId === 'janitor'; });
+    const janId = jan ? jan.targetId : null;
+    let target = null;
+    for (let i = state.graveyard.length - 1; i >= 0; i -= 1) {
+      const e = state.graveyard[i];
+      if (e.wasCleaned || models.town.inspectedBefore[e.playerId] || (janId != null && e.playerId === janId)) continue;
+      target = e;
+      break;
+    }
+    if (target) emit(target.playerId, 'undertaker', actor.name + ' (Undertaker) inspected ' + target.name + '\'s corpse:');
+  }
+}
+function retributionistAction(state, models, actor, recorded, notes) {
+  if (actor.usedOncePerGame) return;
+  let target = null;
+  for (let i = 0; i < 3 && !target; i += 1) target = state.players.find(function (p) { return !p.isAlive && p.assignedRole === ['sheriff', 'jailor', 'mayor'][i]; });
+  if (!target) {
+    for (let i = state.graveyard.length - 1; i >= 0; i -= 1) {
+      const e = state.graveyard[i];
+      if (teamOfRole(e.trueRole) === 'TOWN') { target = byId(state, e.playerId); break; }
+    }
+  }
+  if (target) rec(state, { position: 12, roleId: 'retributionist', playerId: actor.id, targetId: target.id }, recorded, notes,
+    actor.name + ' (Retributionist) will revive ' + target.name + ' (' + roleName(target.assignedRole) + ')');
+}
+function amnesiacAction(state, models, actor, recorded, notes) {
+  if (state.amnesiac.used) return;
+  let target = null;
+  for (let i = 0; i < 3 && !target; i += 1) target = state.players.find(function (p) { return !p.isAlive && p.assignedRole === ['jailor', 'sheriff', 'doctor'][i]; });
+  if (!target && state.graveyard.length) target = byId(state, state.graveyard[state.graveyard.length - 1].playerId);
+  if (target) rec(state, { position: 12, roleId: 'amnesiac', playerId: actor.id, targetId: target.id }, recorded, notes,
+    actor.name + ' (Amnesiac) remembered ' + roleName(target.assignedRole) + ' from ' + target.name);
+}
+function mediumAction(state, models, actor, recorded, notes) {
+  if (actor.isAlive) {
+    rec(state, { position: 13, roleId: 'medium', playerId: actor.id }, recorded, notes, actor.name + ' (Medium) read the Ghost Ledger');
+    return;
+  }
+  const target = livingByRole(state, ['sheriff']) || livingByRole(state, ['jailor']);
+  if (target) {
+    rec(state, { position: 13, roleId: 'medium', playerId: actor.id, targetId: target.id }, recorded, notes,
+      actor.name + ' (Medium) whispered to ' + target.name);
+  }
+}
+function nightActor(state, models, pos, role, actor, recorded, notes) {
+  if (pos === 0 && role === 'veteran') {
+    if (actor.alertsUsed < 3) {
+      const alert = Math.random() < 0.3;
+      rec(state, { position: 0, roleId: 'veteran', playerId: actor.id, extra: { alert: alert } }, recorded, notes,
+        alert ? actor.name + ' (Veteran) went on alert' : null);
+    }
+    return;
+  }
+  if (pos === 0 && role === 'jester') {
+    const target = pick((state.trial.votes || []).filter(function (v) { return v.verdict === 'GUILTY' && byId(state, v.voterId) && byId(state, v.voterId).isAlive; }).map(function (v) { return v.voterId; }));
+    if (target) rec(state, { position: 0, roleId: 'jester', playerId: actor.id, targetId: target }, recorded, notes, 'Jester haunted ' + pname(state, target));
+    return;
+  }
+  if (pos === 1 && role === 'poisoner') {
+    const target = livingByRole(state, ['doctor', 'jailor', 'sheriff']);
+    if (target) rec(state, { position: 1, roleId: 'poisoner', playerId: actor.id, targetId: target.id }, recorded, notes, actor.name + ' (Poisoner) poisoned ' + target.name);
+    return;
+  }
+  if (pos === 2 && role === 'witch') { witchAction(state, models, actor, recorded, notes); return; }
+  if (pos === 3 && role === 'jailor') { jailorAction(state, models, actor, recorded, notes); return; }
+  if (pos === 4) {
+    const target = role === 'escort' ? mostSuspicious(state, models, [actor.id]) : livingByRole(state, ['doctor', 'jailor', 'sheriff']);
+    if (target) rec(state, { position: 4, roleId: role, playerId: actor.id, targetId: target.id }, recorded, notes, actor.name + ' (' + (role === 'escort' ? 'Escort' : 'Consort') + ') roleblocked ' + target.name);
+    return;
+  }
+  if (pos === 5 && role === 'doctor') { doctorAction(state, models, actor, recorded, notes); return; }
+  if (pos === 7 && role === 'janitor') { janitorAction(state, models, actor, recorded, notes); return; }
+  if (pos === 7 && role === 'forger') { forgerAction(state, models, actor, recorded, notes); return; }
+  if (pos === 8 && role === 'blackmailer') { blackmailerAction(state, models, actor, recorded, notes); return; }
+  if (pos === 9 && role === 'serialkiller') { skAction(state, models, actor, recorded, notes); return; }
+  if (pos === 10 && role === 'framer') { framerAction(state, models, actor, recorded, notes); return; }
+  if (pos === 11) { invActor(state, models, role, actor, recorded, notes); return; }
+  if (pos === 12 && role === 'retributionist') { retributionistAction(state, models, actor, recorded, notes); return; }
+  if (pos === 12 && role === 'amnesiac') { amnesiacAction(state, models, actor, recorded, notes); return; }
+  if (pos === 13 && role === 'medium') { mediumAction(state, models, actor, recorded, notes); }
+}
+function runNight(state, models, recorded, notes) {
+  models.mafia.lastKillTarget = models.mafia.killTarget;
+  models.mafia.killTarget = null;
+  models.town.evidence = {};
+  const steps = engine.getNightSteps(state);
+  for (const step of steps) {
+    const pos = step.position;
+    if (pos >= 14) continue;
+    if (pos === 6) {
+      const leader = engine.mafiaKillActor(state);
+      const target = leader ? mafiaKillTarget(state, models) : null;
+      if (leader && target) {
+        rec(state, { position: 6, roleId: leader.assignedRole, playerId: leader.id, targetId: target.id }, recorded, notes,
+          'Mafia killed ' + target.name + ' (' + roleName(target.assignedRole) + ')');
+        models.mafia.killTarget = target.id;
+      }
+      continue;
+    }
+    for (const role of step.roles) {
+      const actors = state.players.filter(function (p) {
+        if (p.assignedRole !== role) return false;
+        if (pos === 0 && role === 'jester') return !p.isAlive && state.jester.haunted && state.jester.hauntTarget === null;
+        if (pos === 13 && role === 'medium') return true;
+        return p.isAlive;
+      });
+      for (const actor of actors) nightActor(state, models, pos, role, actor, recorded, notes);
+    }
+  }
+}
+function computeBlocked(state, recorded) {
+  const blocked = {};
+  recorded.forEach(function (a) {
+    if (a.position === 4 && (a.roleId === 'escort' || a.roleId === 'consort')) {
+      const t = byId(state, a.targetId);
+      if (t && t.isAlive) blocked[a.targetId] = true;
+    }
+  });
+  const jail = recorded.find(function (a) { return a.position === 3 && a.roleId === 'jailor'; });
+  if (jail && jail.targetId && byId(state, jail.playerId).isAlive && byId(state, jail.targetId).isAlive && jail.targetId !== state.night.lastJailTarget) {
+    blocked[jail.targetId] = true;
+  }
+  return blocked;
+}
+function morningUpdate(state, models, recorded, notes, blocked) {
+  const strip = function (note) { if (note) note.text = note.text.replace(/:$/, ''); };
+  recorded.forEach(function (a) {
+    if (a.position !== 11) return;
+    const actor = byId(state, a.playerId);
+    const t = a.targetId != null ? byId(state, a.targetId) : null;
+    const note = notes.find(function (n) { return n.kind && n.playerId === a.playerId && n.targetId === a.targetId; });
+    const acted = actor.isAlive && t && t.isAlive && !blocked[a.playerId];
+    const isSheriffLike = a.roleId === 'sheriff' || (a.roleId === 'deputy' && actor.inheritedRole === 'sheriff');
+    if (isSheriffLike) {
+      if (acted) {
+        let r = t.framed ? 'SUSPICIOUS' : (engine._sheriffSuspicious(state, t) ? 'SUSPICIOUS' : 'INNOCENT');
+        if (actor.isDrunk) r = r === 'SUSPICIOUS' ? 'INNOCENT' : 'SUSPICIOUS';
+        models.town.sheriffResults[a.targetId] = r;
+        if (note) note.text += ' ' + r;
+      } else strip(note);
+    } else if (a.roleId === 'consigliere') {
+      if (acted) {
+        let learned = t.assignedRole;
+        if (actor.isDrunk) {
+          const aligned = engine._alignmentOf(state, t);
+          const pool = Object.keys(engine.ROLES).filter(function (id) { return engine.ROLES[id].team !== aligned; });
+          learned = pool[randInt(pool.length)];
+        }
+        models.mafia.consigliereResults[a.targetId] = learned;
+        if (note) note.text += ' ' + roleName(learned);
+      } else strip(note);
+    } else if (a.roleId === 'undertaker') {
+      const entry = state.graveyard.find(function (e) { return e.playerId === a.targetId; });
+      if (entry && entry.inspectedByUndertaker && !models.town.inspectedBefore[a.targetId]) {
+        models.town.inspectedBefore[a.targetId] = true;
+        models.town.undertakerResults[a.targetId] = entry.trueRole;
+        if (note) note.text += ' ' + roleName(entry.trueRole);
+      } else strip(note);
+    }
+  });
+  const killVictim = models.mafia.killTarget;
+  recorded.forEach(function (a) {
+    if (a.position !== 11 || (a.roleId !== 'tracker' && a.roleId !== 'lookout')) return;
+    const lo = a.roleId === 'lookout';
+    const actor = byId(state, a.playerId);
+    const watched = a.targetId;
+    const note = notes.find(function (n) { return n.kind === a.roleId && n.playerId === a.playerId; });
+    if (!actor.isAlive || !watched || !byId(state, watched).isAlive || blocked[a.playerId]) return;
+    if (lo) {
+      const visitors = recorded.filter(function (x) {
+        return x.targetId === watched && x.playerId !== a.playerId && !(x.position === 0 && x.roleId === 'veteran');
+      });
+      if (note) note.text += visitors.length ? ': ' + visitors.map(function (x) { return pname(state, x.playerId); }).join(', ') + ' visited' : ': no visitors';
+    } else {
+      const ta = recorded.find(function (x) { return x.playerId === watched && x.position !== 13; });
+      let tgt = ta ? ta.targetId : null;
+      if (ta && ta.extra && ta.extra.controlRedirect) tgt = ta.extra.controlRedirect;
+      if (note) note.text += tgt != null ? ': visited ' + pname(state, tgt) : ': visited no one';
+      if (killVictim != null && tgt === killVictim) models.town.evidence[watched] = true;
+    }
+  });
+  const m = state.morning || { deaths: [], revivals: [] };
+  (m.deaths || []).forEach(function (d) { models.town.deadById[d.playerId] = d.cause; });
+  (m.revivals || []).forEach(function (id) { models.town.confirmedTown[id] = true; });
+  if (models.mafia.killTarget != null) {
+    const prev = byId(state, models.mafia.killTarget);
+    if (prev && prev.isAlive) models.mafia.avoid[models.mafia.killTarget] = true;
+  }
+}
+function printNight(notes, nightNum) {
+  const sorted = notes.slice().sort(function (a, b) { return a.pos - b.pos; });
+  console.log('=== Night ' + nightNum + ' (' + sorted.map(function (n) { return n.text; }).join(' / ') + ') ===');
+}
+function printMorning(state, ann) {
+  const parts = [];
+  ann.deaths.forEach(function (d) {
+    parts.push(d.name + ' died (' + d.cause + ', ' + (d.roleShown === '?? UNKNOWN ??' ? 'role hidden' : d.roleShown) + ')');
+  });
+  ann.revivals.forEach(function (n) {
+    const p = state.players.find(function (x) { return x.name === n; });
+    parts.push(n + ' revived (' + (p ? roleName(p.assignedRole) : '?') + ')');
+  });
+  if (ann.inheritanceNote) {
+    const dep = state.players.find(function (p) { return p.assignedRole === 'deputy' && p.inheritedRole === 'sheriff'; });
+    parts.push(dep ? dep.name + ' (Deputy) inherited the Sheriff badge' : ann.inheritanceNote);
+  }
+  if (ann.forgedWills && ann.forgedWills.length) parts.push(ann.forgedWills.map(function (f) { return f.targetName + '\'s will was forged'; }).join(', '));
+  console.log('=== Morning ' + (state.night.number - 1) + ': ' + parts.join('; ') + ' ===');
+}
+function vigilanteTarget(state, models, dayInfo) {
+  return pick(living(state).filter(function (p) {
+    return models.town.sheriffResults[p.id] === 'SUSPICIOUS' && p.id !== dayInfo.lastLynched;
+  }));
+}
+function undertakerEvil(state, models, accused) {
+  const ur = models.town.undertakerResults[accused.id];
+  return ur && teamOfRole(ur) === 'MAFIA';
+}
+function livingVote(state, models, voter, accused) {
+  const a = engine._alignmentOf(state, voter);
+  if (a === 'TOWN') {
+    if (models.town.sheriffResults[accused.id] === 'SUSPICIOUS' || undertakerEvil(state, models, accused)) return 'GUILTY';
+    if (models.town.confirmedTown[accused.id]) return 'INNOCENT';
+    return 'ABSTAIN';
+  }
+  if (a === 'MAFIA') {
+    if (models.mafia.members[accused.id]) return 'INNOCENT';
+    const known = models.mafia.consigliereResults[accused.id];
+    if (accused.assignedRole === 'sheriff' || (known && KNOWN_POWER[known])) return 'GUILTY';
+    return 'ABSTAIN';
+  }
+  if (voter.assignedRole === 'jester') return accused.id === voter.id ? 'GUILTY' : 'ABSTAIN';
+  if (voter.assignedRole === 'executioner') {
+    return accused.id === (state.executionerConverted ? voter.id : state.executionerTarget) ? 'GUILTY' : 'ABSTAIN';
+  }
+  return 'ABSTAIN';
+}
+function ghostVote(state, models, accused) {
+  if (models.town.sheriffResults[accused.id] === 'SUSPICIOUS' || undertakerEvil(state, models, accused)) return 'GUILTY';
+  if (models.town.confirmedTown[accused.id]) return 'INNOCENT';
+  return null;
+}
+function runTrial(state, models, dayInfo) {
+  const accused = mostSuspicious(state, models, null, true);
+  if (!accused) return null;
+  const townAlive = living(state).filter(function (p) {
+    return engine._alignmentOf(state, p) === 'TOWN' && p.id !== accused.id;
+  });
+  const nominator = townAlive.find(function (p) { return p.assignedRole === 'sheriff'; }) || pick(townAlive);
+  if (!nominator || !engine.startTrial(state, accused.id, nominator.id)) return null;
+  state.players.forEach(function (p) {
+    if (p.isAlive) {
+      const v = livingVote(state, models, p, accused);
+      if (v) engine.castVote(state, { voterId: p.id, verdict: v, ghostToken: false });
+    } else if (p.hasGhostVote && !p.ghostVoteSpent) {
+      const g = ghostVote(state, models, accused);
+      if (g) engine.castVote(state, { voterId: p.id, verdict: g, ghostToken: true });
+    }
+  });
+  const res = engine.resolveTrial(state);
+  let g = 0, o = 0;
+  (state.trial.votes || []).forEach(function (v) {
+    const voter = byId(state, v.voterId);
+    const w = voter && voter.isAlive && voter.revealed && voter.assignedRole === 'mayor' ? 3 : 1;
+    if (v.verdict === 'GUILTY') g += w; else o += w;
+  });
+  let line = '=== Day ' + state.dayNumber + ': ' + accused.name + ' accused by ' + nominator.name +
+    '; votes ' + g + '-' + o + (res.lynchedId ? ' GUILTY' : ' no-lynch') + '; ';
+  if (res.lynchedId) {
+    const lynched = byId(state, res.lynchedId);
+    line += lynched.name + ' lynched (' + roleName(lynched.assignedRole) + ')';
+    dayInfo.lastLynched = res.lynchedId;
+    if (res.jesterWin) line += ' - Jester wins!';
+    if (res.executionerWin) line += ' - Executioner wins!';
+  } else line += accused.name + ' survived';
+  return line + ' ===';
+}
+function runDay(state, models, dayInfo) {
+  const lines = [];
+  const mayor = state.players.find(function (p) { return p.isAlive && p.assignedRole === 'mayor' && !p.revealed; });
+  if (mayor && state.dayNumber >= 2) {
+    engine.mayorReveal(state, mayor.id);
+    models.town.confirmedTown[mayor.id] = true;
+    lines.push(mayor.name + ' (Mayor) revealed');
+  }
+  const vig = state.players.find(function (p) { return p.isAlive && p.assignedRole === 'vigilante' && p.shotsFired < 3; });
+  const vt = vig ? vigilanteTarget(state, models, dayInfo) : null;
+  if (vig && vt && engine.vigilanteShoot(state, vig.id, vt.id)) lines.push(vig.name + ' (Vigilante) shot ' + vt.name);
+  if (state.phase === 'END') return lines;
+  const dep = state.players.find(function (p) { return p.isAlive && p.assignedRole === 'deputy' && !p.usedOncePerGame; });
+  const dt = dep ? vigilanteTarget(state, models, dayInfo) : null;
+  if (dep && dt && engine.deputyShoot(state, dep.id, dt.id)) lines.push(dep.name + ' (Deputy) shot ' + dt.name);
+  if (state.phase === 'END') return lines;
+  const trialLine = runTrial(state, models, dayInfo);
+  if (trialLine) lines.push(trialLine);
+  return lines;
+}
+function checkInvariants(state, ctx) {
+  if (!state.players || state.players.length !== state.playerCount) throw new Error(ctx + ': player count mismatch');
+  const dead = state.players.length - living(state).length;
+  if (state.graveyard.length !== dead) throw new Error(ctx + ': graveyard length ' + state.graveyard.length + ' != dead ' + dead);
+  state.players.forEach(function (p) {
+    if (!engine.ROLES[p.assignedRole]) throw new Error(ctx + ': unknown role ' + p.assignedRole + ' for ' + p.name);
+    if (!p.name) throw new Error(ctx + ': player ' + p.id + ' has no name');
+  });
+  const gyIds = state.graveyard.map(function (g) { return g.playerId; });
+  state.players.forEach(function (p) {
+    if (!p.isAlive && gyIds.indexOf(p.id) === -1) throw new Error(ctx + ': dead player ' + p.name + ' missing from graveyard');
+  });
+}
+function roundTrip(state, ctx) {
+  const json = engine.serialize(state);
+  const s2 = engine.deserialize(json);
+  if (s2.phase !== state.phase) throw new Error(ctx + ': round-trip phase mismatch');
+  if (s2.players.length !== state.players.length) throw new Error(ctx + ': round-trip player count mismatch');
+  s2.players.forEach(function (p, i) {
+    const o = state.players[i];
+    if (p.assignedRole !== o.assignedRole || p.isAlive !== o.isAlive || p.name !== o.name) {
+      throw new Error(ctx + ': round-trip player ' + p.id + ' mismatch');
+    }
+  });
+  if (s2.graveyard.length !== state.graveyard.length) throw new Error(ctx + ': round-trip graveyard mismatch');
+  if (s2.night.number !== state.night.number) throw new Error(ctx + ': round-trip night mismatch');
+}
+function pad(s, n) {
+  s = String(s);
+  while (s.length < n) s += ' ';
+  return s;
+}
+function winnerName(w) {
+  return w === 'SERIAL_KILLER' ? 'Serial Killer' : w === 'EXECUTIONER' ? 'Executioner' : (w || 'nobody');
+}
+function printFinal(state) {
+  const w = state.winner;
+  const deaths = { TOWN: 0, MAFIA: 0, NEUTRAL: 0 };
+  state.graveyard.forEach(function (e) { deaths[teamOfRole(e.trueRole)] += 1; });
+  console.log('=== Game Over ===');
+  console.log('Winner: ' + (w ? w.winner + ' (' + w.reason + ')' : 'none'));
+  console.log(pad('Name', 8) + pad('Role', 18) + pad('Team', 9) + 'Status');
+  state.players.forEach(function (p) {
+    const r = engine.ROLES[p.assignedRole];
+    console.log(pad(p.name, 8) + pad(r.name, 18) + pad(r.team, 9) + (p.isAlive ? 'alive' : 'dead'));
+  });
+  console.log('balance: TOWN deaths ' + deaths.TOWN + ', MAFIA deaths ' + deaths.MAFIA +
+    ', NEUTRAL deaths ' + deaths.NEUTRAL + ' | ' + (w ? w.winner + ' won via: ' + w.reason : 'no winner'));
+  console.log('=== GAME OVER: ' + winnerName(w ? w.winner : null) + ' wins after ' + state.dayNumber + ' days ===');
+}
+function main() {
+  const state = engine.createGame({ playerCount: PLAYER_COUNT, presetId: PRESET });
+  const names = [];
+  for (let s = 1; s <= PLAYER_COUNT; s += 1) names.push({ seat: s, name: 'P' + s });
+  engine.setPlayerNames(state, names);
+  engine.dealRoles(state);
+  const models = makeModels(state);
+  const dayInfo = { lastLynched: null };
+  console.log('=== Town of Vibelm: ' + PLAYER_COUNT + ' players, preset ' + PRESET + ' (' + engine.PRESETS[PRESET].name + ') ===');
+  let days = 0;
+  while (state.phase !== 'END' && days < MAX_DAYS) {
+    if (state.phase !== 'NIGHT') state.phase = 'NIGHT';
+    const recorded = [], notes = [];
+    const nightNum = state.night.number;
+    runNight(state, models, recorded, notes);
+    const blocked = computeBlocked(state, recorded);
+    engine.resolveNight(state);
+    const ann = engine.getMorningAnnouncement(state);
+    morningUpdate(state, models, recorded, notes, blocked);
+    roundTrip(state, 'after night ' + nightNum);
+    checkInvariants(state, 'after night ' + nightNum);
+    printNight(notes, nightNum);
+    printMorning(state, ann);
+    engine.beginDay(state);
+    if (state.phase === 'END') break;
+    runDay(state, models, dayInfo).forEach(function (l) { console.log(l); });
+    console.log('End Day');
+    if (state.phase === 'END') break;
+    days += 1;
+  }
+  if (state.phase !== 'END') engine.endGame(state);
+  roundTrip(state, 'final');
+  checkInvariants(state, 'final');
+  printFinal(state);
+}
+main();

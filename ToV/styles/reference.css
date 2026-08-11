@@ -1,0 +1,119 @@
+/* Role reference overlay */
+body.reference-open { overflow: hidden; }
+
+.reference-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  max-width: 600px;
+  z-index: 40;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 14px calc(20px + env(safe-area-inset-bottom));
+}
+.reference-panel.open { display: flex; }
+
+.reference-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg);
+  padding: 12px 0 10px;
+}
+.reference-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.reference-head-row h2 { margin: 0; font-size: 1.1rem; }
+.app-header .btn-sm { margin-top: 10px; }
+
+.reference-search {
+  width: 100%;
+  min-height: 44px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0 12px 0 38px;
+  font-size: 1rem;
+  position: relative;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .35);
+}
+.reference-search::before {
+  content: "\1F50D";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  opacity: .55;
+  pointer-events: none;
+}
+
+.reference-group { margin: 14px 0 4px; }
+.reference-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.reference-group-head strong { font-size: .95rem; letter-spacing: .02em; }
+
+.reference-row {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 10px 12px;
+  margin: 8px 0;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.reference-row:active { transform: scale(.99); filter: brightness(1.15); }
+.reference-row-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reference-row-name { font-weight: 600; font-size: .95rem; }
+.reference-cat {
+  font-size: .66rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.reference-blurb {
+  display: block;
+  font-size: .82rem;
+  line-height: 1.4;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.reference-detail {
+  display: block;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.reference-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: .88rem;
+}
+.reference-none { text-align: center; padding: 30px 0; }
+.reference-list { padding-bottom: 16px; }

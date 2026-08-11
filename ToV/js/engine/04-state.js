@@ -8,6 +8,7 @@
 
   function resetTransient(state) {
     state.graveyard = [];
+    state.deathLog = [];
     state.ghosts = { ledgerEnabled: true };
     state.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
     state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
@@ -19,14 +20,14 @@
     state.retributionist = { used: false };
     state.amnesiac = { used: false, rememberedRole: null };
     state.pendingInheritanceNote = '';
-    state.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null };
+    state.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] };
     state.players.forEach(function (p) {
       p.inheritedRole = null;
       p.isAlive = true;
       p.isDrunk = false;
+      p.diedBefore = false;
       p.hasGhostVote = false;
       p.ghostVoteSpent = false;
-      p.lastWill = '';
       p.nightTarget = null;
       p.jailorDecision = null;
       p.isRoleblocked = false;
@@ -108,9 +109,9 @@
       players.push({
         id: i, name: '', seat: i,
         assignedRole: null, inheritedRole: null,
-        isAlive: true, isDrunk: false,
+        isAlive: true, isDrunk: false, diedBefore: false,
         hasGhostVote: false, ghostVoteSpent: false,
-        lastWill: '', nightTarget: null, jailorDecision: null,
+        nightTarget: null, jailorDecision: null,
         isRoleblocked: false, isProtected: false, framed: false, blackmailed: false,
         jailed: false, poisoned: false, alerted: false, cleaned: false,
         revealed: false,
@@ -126,6 +127,7 @@
       deck: deck,
       players: players,
       graveyard: [],
+      deathLog: [],
       ghosts: { ledgerEnabled: true },
       trial: { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 },
       night: { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null },
@@ -141,7 +143,7 @@
       retributionist: { used: false },
       amnesiac: { used: false, rememberedRole: null },
       pendingInheritanceNote: '',
-      morning: { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null }
+      morning: { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] }
     };
     state.logs.push('Game created: ' + playerCount + ' players, preset ' + presetId + '.');
     return state;
@@ -198,6 +200,51 @@
     return dealCommon(state, 'Roles redealt.');
   };
 
+  E.assignRoles = function (state, seatToRole) {
+    var n = state.playerCount;
+    for (var s = 1; s <= n; s += 1) {
+      if (!seatToRole || seatToRole[s] == null) {
+        throw new Error('assignRoles: seat ' + s + ' is missing');
+      }
+    }
+    var deckCounts = {};
+    for (var i = 0; i < state.deck.length; i += 1) {
+      var did = state.deck[i];
+      deckCounts[did] = (deckCounts[did] || 0) + 1;
+    }
+    var assignedCounts = {};
+    for (var j = 1; j <= n; j += 1) {
+      var rid = seatToRole[j];
+      if (!E.ROLES[rid]) throw new Error('assignRoles: unknown role ' + rid);
+      assignedCounts[rid] = (assignedCounts[rid] || 0) + 1;
+    }
+    var allKeys = {};
+    Object.keys(assignedCounts).forEach(function (k) { allKeys[k] = true; });
+    Object.keys(deckCounts).forEach(function (k) { allKeys[k] = true; });
+    var allMatch = true;
+    var firstAbsent = null;
+    Object.keys(allKeys).forEach(function (k) {
+      var a = assignedCounts[k] || 0;
+      var d = deckCounts[k] || 0;
+      if (a !== d) {
+        allMatch = false;
+        if (d === 0 && firstAbsent === null) firstAbsent = k;
+      }
+    });
+    if (!allMatch) {
+      if (firstAbsent !== null) {
+        throw new Error('assignRoles: role ' + firstAbsent + ' is not in the deck');
+      }
+      throw new Error('assignRoles: assigned roles do not match the deck');
+    }
+    state.players.forEach(function (p) { p.assignedRole = seatToRole[p.seat]; });
+    resetTransient(state);
+    assignSetupInfo(state);
+    state.phase = 'SEATS';
+    state.logs.push('Roles assigned.');
+    return state;
+  };
+
   E.serialize = function (state) {
     return JSON.stringify(state);
   };
@@ -230,6 +277,12 @@
     }
     if (!data.houseRules || typeof data.houseRules !== 'object') data.houseRules = {};
     if (!Array.isArray(data.graveyard)) data.graveyard = [];
+    data.players.forEach(function (pl) {
+      if (typeof pl.diedBefore !== 'boolean') {
+        pl.diedBefore = data.graveyard.some(function (e) { return e.playerId === pl.id; });
+      }
+    });
+    if (!Array.isArray(data.deathLog)) data.deathLog = [];
     if (!data.trial || typeof data.trial !== 'object') {
       data.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
     }
@@ -240,6 +293,12 @@
     if (!data.retributionist || typeof data.retributionist !== 'object') data.retributionist = { used: false };
     if (!data.amnesiac || typeof data.amnesiac !== 'object') data.amnesiac = { used: false, rememberedRole: null };
     if (!Array.isArray(data.logs)) data.logs = [];
+    if (!data.morning || typeof data.morning !== 'object') {
+      data.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] };
+    }
+    if (!Array.isArray(data.morning.deaths)) data.morning.deaths = [];
+    if (!Array.isArray(data.morning.revivals)) data.morning.revivals = [];
+    if (!Array.isArray(data.morning.forgedWills)) data.morning.forgedWills = [];
     if (data.version == null) data.version = 1;
     return data;
   };

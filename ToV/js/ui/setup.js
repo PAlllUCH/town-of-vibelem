@@ -51,12 +51,14 @@
           (isTown ? 'Slots fill with Civilians.' : 'Slots pad from the preset and role pool.') + '</p>';
       }
       list.forEach(function (rid, i) {
+        var blurb = (E.ROLES[rid] && E.ROLES[rid].blurb) || '';
         out += '<div class="team-row">' +
           '<span class="team-rank">' + (i + 1) + '</span>' +
           '<span class="team-row-name">' + UI.roleName(rid) + '</span>' +
           '<button class="btn btn-icon" data-action="deck-up" data-team="' + team + '" data-index="' + i + '" aria-label="Move up">&#9650;</button>' +
           '<button class="btn btn-icon" data-action="deck-down" data-team="' + team + '" data-index="' + i + '" aria-label="Move down">&#9660;</button>' +
           '<button class="btn btn-icon btn-danger" data-action="deck-remove" data-team="' + team + '" data-index="' + i + '" aria-label="Remove">&#10005;</button>' +
+          '<div class="role-blurb">' + UI.esc(blurb) + '</div>' +
           '</div>';
       });
       if (isTown) {
@@ -73,7 +75,8 @@
       out += '<div class="team-add">' +
         '<select id="add-' + team + '" class="select" aria-label="Add role to ' + team + '">' +
         pool.map(function (id) {
-          return '<option value="' + UI.esc(id) + '">' + UI.roleName(id) + '</option>';
+          var r = E.ROLES[id] || {};
+          return '<option value="' + UI.esc(id) + '" title="' + UI.esc(r.blurb || '') + '">' + UI.roleName(id) + '</option>';
         }).join('') +
         '</select>' +
         (full
@@ -193,7 +196,7 @@
       '<p class="muted small">Edit each team priority list, then check the live deck preview.</p>' +
       deckBuilder(cfg) + deckPreview(cfg) + '</div>';
 
-    html += '<button class="btn btn-primary btn-block btn-big" data-action="start-game">Start Game</button>';
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="start-game">Start Session</button>';
     return html;
   };
 })();

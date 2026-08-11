@@ -14,6 +14,15 @@
 }
 .stepper-num strong { font-size: 1.6rem; line-height: 1; }
 .stepper-num span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+@keyframes bump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+.stepper-num strong.bump, .team-stepper-num strong.bump, .civ-stepper-num strong.bump {
+  display: inline-block;
+  animation: bump .25s ease;
+}
 .ratio { text-align: center; color: var(--muted); font-size: .92rem; }
 
 /* Team structure steppers */
@@ -70,7 +79,7 @@
   text-align: left;
   cursor: pointer;
 }
-.preset-card.selected { border-color: var(--accent); background: rgba(79, 163, 227, .12); }
+.preset-card.selected { border-color: var(--accent); background: rgba(212, 138, 60, .12); }
 .preset-name { font-weight: 700; }
 .preset-tag { color: var(--muted); font-size: .82rem; }
 
@@ -131,7 +140,7 @@
   font-size: .82rem;
   cursor: pointer;
 }
-.layout-card.selected { border-color: var(--accent); background: rgba(79, 163, 227, .12); }
+.layout-card.selected { border-color: var(--accent); background: rgba(212, 138, 60, .12); }
 .layout-icon {
   width: 56px;
   height: 38px;
@@ -140,16 +149,17 @@
   background-position: center;
   opacity: .95;
 }
-.layout-icon-circle { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cellipse cx='32' cy='22' rx='24' ry='15' fill='none' stroke='%235d8cc4' stroke-width='2'/%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='32' cy='5' r='3'/%3E%3Ccircle cx='54' cy='22' r='3'/%3E%3Ccircle cx='32' cy='39' r='3'/%3E%3Ccircle cx='10' cy='22' r='3'/%3E%3Ccircle cx='19' cy='9' r='3'/%3E%3Ccircle cx='45' cy='35' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
-.layout-icon-two_rows { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='32' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
-.layout-icon-u_shape { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
-.layout-icon-rectangular { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23e7edf5'%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Ccircle cx='32' cy='10' r='3'/%3E%3Ccircle cx='52' cy='10' r='3'/%3E%3Ccircle cx='12' cy='22' r='3'/%3E%3Ccircle cx='32' cy='22' r='3'/%3E%3Ccircle cx='52' cy='22' r='3'/%3E%3Ccircle cx='12' cy='34' r='3'/%3E%3Ccircle cx='32' cy='34' r='3'/%3E%3Ccircle cx='52' cy='34' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-circle { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cellipse cx='32' cy='22' rx='24' ry='15' fill='none' stroke='%237a9ab5' stroke-width='2'/%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='32' cy='5' r='3'/%3E%3Ccircle cx='54' cy='22' r='3'/%3E%3Ccircle cx='32' cy='39' r='3'/%3E%3Ccircle cx='10' cy='22' r='3'/%3E%3Ccircle cx='19' cy='9' r='3'/%3E%3Ccircle cx='45' cy='35' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-two_rows { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='32' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-u_shape { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
+.layout-icon-rectangular { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Ccircle cx='32' cy='10' r='3'/%3E%3Ccircle cx='52' cy='10' r='3'/%3E%3Ccircle cx='12' cy='22' r='3'/%3E%3Ccircle cx='32' cy='22' r='3'/%3E%3Ccircle cx='52' cy='22' r='3'/%3E%3Ccircle cx='12' cy='34' r='3'/%3E%3Ccircle cx='32' cy='34' r='3'/%3E%3Ccircle cx='52' cy='34' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
 
 /* Deck builder */
 .team-edit { margin: 12px 0; }
 .team-edit-head { display: flex; align-items: center; margin-bottom: 6px; }
 .team-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   background: var(--bg2);
@@ -160,6 +170,13 @@
 }
 .team-rank { color: var(--muted); font-size: .8rem; width: 18px; text-align: right; flex: none; }
 .team-row-name { flex: 1; font-size: .92rem; }
+.role-blurb {
+  flex-basis: 100%;
+  font-size: .75rem;
+  line-height: 1.35;
+  color: var(--muted);
+  margin: 0 0 2px 24px;
+}
 .team-add { display: flex; gap: 8px; margin-top: 8px; }
 .select {
   flex: 1;
@@ -179,7 +196,7 @@
 .deck-team-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .deck-count {
   margin-left: auto;
-  background: rgba(255, 255, 255, .08);
+  background: rgba(212, 138, 60, .14);
   border-radius: 999px;
   padding: 2px 10px;
   font-size: .78rem;
@@ -197,7 +214,7 @@
 
 /* Resume banner */
 .resume-banner {
-  background: rgba(79, 163, 227, .12);
+  background: rgba(212, 138, 60, .12);
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 14px;

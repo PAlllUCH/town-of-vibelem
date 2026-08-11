@@ -1,7 +1,7 @@
 'use strict';
 
-var CACHE_NAME = 'villagepub-v1';
-var CACHE_PREFIX = 'villagepub-';
+var CACHE_NAME = 'tov-v1';
+var CACHE_PREFIX = 'tov-';
 var CORE_ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ var CORE_ASSETS = [
   './styles/seats.css',
   './styles/game.css',
   './styles/end.css',
+  './styles/reference.css',
   './js/engine/00-namespace.js',
   './js/engine/01-roles.js',
   './js/engine/02-presets.js',
@@ -20,6 +21,7 @@ var CORE_ASSETS = [
   './js/engine/05-night-steps.js',
   './js/engine/06-night-actions.js',
   './js/engine/07-night-resolution.js',
+  './js/engine/07b-night-resolution.js',
   './js/engine/08-ghosts.js',
   './js/engine/09-day.js',
   './js/engine/10-victory.js',
@@ -29,6 +31,7 @@ var CORE_ASSETS = [
   './js/ui/wizard.js',
   './js/ui/day.js',
   './js/ui/end.js',
+  './js/ui/reference.js',
   './js/app/config.js',
   './js/app/persistence.js',
   './js/app/router.js',
