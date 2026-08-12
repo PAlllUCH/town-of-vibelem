@@ -249,14 +249,14 @@ describe('custom team overrides', () => {
 // ---------------------------------------------------------------------------
 
 describe('night resolution order and the attack/defense model', () => {
-  test('Doctor protection blocks the first Basic attack and is then consumed', () => {
+  test('Doctor protection blocks every Basic attack that night', () => {
     const state = assignRoles(['doctor', 'civilian', 'godfather', 'mafioso', 'serialkiller', 'civilian']);
     act(state, 5, 'doctor', 1, 2);
     act(state, 6, 'godfather', 3, 2);
     act(state, 9, 'serialkiller', 5, 2);
     const result = night(state);
-    assert.strictEqual(pid(state, 2).isAlive, false);
-    assert.strictEqual(deathCauses(result)[2], 'killed by the Serial Killer');
+    assert.strictEqual(pid(state, 2).isAlive, true);
+    assert.strictEqual(result.deaths.length, 0);
     assert.ok(logText(state).includes('survived an attack (Doctor protection)'));
   });
 

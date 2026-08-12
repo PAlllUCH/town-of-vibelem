@@ -3,6 +3,7 @@
 (function () {
   var E = window.VillageEngine || {};
   var APP = window.APP;
+  var saveWarningShown = false;
 
   function save() {
     var app = APP.app;
@@ -18,7 +19,12 @@
     var payload = { cfg: APP.cfg, ui: ui, game: APP.state ? E.serialize(APP.state) : null };
     try {
       localStorage.setItem(APP.SAVE_KEY, JSON.stringify(payload));
-    } catch (e) { }
+    } catch (e) {
+      if (!saveWarningShown) {
+        saveWarningShown = true;
+        console.warn('Failed to save game:', e.message);
+      }
+    }
   }
 
   function renderResumeBanner() {

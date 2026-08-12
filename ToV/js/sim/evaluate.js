@@ -1,0 +1,572 @@
+'use strict';
+
+const engine = require('../../js/engine.js');
+const { NeuralNetwork, createInputEncoder } = require('./neural-net.js');
+const fs = require('fs');
+
+const AGENT_FILE = process.argv[2] || 'best-agent.json';
+const PRESET = process.argv[3] || 'p1';
+const PLAYER_COUNT = parseInt(process.argv[4]) || 11;
+const NUM_GAMES = parseInt(process.argv[5]) || 50;
+const MAX_DAYS = 25;
+const OUTPUT_FILE = process.argv[6] || 'eval-result.json';
+
+function randInt(n) { return Math.floor(Math.random() * n); }
+function pick(arr) { return arr.length ? arr[randInt(arr.length)] : null; }
+function living(state) { return state.players.filter(function (p) { return p.isAlive; }); }
+function byId(state, id) { return state.players[id - 1] || null; }
+function teamOfRole(roleId) { const r = engine.ROLES[roleId]; return r ? r.team : 'NEUTRAL'; }
+
+function createMemory() {
+  return {
+    suspicions: {},
+    confirmedTown: {},
+    confirmedMafia: {},
+    deadRoles: {},
+    visitedBy: {},
+    trackedTargets: {},
+    lookoutVisitors: {},
+    lastLynchTarget: null,
+    lastLynchVotes: null,
+    dayCount: 0,
+    claims: {},
+    roleId: null,
+    team: null,
+    side: null,
+    isMafia: false,
+    inheritedSheriff: false,
+    ownSheriffResults: {},
+    sheriffPublic: {},
+    consigliereResults: {},
+    learnedRoles: {},
+    attacked: {},
+    avoid: {},
+    cleanedCorpses: {},
+    inspectedCorpses: {},
+    voteHistory: {},
+    mafiaMembers: {},
+    killTarget: null,
+    lastKillTarget: null,
+    lastJailed: null,
+    lastBlackmail: null,
+    lastLynchAccusedId: null,
+    lastLynchAccusedKnownSuspicious: false,
+    lastLynchAccusedKnownTown: false,
+    announced: {},
+    bluffPool: null
+  };
+}
+
+function makeMemories(state) {
+  const memories = {};
+  const mafiaIds = {};
+  state.players.forEach(function (p) {
+    if (engine.ROLES[p.assignedRole].team === 'MAFIA') mafiaIds[p.id] = true;
+  });
+  state.players.forEach(function (p) {
+    const role = engine.ROLES[p.assignedRole];
+    const mem = createMemory();
+    mem.roleId = p.assignedRole;
+    mem.team = role.team;
+    mem.isMafia = role.team === 'MAFIA';
+    mem.side = p.assignedRole === 'witch' ? (state.witchSide === 'TOWN' ? 'TOWN' : 'MAFIA') : role.team;
+    if (mem.isMafia) {
+      Object.keys(mafiaIds).forEach(function (k) { mem.mafiaMembers[Number(k)] = true; });
+    }
+    memories[p.id] = mem;
+  });
+  return memories;
+}
+
+function checkSuspicious(state, player) {
+  if (!player) return false;
+  const gfLike = player.assignedRole === 'godfather';
+  if (gfLike) return false;
+  const skLike = player.assignedRole === 'serialkiller';
+  if (skLike) return true;
+  return teamOfRole(player.assignedRole) === 'MAFIA';
+}
+
+function morningUpdate(state, memories, recorded, notes) {
+  const strip = function (note) { if (note) note.text = note.text.replace(/:$/, ''); };
+  
+  const effTargets = [];
+  const voided = [];
+  recorded.forEach(function (a) {
+    if (a.position === 0 && a.roleId === 'veteran' && a.extra && a.extra.alert) {
+      recorded.forEach(function (x) {
+        if (x.targetId === a.playerId && x.position !== 0) voided.push(x.playerId);
+      });
+    }
+  });
+  
+  const witchAction = recorded.find(function (a) { return a.position === 2 && a.roleId === 'witch'; });
+  const witchControl = witchAction && witchAction.extra && witchAction.extra.controlRedirect ? {
+    controlledId: witchAction.targetId,
+    redirect: witchAction.extra.controlRedirect
+  } : null;
+  
+  recorded.forEach(function (a) {
+    if (a.position === 13) return;
+    const actor = byId(state, a.playerId);
+    if (!actor || !actor.isAlive || actor.isRoleblocked || actor.jailed) return;
+    if (voided.indexOf(a.playerId) !== -1) return;
+    const target = a.targetId != null ? byId(state, a.targetId) : null;
+    if (!target || !target.isAlive) return;
+    let effTid = a.targetId;
+    if (witchControl && a.playerId === witchControl.controlledId) {
+      effTid = witchControl.redirect;
+    } else if (a.extra && a.extra.controlRedirect) {
+      effTid = a.extra.controlRedirect;
+    }
+    effTargets.push({ playerId: a.playerId, targetId: effTid });
+  });
+  
+  const getEff = function (pid) {
+    for (var i = 0; i < effTargets.length; i += 1) {
+      if (effTargets[i].playerId === pid) return effTargets[i].targetId;
+    }
+    return null;
+  };
+  
+  recorded.forEach(function (a) {
+    if (a.position !== 11) return;
+    const actor = byId(state, a.playerId);
+    const t = a.targetId != null ? byId(state, a.targetId) : null;
+    const note = notes.find(function (n) { return n.kind && n.playerId === a.playerId && n.targetId === a.targetId; });
+    const acted = !!actor && actor.isAlive && !!t && t.isAlive && !actor.isRoleblocked && !actor.jailed;
+    const amem = memories[a.playerId];
+    if (!amem) return;
+    const isSheriffLike = amem.roleId === 'sheriff' || amem.inheritedSheriff;
+    if (isSheriffLike && (a.roleId === 'sheriff' || a.roleId === 'deputy')) {
+      if (acted) {
+        let r = t.framed ? 'SUSPICIOUS' : (checkSuspicious(state, t) ? 'SUSPICIOUS' : 'INNOCENT');
+        if (actor.isDrunk) r = r === 'SUSPICIOUS' ? 'INNOCENT' : 'SUSPICIOUS';
+        amem.ownSheriffResults[a.targetId] = r;
+        if (note) note.text += ' ' + r;
+      } else strip(note);
+    } else if (a.roleId === 'consigliere') {
+      if (acted) {
+        let learned = t.assignedRole;
+        if (actor.isDrunk) {
+          const aligned = teamOfRole(t.assignedRole);
+          const pool = Object.keys(engine.ROLES).filter(function (id) { return engine.ROLES[id].team !== aligned; });
+          learned = pool[randInt(pool.length)];
+        }
+        state.players.forEach(function (p) {
+          const pm = memories[p.id];
+          if (pm && pm.isMafia) pm.consigliereResults[a.targetId] = learned;
+        });
+        if (note) note.text += ' ' + engine.ROLES[learned].name;
+      } else strip(note);
+    } else if (a.roleId === 'undertaker') {
+      const entry = state.graveyard.find(function (e) { return e.playerId === a.targetId; });
+      if (entry && entry.inspectedByUndertaker && !amem.inspectedCorpses[a.targetId]) {
+        amem.inspectedCorpses[a.targetId] = true;
+        amem.deadRoles[a.targetId] = entry.trueRole;
+        if (note) note.text += ' ' + engine.ROLES[entry.trueRole].name;
+      } else strip(note);
+    } else if (a.roleId === 'tracker') {
+      if (acted) {
+        const eff = getEff(a.targetId);
+        amem.trackedTargets[a.targetId] = eff;
+        const m = state.morning || { deaths: [] };
+        if (eff != null && m.deaths.some(function (d) { return d.playerId === eff; })) {
+          amem.suspicions[a.targetId] = 'SUSPICIOUS';
+        }
+        if (note) note.text += eff != null ? ': visited ' + byId(state, eff).name : ': visited no one';
+      } else strip(note);
+    } else if (a.roleId === 'lookout') {
+      if (acted) {
+        const visitors = effTargets.filter(function (x) {
+          return x.targetId === a.targetId && x.playerId !== a.playerId;
+        }).map(function (x) { return x.playerId; });
+        amem.lookoutVisitors[a.targetId] = visitors;
+        if (note) note.text += visitors.length ? ': ' + visitors.map(function (x) { return byId(state, x).name; }).join(', ') + ' visited' : ': no visitors';
+      } else strip(note);
+    }
+  });
+  
+  recorded.forEach(function (a) {
+    if (a.position !== 9 || a.roleId !== 'serialkiller') return;
+    const sk = byId(state, a.playerId);
+    if (!sk || !sk.isAlive) return;
+    const sm = memories[sk.id];
+    const target = a.targetId != null ? byId(state, a.targetId) : null;
+    if (!target || !sm) return;
+    sm.attacked[target.id] = true;
+    if (target.isAlive) sm.suspicions[target.id] = 'SUSPICIOUS';
+  });
+  
+  const m = state.morning || { deaths: [], revivals: [] };
+  (m.deaths || []).forEach(function (d) {
+    state.players.forEach(function (p) {
+      const pm = memories[p.id];
+      if (d.wasCleaned) pm.cleanedCorpses[d.playerId] = true;
+      else pm.deadRoles[d.playerId] = d.trueRole;
+    });
+  });
+  (m.revivals || []).forEach(function (id) {
+    state.players.forEach(function (p) { memories[p.id].confirmedTown[id] = true; });
+  });
+  
+  if (m.inheritanceNote) {
+    const dep = state.players.find(function (p) { return p.assignedRole === 'deputy' && p.inheritedRole === 'sheriff'; });
+    if (dep && memories[dep.id]) memories[dep.id].inheritedSheriff = true;
+  }
+}
+
+function dayClaims(state, memories) {
+  state.players.forEach(function (p) {
+    if (!p.isAlive) return;
+    const mem = memories[p.id];
+    let claim;
+    if (mem.team === 'TOWN') claim = mem.roleId;
+    else if (mem.team === 'MAFIA') {
+      const townRoles = ['sheriff', 'doctor', 'veteran', 'civilian'];
+      claim = townRoles[randInt(townRoles.length)];
+    } else claim = 'civilian';
+    mem.claims[p.id] = claim;
+    state.players.forEach(function (q) { memories[q.id].claims[p.id] = claim; });
+  });
+}
+
+function sheriffReport(state, memories) {
+  state.players.forEach(function (p) {
+    const mem = memories[p.id];
+    const isSheriff = mem.roleId === 'sheriff' || mem.inheritedSheriff;
+    if (!p.isAlive || !isSheriff) return;
+    Object.keys(mem.ownSheriffResults).forEach(function (k) {
+      const tid = Number(k);
+      if (mem.announced[tid]) return;
+      mem.announced[tid] = true;
+      const res = mem.ownSheriffResults[k];
+      state.players.forEach(function (q) { memories[q.id].sheriffPublic[tid] = res; });
+    });
+  });
+}
+
+function runGameWithAgent(agentData, preset, playerCount) {
+  const state = engine.createGame({ playerCount: playerCount, presetId: preset });
+  const names = [];
+  for (let s = 1; s <= playerCount; s += 1) names.push({ seat: s, name: 'P' + s });
+  engine.setPlayerNames(state, names);
+  engine.dealRoles(state);
+  
+  const memories = makeMemories(state);
+  const encoder = createInputEncoder(playerCount);
+  
+  const voteNet = NeuralNetwork.deserialize(agentData.voteNet);
+  const nightNet = NeuralNetwork.deserialize(agentData.nightNet);
+  
+  let days = 0;
+  while (state.phase !== 'END' && days < MAX_DAYS) {
+    if (state.phase !== 'NIGHT') state.phase = 'NIGHT';
+    const recorded = [], notes = [];
+    
+    const steps = engine.getNightSteps(state);
+    for (const step of steps) {
+      const pos = step.position;
+      if (pos >= 14) continue;
+      
+      if (pos === 6) {
+        const leader = engine.mafiaKillActor(state);
+        if (leader) {
+          const mem = memories[leader.id];
+          const cands = living(state).filter(function (p) {
+            return !mem.mafiaMembers[p.id] && !mem.avoid[p.id];
+          });
+          if (cands.length) {
+            let bestScore = -Infinity;
+            let bestTarget = null;
+            cands.forEach(function (p) {
+              const input = encoder.getNightInput(state, memories, leader.id, p.id);
+              const output = nightNet.predict(input);
+              const score = output[0] + output[1] + output[2] + output[3] + output[4];
+              if (score > bestScore) {
+                bestScore = score;
+                bestTarget = p.id;
+              }
+            });
+            if (bestTarget) {
+              engine.recordNightAction(state, {
+                position: 6, roleId: leader.assignedRole, playerId: leader.id, targetId: bestTarget
+              });
+              recorded.push({ position: 6, roleId: leader.assignedRole, playerId: leader.id, targetId: bestTarget });
+              notes.push({ pos: 6, text: 'Mafia killed ' + byId(state, bestTarget).name });
+              mem.killTarget = bestTarget;
+            }
+          }
+        }
+        continue;
+      }
+      
+      for (const role of step.roles) {
+        const actors = state.players.filter(function (p) {
+          if (p.assignedRole !== role) return false;
+          if (pos === 0 && role === 'jester') return !p.isAlive && state.jester.haunted && state.jester.hauntTarget === null;
+          if (pos === 13 && role === 'medium') return true;
+          return p.isAlive;
+        });
+        
+        for (const actor of actors) {
+          const mem = memories[actor.id];
+          
+          if (pos === 0 && role === 'veteran') {
+            const alert = Math.random() < 0.3;
+            engine.recordNightAction(state, { position: 0, roleId: 'veteran', playerId: actor.id, extra: { alert: alert } });
+            recorded.push({ position: 0, roleId: 'veteran', playerId: actor.id, extra: { alert: alert } });
+            if (alert) notes.push({ pos: 0, text: actor.name + ' (Veteran) went on alert' });
+          } else if (pos === 0 && role === 'jester') {
+            const guiltyVoters = (state.trial.votes || []).filter(function (v) {
+              return v.verdict === 'GUILTY' && byId(state, v.voterId) && byId(state, v.voterId).isAlive;
+            }).map(function (v) { return v.voterId; });
+            if (guiltyVoters.length) {
+              const target = pick(guiltyVoters);
+              engine.recordNightAction(state, { position: 0, roleId: 'jester', playerId: actor.id, targetId: target });
+              recorded.push({ position: 0, roleId: 'jester', playerId: actor.id, targetId: target });
+            }
+          } else if (pos === 3 && role === 'jailor') {
+            const ex = [actor.id];
+            if (mem.lastJailed != null) ex.push(mem.lastJailed);
+            const cands = living(state).filter(function (p) {
+              return ex.indexOf(p.id) === -1;
+            });
+            if (cands.length) {
+              let bestScore = -Infinity;
+              let bestTarget = null;
+              cands.forEach(function (p) {
+                const input = encoder.getNightInput(state, memories, actor.id, p.id);
+                const output = nightNet.predict(input);
+                const score = output[0] + output[1] + output[2] + output[3] + output[4];
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestTarget = p.id;
+                }
+              });
+              if (bestTarget) {
+                const canExecute = state.night.number > 1;
+                const decision = canExecute && Math.random() < 0.5 ? 'EXECUTE' : 'SPARE';
+                engine.recordNightAction(state, {
+                  position: 3, roleId: 'jailor', playerId: actor.id, targetId: bestTarget,
+                  extra: { jailorDecision: decision }
+                });
+                recorded.push({
+                  position: 3, roleId: 'jailor', playerId: actor.id, targetId: bestTarget,
+                  extra: { jailorDecision: decision }
+                });
+                notes.push({ pos: 3, text: actor.name + ' (Jailor) jailed ' + byId(state, bestTarget).name + ', ' + decision.toLowerCase() });
+                mem.lastJailed = bestTarget;
+              }
+            }
+          } else if (pos === 5 && role === 'doctor') {
+            const cands = living(state).filter(function (p) { return p.id !== actor.id; });
+            let bestScore = -Infinity;
+            let bestTarget = actor.id;
+            cands.concat([actor]).forEach(function (p) {
+              const input = encoder.getNightInput(state, memories, actor.id, p.id);
+              const output = nightNet.predict(input);
+              const score = output[0] + output[1] + output[2] + output[3] + output[4];
+              if (score > bestScore) {
+                bestScore = score;
+                bestTarget = p.id;
+              }
+            });
+            engine.recordNightAction(state, { position: 5, roleId: 'doctor', playerId: actor.id, targetId: bestTarget });
+            recorded.push({ position: 5, roleId: 'doctor', playerId: actor.id, targetId: bestTarget });
+            notes.push({ pos: 5, text: actor.name + ' (Doctor) protected ' + byId(state, bestTarget).name });
+          } else if (pos === 9 && role === 'serialkiller') {
+            const cands = living(state).filter(function (p) { return p.id !== actor.id; });
+            if (cands.length) {
+              let bestScore = -Infinity;
+              let bestTarget = null;
+              cands.forEach(function (p) {
+                const input = encoder.getNightInput(state, memories, actor.id, p.id);
+                const output = nightNet.predict(input);
+                const score = output[0] + output[1] + output[2] + output[3] + output[4];
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestTarget = p.id;
+                }
+              });
+              if (bestTarget) {
+                engine.recordNightAction(state, { position: 9, roleId: 'serialkiller', playerId: actor.id, targetId: bestTarget });
+                recorded.push({ position: 9, roleId: 'serialkiller', playerId: actor.id, targetId: bestTarget });
+                notes.push({ pos: 9, text: actor.name + ' (Serial Killer) attacked ' + byId(state, bestTarget).name });
+              }
+            }
+          } else if (pos === 11) {
+            if (role === 'sheriff' || (role === 'deputy' && mem.inheritedSheriff)) {
+              const checked = Object.keys(mem.ownSheriffResults).map(Number);
+              const ex = [actor.id].concat(checked);
+              const cands = living(state).filter(function (p) {
+                return ex.indexOf(p.id) === -1;
+              });
+              if (cands.length) {
+                let bestScore = -Infinity;
+                let bestTarget = null;
+                cands.forEach(function (p) {
+                  const input = encoder.getNightInput(state, memories, actor.id, p.id);
+                  const output = nightNet.predict(input);
+                  const score = output[0] + output[1] + output[2] + output[3] + output[4];
+                  if (score > bestScore) {
+                    bestScore = score;
+                    bestTarget = p.id;
+                  }
+                });
+                if (bestTarget) {
+                  engine.recordNightAction(state, { position: 11, roleId: role, playerId: actor.id, targetId: bestTarget });
+                  recorded.push({ position: 11, roleId: role, playerId: actor.id, targetId: bestTarget });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    engine.resolveNight(state);
+    
+    state.players.forEach(function (p) {
+      const m = memories[p.id];
+      if (m.roleId === 'jailor') m.lastJailed = state.night.lastJailTarget;
+      if (m.roleId === 'blackmailer') m.lastBlackmail = state.night.lastBlackmailTarget;
+    });
+    
+    if (state.jester.hauntTarget) {
+      notes.push({ pos: 0, text: 'Jester haunted ' + byId(state, state.jester.hauntTarget).name });
+    }
+    
+    morningUpdate(state, memories, recorded, notes);
+    engine.beginDay(state);
+    
+    if (state.phase === 'END') break;
+    
+    dayClaims(state, memories);
+    sheriffReport(state, memories);
+    
+    const mayor = state.players.find(function (p) {
+      return p.isAlive && memories[p.id].roleId === 'mayor' && !p.revealed;
+    });
+    if (mayor && state.dayNumber >= 2) {
+      engine.mayorReveal(state, mayor.id);
+      state.players.forEach(function (p) { memories[p.id].confirmedTown[mayor.id] = true; });
+    }
+    
+    const townAlive = living(state).filter(function (p) {
+      return memories[p.id].side === 'TOWN';
+    });
+    
+    if (townAlive.length > 1) {
+      const sheriff = townAlive.find(function (p) {
+        const m = memories[p.id];
+        return m.roleId === 'sheriff' || m.inheritedSheriff;
+      });
+      const nominator = sheriff || pick(townAlive);
+      
+      if (nominator) {
+        let accused = null;
+        let bestScore = -1;
+        
+        living(state).forEach(function (p) {
+          if (p.id === nominator.id) return;
+          const mem = memories[nominator.id];
+          let score = 0;
+          if (mem.ownSheriffResults[p.id] === 'SUSPICIOUS') score += 4;
+          if (mem.sheriffPublic[p.id] === 'SUSPICIOUS') score += 3;
+          if (!mem.claims[p.id]) score += 1;
+          
+          if (score > bestScore) {
+            bestScore = score;
+            accused = p;
+          }
+        });
+        
+        if (accused && engine.startTrial(state, accused.id, nominator.id)) {
+          state.players.forEach(function (p) {
+            if (p.isAlive) {
+              const input = encoder.getVoteInput(state, memories, p.id, accused.id);
+              const output = voteNet.predict(input);
+              const maxIdx = output.indexOf(Math.max(...output));
+              const verdict = ['GUILTY', 'ABSTAIN', 'INNOCENT'][maxIdx];
+              engine.castVote(state, { voterId: p.id, verdict: verdict, ghostToken: false });
+            } else if (p.hasGhostVote && !p.ghostVoteSpent) {
+              const mem = memories[p.id];
+              let verdict = 'ABSTAIN';
+              if (mem.ownSheriffResults[accused.id] === 'SUSPICIOUS') verdict = 'GUILTY';
+              else if (mem.sheriffPublic[accused.id] === 'SUSPICIOUS') verdict = 'GUILTY';
+              else if (mem.confirmedTown[accused.id]) verdict = 'INNOCENT';
+              
+              if (verdict !== 'ABSTAIN') {
+                engine.castVote(state, { voterId: p.id, verdict: verdict, ghostToken: true });
+              }
+            }
+          });
+          
+          engine.resolveTrial(state);
+        }
+      }
+    }
+    
+    if (state.phase === 'END') break;
+    days += 1;
+  }
+  
+  if (state.phase !== 'END') engine.endGame(state);
+  
+  const winner = state.winner ? state.winner.winner : 'nobody';
+  
+  return {
+    winner: winner,
+    reason: state.winner ? state.winner.reason : 'max days',
+    days: days,
+    townDeaths: state.graveyard.filter(function (e) { return teamOfRole(e.trueRole) === 'TOWN'; }).length,
+    mafiaDeaths: state.graveyard.filter(function (e) { return teamOfRole(e.trueRole) === 'MAFIA'; }).length,
+    neutralDeaths: state.graveyard.filter(function (e) { return teamOfRole(e.trueRole) === 'NEUTRAL'; }).length
+  };
+}
+
+function evaluate() {
+  let agentData;
+  try {
+    agentData = JSON.parse(fs.readFileSync(AGENT_FILE, 'utf8'));
+  } catch (e) {
+    console.error('Could not load agent file: ' + AGENT_FILE);
+    process.exit(1);
+  }
+  
+  const results = { wins: { TOWN: 0, MAFIA: 0, NEUTRAL: 0, nobody: 0 }, details: [] };
+  
+  console.log('Evaluating agent over ' + NUM_GAMES + ' games...');
+  
+  for (let i = 0; i < NUM_GAMES; i++) {
+    const result = runGameWithAgent(agentData, PRESET, PLAYER_COUNT);
+    
+    if (result.winner === 'TOWN') results.wins.TOWN++;
+    else if (result.winner === 'MAFIA') results.wins.MAFIA++;
+    else if (result.winner === 'SERIAL_KILLER' || result.winner === 'EXECUTIONER' || result.winner === 'JESTER') results.wins.NEUTRAL++;
+    else results.wins.nobody++;
+    
+    results.details.push(result);
+    
+    if ((i + 1) % 10 === 0) {
+      console.log('  Completed ' + (i + 1) + '/' + NUM_GAMES + ' games');
+    }
+  }
+  
+  results.townWinRate = (results.wins.TOWN / NUM_GAMES * 100).toFixed(1) + '%';
+  results.mafiaWinRate = (results.wins.MAFIA / NUM_GAMES * 100).toFixed(1) + '%';
+  results.neutralWinRate = (results.wins.NEUTRAL / NUM_GAMES * 100).toFixed(1) + '%';
+  
+  console.log('Results:');
+  console.log('  Town: ' + results.townWinRate);
+  console.log('  Mafia: ' + results.mafiaWinRate);
+  console.log('  Neutral: ' + results.neutralWinRate);
+  
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(results, null, 2));
+  console.log('Results saved to ' + OUTPUT_FILE);
+  
+  return results;
+}
+
+evaluate();

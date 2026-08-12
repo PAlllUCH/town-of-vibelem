@@ -39,7 +39,7 @@
     return {
       playerCount: 8,
       presetId: keys[0],
-      houseRules: { noKillN1: false, noLynchD1: false, classicReveal: false },
+      houseRules: { noKillN1: true, noLynchD1: false, classicReveal: false },
       layout: (E.SEAT_LAYOUTS && E.SEAT_LAYOUTS[0]) || 'circle',
       teamCounts: { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral },
       civilians: null,
@@ -55,7 +55,15 @@
     var out = JSON.parse(JSON.stringify(base));
     if (saved.playerCount) out.playerCount = saved.playerCount;
     if (saved.presetId) out.presetId = saved.presetId;
-    if (saved.houseRules) out.houseRules = Object.assign({}, out.houseRules, saved.houseRules);
+    if (saved.houseRules && typeof saved.houseRules === 'object') {
+      var hr = {};
+      Object.keys(saved.houseRules).forEach(function (k) {
+        if (Object.prototype.hasOwnProperty.call(saved.houseRules, k)) {
+          hr[k] = saved.houseRules[k];
+        }
+      });
+      out.houseRules = Object.assign({}, out.houseRules, hr);
+    }
     if (saved.layout) out.layout = saved.layout;
     if (saved.teamCounts && saved.teamCounts.town != null) {
       out.teamCounts = { town: saved.teamCounts.town, mafia: saved.teamCounts.mafia, neutral: saved.teamCounts.neutral };

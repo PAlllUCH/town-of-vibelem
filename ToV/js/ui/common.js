@@ -99,7 +99,7 @@
       var team = teamOf(p.assignedRole);
       var roleTxt = rolesHidden ? '&#8226;&#8226;&#8226;' : roleName(p.assignedRole);
       var tile = '<div class="seat-tile team-' + team + '">' +
-        '<div class="seat-tile-top"><span class="seat-label">' + p.seat + '</span>' +
+        '<div class="seat-tile-top"><span class="seat-label">' + esc(p.seat) + '</span>' +
         '<span class="seat-name">' + esc(p.name) + '</span></div>' +
         '<div class="seat-role">' + roleTxt + '</div>' +
         '<div class="seat-tags">' + statusTags(p) + '</div></div>';

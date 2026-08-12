@@ -61,7 +61,6 @@
       if (!target || !target.isAlive) return false;
       if (type === 'unstoppable') return killPlayer(targetId, cause);
       if (target.isProtected) {
-        target.isProtected = false;
         log(target.name + ' survived an attack (Doctor protection).');
         return false;
       }
@@ -254,6 +253,11 @@
     }
 
     E._updateInheritance(state);
+
+    blocked.forEach(function (pid) {
+      var bp = E._byId(state, pid);
+      if (bp && bp.isAlive) bp.isRoleblocked = true;
+    });
 
     var forgedReminder = Object.keys(forgedWills).map(function (fpid) {
       var fId = Number(fpid);

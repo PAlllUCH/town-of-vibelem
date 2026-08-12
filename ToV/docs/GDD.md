@@ -72,10 +72,10 @@ General rules that apply to every role:
 
 | Role | Category | Ability |
 |---|---|---|
-| **Jailor** | Town Killing | Each night, choose a living player to jail. The jailed player is roleblocked for the night, the Jailor reads the jailed player's last will from their card, then the Jailor chooses EXECUTE (thumbs down) or SPARE (thumbs up). Execution is an Unstoppable kill. The Jailor has a maximum of three executions per game and cannot execute on Night 1; jailing and reading the will still work on Night 1. The Jailor cannot jail the same player on two consecutive nights. |
+| **Jailor** | Town Killing | Each night, choose a living player to jail. The jailed player is roleblocked for the night, the Jailor reads the jailed player's last will from their card, then the Jailor chooses EXECUTE (thumbs down) or SPARE (thumbs up). Execution is an Unstoppable kill. The Jailor cannot execute on Night 1; jailing and reading the will still work on Night 1. The Jailor cannot jail the same player on two consecutive nights. |
 | **Undertaker** | Town Investigative | Each night, choose one corpse; the moderator privately reveals its true role to you (shown on the app). Cannot inspect a corpse cleaned by the Janitor. |
 | **Medium** | Town Support | Alive: each night, during the Medium and Ghosts step, read the Ghost Ledger for 30 seconds. Dead: each night, during the Medium and Ghosts step, whisper with one living player of your choice for 60 seconds. |
-| **Doctor** | Town Protective | Each night, choose a living player (including yourself) to protect. Protection blocks the first Basic attack against them that night. Fails if the Doctor is Drunk or roleblocked. |
+| **Doctor** | Town Protective | Each night, choose a living player (including yourself) to protect. Protection blocks all Basic attacks against them that night. Fails if the Doctor is Drunk or roleblocked. |
 | **Sheriff** | Town Investigative | Each night, choose a living player and learn INNOCENT or SUSPICIOUS. Suspicious: Mafia-aligned players except the Godfather (who always reads INNOCENT), and the Serial Killer. Everyone else reads INNOCENT. The result inverts if the Sheriff is Drunk. |
 | **Deputy** | Town Killing | Once per game, during the day, publicly shoot one living player; they die immediately. If the victim was Town-aligned, the Deputy dies of guilt at the start of the following night. Inheritance: when the Sheriff dies while the Deputy is alive, the Deputy permanently inherits the Sheriff's badge and gains the nightly Sheriff check (in addition to the day shot, if unused). |
 | **Tracker** | Town Investigative | Each night, choose a living player and learn which player, if any, they targeted with a night action that night. If they targeted no one, the Tracker learns "no one". |
@@ -218,7 +218,7 @@ Actions are recorded in the scripted night wizard order (the moderator wakes pla
 | 0 | **Veteran** (pre-night) | Declares ALERT (max 3 per game); while alert, visitors die (Unstoppable) and the Veteran cannot be killed (Section 5.3). |
 | 1 | **Poisoner** | Poisons the target: Drunk for one cycle (Section 6). |
 | 2 | **Witch** | Chooses a living player to control and a redirect target. Cannot control a player who is currently jailed (the jail voids the control). On a successful control, learns the controlled player's exact role. The controlled player's targeting night action is redirected (a controlled Poisoner has already acted and is unaffected). Controlling the Godfather redirects the Mafia kill target (resolved per 5.4); controlling the Serial Killer redirects his kill; controlling the Jailor redirects only the jail target, and the EXECUTE or SPARE decision stays with the Jailor. |
-| 3 | **Jailor** | Jails a player: roleblocked, the Jailor reads the jailed player's will from their card, then EXECUTE (Unstoppable kill, resolves immediately) or SPARE. Max 3 executions per game; on Night 1 the Jailor jails and reads the will but cannot execute. |
+| 3 | **Jailor** | Jails a player: roleblocked, the Jailor reads the jailed player's will from their card, then EXECUTE (Unstoppable kill, resolves immediately) or SPARE. On Night 1 the Jailor jails and reads the will but cannot execute. |
 | 4 | **Escort** | Roleblocks the chosen player. |
 | 4 | **Consort** | Roleblocks the chosen player. |
 | 5 | **Doctor** | Protects the chosen player (fails if Drunk or roleblocked). |
@@ -259,7 +259,7 @@ Every kill in the game is one of two attack types; every target has one of two d
 | **None** | Most roles | A Basic attack kills them. |
 | **Basic** | Godfather, Serial Killer, and a Mafioso promoted to Godfather | Blocks Basic attacks. Does not block Unstoppable attacks. |
 
-**Doctor protection**: protects one player from the first Basic attack against them that night. The protection is consumed when it blocks an attack; if the protected player is hit by a second Basic attack in the same night, they die. Fails entirely if the Doctor is Drunk or roleblocked. Protection does nothing against Unstoppable attacks.
+**Doctor protection**: protects one player from all Basic attacks against them that night. Fails entirely if the Doctor is Drunk or roleblocked. Protection does nothing against Unstoppable attacks.
 
 ### 5.3 Who dies when multiple effects target one player
 
@@ -268,8 +268,8 @@ Every kill in the game is one of two attack types; every target has one of two d
 | Any Unstoppable kill (Jailor execution, Veteran alert, Jester haunt) | Target dies. Doctor protection and Basic defense do not apply. |
 | One Basic kill, no protection, no Basic defense | Target dies. |
 | Basic kill vs Basic defense | Target survives. |
-| Basic kill vs Doctor protection | Target survives; protection consumed. |
-| Two Basic kills in one night, Doctor protection present | Target survives the first and dies to the second. |
+| Basic kill vs Doctor protection | Target survives. |
+| Two Basic kills in one night, Doctor protection present | Target survives both attacks. |
 | Two Basic kills in one night, no protection | Target dies to the first; the second is void. |
 | Target is roleblocked and also killed | Roleblock does not save them; they die if the kill lands. |
 

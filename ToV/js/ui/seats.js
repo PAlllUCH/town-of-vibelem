@@ -96,10 +96,10 @@
       var sel = app.swapMode && app.swapSel != null && String(app.swapSel) === String(p.seat)
         ? ' swap-selected' : '';
       var clickable = app.swapMode
-        ? ' data-action="swap-select" data-seat="' + p.seat + '"'
+        ? ' data-action="swap-select" data-seat="' + UI.esc(p.seat) + '"'
         : '';
       html += '<div class="seat-input-wrap' + sel + '"' + UI.seatPosAttr(cfg, p.seat, n) + '>' +
-        '<span class="seat-label">' + p.seat + '</span>' +
+        '<span class="seat-label">' + UI.esc(p.seat) + '</span>' +
         '<div class="seat-dealt team-' + team + '"' + clickable + '>' +
         '<div class="seat-dealt-name">' + UI.esc(p.name || ('Player ' + p.seat)) + '</div>' +
         '<div class="seat-role">' + (app.rolesHidden ? '&#8226;&#8226;&#8226;' : UI.roleName(p.assignedRole)) + '</div>' +

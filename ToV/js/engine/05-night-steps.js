@@ -72,6 +72,10 @@
     input = input || {};
     var p = E._byId(state, input.playerId);
     if (!p) return false;
+    var ghostAllowed = (input.position === 0 && input.roleId === 'jester') ||
+      (input.position === 13 && input.roleId === 'medium');
+    if (!p.isAlive && !ghostAllowed) return false;
+    if (input.roleId && input.roleId !== p.assignedRole) return false;
     if (input.targetId != null && String(input.targetId) === String(input.playerId)) {
       var selfAllowed = input.roleId === 'doctor' ||
         (input.position === 6 && (input.roleId === 'godfather' || input.roleId === 'mafioso'));

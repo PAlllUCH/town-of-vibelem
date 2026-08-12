@@ -271,6 +271,12 @@
       }
       if (typeof p.name !== 'string') throw new Error('Invalid save data: player name');
       if (typeof p.isAlive !== 'boolean') throw new Error('Invalid save data: player isAlive');
+      if (typeof p.assignedRole !== 'string' || !E.ROLES[p.assignedRole]) {
+        p.assignedRole = 'civilian';
+      }
+      if (!Number.isInteger(p.seat) || p.seat < 1 || p.seat > data.playerCount) {
+        p.seat = p.id;
+      }
       ['jailed', 'poisoned', 'alerted', 'cleaned'].forEach(function (flag) {
         if (typeof p[flag] !== 'boolean') p[flag] = false;
       });

@@ -12,16 +12,28 @@ Architecture: vanilla HTML/CSS/JS, no build step, no ES modules (must work by do
 ## Commands
 
 ```bash
-node --test --test-reporter=dot tests/engine.test.js   # full suite (currently 119 tests, all green)
-node scripts/simulate.js                                # random-play crash/error sim (30 games: 6 presets x 8-12 players)
-node scripts/agentic.js                                 # one game with heuristic-AI players + transcript
-node scripts/llm-sim/runner.js --dry-run                # one game, heuristic fallbacks only (no cost)
-node scripts/llm-sim/runner.js                          # one game with real LLM agents (paid flash via crush)
-LLM_DEBUG=1 node scripts/llm-sim/runner.js --dry-run    # print sample prompts instead of running
-python -m http.server 8000                              # phone testing on same Wi-Fi
+# Run tests (works on Windows Node 26):
+cd <project-root>
+node --test --test-reporter=dot tests/engine.test.js
+# or plain:  node --test tests/engine.test.js
+
+# Run the app (phone testing on same Wi-Fi):
+python -m http.server 8000    # then open http://<your-ip>:8000 on the phone
+# or just double-click index.html (works, but localStorage is per-origin)
+
+# Simulation tools (dev only, not part of the app):
+node scripts/simulate.js                       # 30 random-play games: crash/invariant checks
+node scripts/agentic.js                        # one game with heuristic-AI players + transcript
+node scripts/run-sim-archetypes.js p1 11 50    # 50 games with archetype AI
+
+# Neural net training (Python):
+python python/train.py --population-size 20 --generations 10 --player-count 11 --preset-id p1
+
+# Neural net evaluation (JS):
+node -e "const loader = require('./js/sim/agent-loader.js'); ..."
 ```
 
-## Work delivered so far (both sessions)
+## Work delivered so far (all sessions)
 
 1. **Rename** to "Town of Vibelm" (index.html, manifest "ToV", sw.js cache, bundle output, docs). `SAVE_KEY` stays `villagepub-save` so existing saves survive.
 2. **Companion mode**: all last-will content removed. Forger keeps target-only; morning shows a "will forged for X" reminder — the will is read from the player's card.
@@ -33,30 +45,45 @@ python -m http.server 8000                              # phone testing on same 
 8. **Night steps split**: every role wakes individually; only Mafia and Medium/Ghosts stay grouped. Positions reused as resolution keys.
 9. **Targeting rules**: no self-target except Doctor and the Mafia kill; Mafia may kill its own members; Jailor has no EXECUTE on Night 1; Mafia phase is a single kill pick (`E.mafiaKillActor`).
 10. **Companion wording** (Start Session / Session Over), **design overhaul** (two MiMo passes: vibe theme tokens + all 12 items from `docs/design-suggestions.md`), **new clocktower icon**.
-11. **Simulation tooling**: `scripts/simulate.js` (random-play crash test with invariants + serialize/deserialize round-trips), `scripts/agentic.js` (heuristic-AI game with transcript), `scripts/llm-sim/` (real LLM agents).
+11. **Simulation tooling**: `scripts/simulate.js` (random-play crash test with invariants + serialize/deserialize round-trips), `scripts/agentic.js` (heuristic-AI game with transcript), `scripts/run-sim-archetypes.js` (archetype-based AI with memory).
 12. **Bug found by simulation**: revived players kept stale graveyard entries → fixed with a permanent `diedBefore` flag; re-death grants no second ghost token.
-13. **LLM simulator** (`scripts/llm-sim/`): knowledge.js (prompt builders + per-player memory journal), fallback.js (heuristics), runner.js (game loop + parallel spawn pool over `crush run` on **opencode-go paid flash**). Night actions run in parallel; day = 2 discussion rounds + nomination + parallel votes (ghost tokens); day abilities folded into vote calls.
-14. **Per-player memory journal** (latest rebuild): agents are stateless spawns, but the runner maintains a per-player journal (own actions + results + public news), rolled up into a digest when >12 entries, so prompts stay bounded (~identity + memory + news diff) for the whole game. No provider-side sessions — the engine stays Crush-independent.
+13. **Balance changes** (this session):
+    - No Kill Night 1 by default (config.js)
+    - Remove Jailor execution cap (06-night-actions.js)
+    - Doctor blocks ALL Basic attacks (07b-night-resolution.js)
+14. **Code review fixes** (this session):
+    - End screen "[object Object] Wins" bug
+    - Roleblocks now tracked on player objects
+    - Witch redirect applied to killer's effective target
+    - recordNightAction validates roleId and alive status
+    - Silent save failure now logs warning
+    - deserialize validates assignedRole and seat
+    - __proto__ pollution prevention in config merge
+    - ROLES uses null-prototype object
+    - Seat values escaped in innerHTML
+15. **AI simulation system** (this session):
+    - `scripts/ai-archetypes.js` — 10 archetypes with memory-based information asymmetry
+    - `scripts/run-sim-archetypes.js` — Simulation using archetypes
+    - `python/` — Neural net training pipeline (6 files)
+    - `js/sim/` — Neural net inference module (4 files)
+    - `weights/` — Trained weights directory (gitignored)
 
 ## Current status
 
 - **Tests: 119 pass, 0 fail.**
-- **Random sims: 90 games, 0 crashes, 0 invariant violations** (error-checking only, NOT a balance signal).
-- **Agentic sim: Mafia 6/6.** **LLM sim live game: Mafia won** (Godfather outlasted after power roles died). **Balance is still an open question** — see below.
+- **Neural net AI: 40% Town win rate** (up from 0-8% with heuristic AI)
+- **Balance changes implemented**: noKillN1 default, unlimited Jailor executes, Doctor blocks all Basic attacks
 
-## OPEN: balance investigation (the main next task)
+## Neural net training results
 
-The game looks Mafia-favored under both heuristic and LLM play. Caveats before touching rules:
+| Training | Town Win | Mafia Win | Notes |
+|----------|----------|-----------|-------|
+| Heuristic AI | 0-8% | 90-100% | No learning, passive Town |
+| Neural net (5 gen) | 40% | 60% | Significant improvement |
 
-1. Random-play bias: the random sim cannot judge balance (info roles unused, random lynches hit the Town majority).
-2. Heuristic policies may be town-passive (lynch only on sheriff intel, no pressure-lynching, no role-claim meta).
-3. The LLM sim (with the memory journal) is the most realistic signal available — run several games and tally winners before concluding anything.
+Training command: `python python/train.py --population-size 10 --generations 5 --player-count 11 --preset-id p1`
 
-Suggested next steps:
-1. Run `node scripts/llm-sim/runner.js` a few times (or loop it with different presets/counts) and tally wins by team. One game ≈ 2-5 min on paid flash.
-2. Check the day-playground realism: agents should claim roles, pressure silent players, and react to counter-claims (the last live game did this well — Sheriff claimed, fake counter-claim happened, Doctor vouched).
-3. Only then decide on rule tuning: candidate levers are default `noKillN1`, lynch threshold, ratio table (change `docs/GDD.md` first, then engine, then tests).
-4. Balance target: roughly 40-50% Mafia, 35-45% Town, remainder Neutral under LLM play, per player count.
+Trained weights saved to `weights/` directory (gitignored).
 
 ## Known notes
 
@@ -65,5 +92,13 @@ Suggested next steps:
 - `docs/tasks/` is transient (task specs) — deleted at session end each time.
 - Git history still contains the old "Village Pub" name (fine). Two commits pushed to `origin/main` (rename/companion pass + this session's wrap).
 - `dist/` is a build artifact (`node scripts/bundle.js`); not kept in the repo.
-- The free opencode-zen tier rate-limits parallel calls heavily; the sim runs on opencode-go paid flash (`crush run -m opencode-go/deepseek-v4-flash`), which is fast and reliable. Crush holds the credentials; `scripts/llm-sim/runner.js` resolves `crush.exe` from PATH on Windows.
-- Windows spawn gotcha (fixed): `execFile('crush')` hangs because Crush waits on the stdin pipe — the runner uses `spawn` with `stdio: ['ignore','pipe','pipe']` + `TERM` env.
+- `scripts/llm-sim/` was an experimental approach that did not yield reliable results. Files are preserved but should not be used unless explicitly reactivated.
+- `weights/` directory contains trained neural net weights. These are gitignored and should not be committed.
+
+## Next steps (for next session)
+
+1. **Scale up neural net training** — More generations = stronger AI
+2. **Test different presets** — p2, p3, p4 with neural nets
+3. **Test different player counts** — 10, 12, 14 players
+4. **Integrate into companion app** — Add "Balance Check" feature to setup screen
+5. **Consider multiplayer** — AI runs server-side, sends actions via API

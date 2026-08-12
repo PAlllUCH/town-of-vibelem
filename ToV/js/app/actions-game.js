@@ -176,6 +176,7 @@
   function finish(v) {
     APP.app.lastVictory = v || APP.app.lastVictory;
     if (v && v.winner) APP.state.winner = v.winner;
+    else if (APP.state.winner && typeof APP.state.winner === 'object' && APP.state.winner.winner) APP.state.winner = APP.state.winner.winner;
     try {
       if (APP.state.phase !== 'END') {
         var er = E.endGame(APP.state);

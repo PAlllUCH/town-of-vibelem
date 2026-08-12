@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Town of Vibelm neural net weights",
+  "description": "Serialization format for trained neural network weights consumed by js/sim/agent-loader.js. One weights file drives all players. Nets are vanilla feed-forward MLPs: ReLU hidden layers, linear output, softmax applied at inference (see js/sim/neural-net.js). The Python trainer (python/network.py, python/agent.py) exports this exact envelope: {version, game_config, network_configs, trained_weights}.",
+  "type": "object",
+  "required": ["version", "game_config", "network_configs", "trained_weights"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Format version. Bump when the feature layout or network contract changes."
+    },
+    "game_config": {
+      "type": "object",
+      "required": ["player_count", "feature_dim", "candidate_dim", "role_ids"],
+      "properties": {
+        "player_count": {
+          "type": "integer",
+          "minimum": 6,
+          "maximum": 15,
+          "description": "Number of players the nets were trained for. Must match the state at load time."
+        },
+        "preset_id": {
+          "type": "string",
+          "description": "Preset the nets were trained on. Informational only."
+        },
+        "feature_dim": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Length of the base feature vector for one player, computed by FeatureExtractor.getFeatureDimension(state) = 16 + R + playerCount * (3R + 5) where R = role_ids.length. Layout (index ranges): [0..5] phase one-hot (SETUP, SEATS, NIGHT, MORNING, DAY, END); [6] dayNumber/25; [7] night.number/25; [8] alive ratio (alive / playerCount); [9..11] team counts (TOWN, MAFIA, NEUTRAL) / playerCount over all dealt roles; [12..12+R-1] own role one-hot over role_ids; [12+R..12+R+2] own team one-hot (TOWN, MAFIA, NEUTRAL); [15+R] self alive; then per player in seat order, a block of [3 sheriff bits (UNKNOWN, INNOCENT, SUSPICIOUS), R consigliere one-hot (all zeros when unknown), R+1 public claim one-hot + no-claim, R+1 known dead role one-hot + unknown/cleaned]."
+        },
+        "candidate_dim": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Length of the candidate block appended to the base features for vote_net and night_net inputs, computed by FeatureExtractor.getCandidateDimension(state) = 3R + 8 where R = role_ids.length. Layout: [alive, is self, is mafia teammate, 3 sheriff bits (UNKNOWN, INNOCENT, SUSPICIOUS), R consigliere one-hot (all zeros when unknown), R+1 public claim one-hot + no-claim, R+1 known dead role one-hot + unknown/cleaned]."
+        },
+        "role_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered role ids matching Object.keys(engine.ROLES). Used for one-hot encoding and claim decoding. No hardcoded role names anywhere else."
+        }
+      }
+    },
+    "network_configs": {
+      "type": "object",
+      "required": ["vote_net", "night_net", "claim_net"],
+      "properties": {
+        "vote_net": { "$ref": "#/definitions/network_config" },
+        "night_net": { "$ref": "#/definitions/network_config" },
+        "claim_net": { "$ref": "#/definitions/network_config" }
+      },
+      "description": "Architecture of each net. vote_net and night_net take the base features plus the candidate block (input_dim = feature_dim + candidate_dim). claim_net takes the base features only (input_dim = feature_dim)."
+    },
+    "trained_weights": {
+      "type": "object",
+      "required": ["vote_net", "night_net", "claim_net"],
+      "properties": {
+        "vote_net": { "$ref": "#/definitions/network_weights" },
+        "night_net": { "$ref": "#/definitions/network_weights" },
+        "claim_net": { "$ref": "#/definitions/network_weights" }
+      }
+    }
+  },
+  "definitions": {
+    "network_config": {
+      "type": "object",
+      "required": ["input_dim", "hidden_dims", "output_dims"],
+      "properties": {
+        "input_dim": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "vote_net/night_net: feature_dim + candidate_dim. claim_net: feature_dim."
+        },
+        "hidden_dims": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "Hidden layer sizes, applied in order with ReLU. Empty array means a linear model."
+        },
+        "output_dims": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "vote_net: 3 (GUILTY, INNOCENT, ABSTAIN scores). night_net: 3 (target_aggressive, target_defensive, no_action scores; target selection maximizes aggressive minus no_action). claim_net: role_ids.length (one output per role; no no-claim slot)."
+        }
+      }
+    },
+    "network_weights": {
+      "type": "object",
+      "required": ["input_dim", "hidden_dims", "output_dims", "weights", "biases"],
+      "properties": {
+        "input_dim": { "type": "integer", "minimum": 1 },
+        "hidden_dims": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "output_dims": { "type": "integer", "minimum": 1 },
+        "weights": {
+          "type": "array",
+          "description": "One matrix per layer (hidden_dims.length + 1). weights[l] is a matrix of shape [outputs_l, inputs_l] with weights[l][j][k] the weight from input k to output j of layer l.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          }
+        },
+        "biases": {
+          "type": "array",
+          "description": "One vector per layer; biases[l] has outputs_l entries.",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}

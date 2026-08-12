@@ -9,3 +9,19 @@
 # OS junk
 Thumbs.db
 .DS_Store
+
+# Trained weights (large, not for git)
+weights/*.json
+
+# Simulation outputs
+sim-*.json
+sim-*.txt
+*-summary.txt
+*-weights.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/

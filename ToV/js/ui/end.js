@@ -46,7 +46,7 @@
         var tags = r.isAlive ? '<span class="tag tag-ok">ALIVE</span>' : '<span class="tag tag-ghost">GHOST</span>';
         if (r.inheritedRole) tags += '<span class="tag tag-warn">INHERITED SHERIFF</span>';
         html += '<div class="seat-tile team-' + r.team + '">' +
-          '<div class="seat-tile-top"><span class="seat-label">' + r.seat + '</span>' +
+          '<div class="seat-tile-top"><span class="seat-label">' + UI.esc(r.seat) + '</span>' +
           '<span class="seat-name">' + UI.esc(r.name) + '</span></div>' +
           '<div class="seat-role">' + UI.esc(r.roleName || r.role) + '</div>' +
           '<div class="seat-tags">' + tags + '</div></div>';

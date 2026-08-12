@@ -1,8 +1,13 @@
 'use strict';
 const engine = require('../js/engine.js');
-const PLAYER_COUNT = 11;
-const PRESET = 'p1';
+const fs = require('fs');
+
+const PRESET = process.argv[2] || 'p1';
+const PLAYER_COUNT = parseInt(process.argv[3]) || 11;
+const NUM_GAMES = parseInt(process.argv[4]) || 50;
 const MAX_DAYS = 25;
+const OUTPUT_FILE = process.argv[5] || 'sim-result.json';
+
 function randInt(n) { return Math.floor(Math.random() * n); }
 function pick(arr) { return arr.length ? arr[randInt(arr.length)] : null; }
 function living(state) { return state.players.filter(function (p) { return p.isAlive; }); }
@@ -10,6 +15,7 @@ function byId(state, id) { return state.players[id - 1] || null; }
 function pname(state, id) { const p = byId(state, id); return p ? p.name : 'P' + id; }
 function roleName(roleId) { const r = engine.ROLES[roleId]; return r ? r.name : String(roleId); }
 function teamOfRole(roleId) { const r = engine.ROLES[roleId]; return r ? r.team : 'NEUTRAL'; }
+
 const KILL_PRIORITY = { jailor: 1, sheriff: 2, doctor: 3, mayor: 4, vigilante: 5, retributionist: 6, medium: 7, undertaker: 8, tracker: 9, lookout: 10, escort: 11 };
 const KNOWN_POWER = {};
 Object.keys(KILL_PRIORITY).forEach(function (k) { KNOWN_POWER[k] = true; });
@@ -21,7 +27,9 @@ function makeModels(state) {
     town: { sheriffResults: {}, undertakerResults: {}, confirmedTown: {}, deadById: {}, evidence: {}, inspectedBefore: {} },
     mafia: { members: members, consigliereResults: {}, killTarget: null, lastKillTarget: null, lastBlackmailId: null, lastFramedId: null, avoid: {} },
     lastJailId: null
-  };}
+  };
+}
+
 function suspicionLevel(state, models, p) {
   if (models.town.sheriffResults[p.id] === 'SUSPICIOUS') return 3;
   const ur = models.town.undertakerResults[p.id];
@@ -29,6 +37,7 @@ function suspicionLevel(state, models, p) {
   if (models.town.evidence[p.id]) return 1;
   return 0;
 }
+
 function mostSuspicious(state, models, excludeIds, noConfirmed) {
   const ex = excludeIds || [];
   const cands = living(state).filter(function (p) {
@@ -43,6 +52,7 @@ function mostSuspicious(state, models, excludeIds, noConfirmed) {
   });
   return pick(best);
 }
+
 function livingByRole(state, roleOrder) {
   for (let i = 0; i < roleOrder.length; i += 1) {
     const p = state.players.find(function (x) { return x.isAlive && x.assignedRole === roleOrder[i]; });
@@ -50,11 +60,13 @@ function livingByRole(state, roleOrder) {
   }
   return null;
 }
+
 function rec(state, action, recorded, notes, note) {
   if (!engine.recordNightAction(state, action)) throw new Error('recordNightAction rejected ' + JSON.stringify(action));
   recorded.push(action);
   if (note) notes.push(typeof note === 'string' ? { pos: action.position, text: note } : note);
 }
+
 function mafiaKillTarget(state, models) {
   const doctorAlive = state.players.some(function (p) { return p.isAlive && p.assignedRole === 'doctor'; });
   const cands = living(state).filter(function (p) { return !models.mafia.members[p.id] && !(doctorAlive && models.mafia.avoid[p.id]); });
@@ -70,6 +82,7 @@ function mafiaKillTarget(state, models) {
   });
   return pick(best);
 }
+
 function pickBestCorpse(state, gy) {
   let best = null, bs = 99;
   gy.forEach(function (e) {
@@ -79,6 +92,7 @@ function pickBestCorpse(state, gy) {
   });
   return best;
 }
+
 function witchAction(state, models, actor, recorded, notes) {
   const witchSide = state.witchSide === 'TOWN' ? 'TOWN' : 'MAFIA';
   const gf = livingByRole(state, ['godfather']);
@@ -132,6 +146,7 @@ function witchAction(state, models, actor, recorded, notes) {
     }
   }
 }
+
 function jailorAction(state, models, actor, recorded, notes) {
   const ex = [actor.id];
   if (models.lastJailId != null) ex.push(models.lastJailId);
@@ -144,6 +159,7 @@ function jailorAction(state, models, actor, recorded, notes) {
   rec(state, { position: 3, roleId: 'jailor', playerId: actor.id, targetId: target.id, extra: { jailorDecision: decision } }, recorded, notes,
     actor.name + ' (Jailor) jailed ' + target.name + ', ' + decision.toLowerCase());
 }
+
 function doctorAction(state, models, actor, recorded, notes) {
   let target = null;
   if (models.town.sheriffResults) {
@@ -158,6 +174,7 @@ function doctorAction(state, models, actor, recorded, notes) {
   rec(state, { position: 5, roleId: 'doctor', playerId: actor.id, targetId: target.id }, recorded, notes,
     actor.name + ' (Doctor) protected ' + target.name + (target.id === actor.id ? ' (self)' : ''));
 }
+
 function janitorAction(state, models, actor, recorded, notes) {
   if (!state.graveyard.length) return;
   let target = null;
@@ -170,6 +187,7 @@ function janitorAction(state, models, actor, recorded, notes) {
       actor.name + ' (Janitor) cleaned ' + target.name + '\'s corpse');
   }
 }
+
 function forgerAction(state, models, actor, recorded, notes) {
   let target = models.mafia.killTarget != null ? byId(state, models.mafia.killTarget) : null;
   if (!target || !target.isAlive) {
@@ -180,6 +198,7 @@ function forgerAction(state, models, actor, recorded, notes) {
       actor.name + ' (Forger) forged ' + target.name + '\'s will');
   }
 }
+
 function blackmailerAction(state, models, actor, recorded, notes) {
   let target = livingByRole(state, ['mayor', 'jailor', 'sheriff']);
   if (target && target.id === models.mafia.lastBlackmailId) target = null;
@@ -188,6 +207,7 @@ function blackmailerAction(state, models, actor, recorded, notes) {
       actor.name + ' (Blackmailer) blackmailed ' + target.name);
   }
 }
+
 function skAction(state, models, actor, recorded, notes) {
   let target = null;
   const confirmed = Object.keys(models.town.confirmedTown).map(Number);
@@ -201,15 +221,17 @@ function skAction(state, models, actor, recorded, notes) {
       actor.name + ' (Serial Killer) attacked ' + target.name);
   }
 }
+
 function framerAction(state, models, actor, recorded, notes) {
   const target = pick(living(state).filter(function (p) {
-    return p.id !== actor.id && !models.mafia.members[p.id] && p.id !== models.mafia.lastFramedId;
+    return p.id !== actor.id && !models.mafia.members[p.id];
   }));
   if (target) {
     rec(state, { position: 10, roleId: 'framer', playerId: actor.id, targetId: target.id }, recorded, notes,
       actor.name + ' (Framer) framed ' + target.name);
   }
 }
+
 function invActor(state, models, role, actor, recorded, notes) {
   const emit = function (targetId, kind, text) {
     rec(state, { position: 11, roleId: role, playerId: actor.id, targetId: targetId }, recorded, notes,
@@ -266,6 +288,7 @@ function invActor(state, models, role, actor, recorded, notes) {
     if (target) emit(target.playerId, 'undertaker', actor.name + ' (Undertaker) inspected ' + target.name + '\'s corpse:');
   }
 }
+
 function retributionistAction(state, models, actor, recorded, notes) {
   if (actor.usedOncePerGame) return;
   let target = null;
@@ -279,6 +302,7 @@ function retributionistAction(state, models, actor, recorded, notes) {
   if (target) rec(state, { position: 12, roleId: 'retributionist', playerId: actor.id, targetId: target.id }, recorded, notes,
     actor.name + ' (Retributionist) will revive ' + target.name + ' (' + roleName(target.assignedRole) + ')');
 }
+
 function amnesiacAction(state, models, actor, recorded, notes) {
   if (state.amnesiac.used) return;
   let target = null;
@@ -287,6 +311,7 @@ function amnesiacAction(state, models, actor, recorded, notes) {
   if (target) rec(state, { position: 12, roleId: 'amnesiac', playerId: actor.id, targetId: target.id }, recorded, notes,
     actor.name + ' (Amnesiac) remembered ' + roleName(target.assignedRole) + ' from ' + target.name);
 }
+
 function mediumAction(state, models, actor, recorded, notes) {
   if (actor.isAlive) {
     rec(state, { position: 13, roleId: 'medium', playerId: actor.id }, recorded, notes, actor.name + ' (Medium) read the Ghost Ledger');
@@ -298,6 +323,7 @@ function mediumAction(state, models, actor, recorded, notes) {
       actor.name + ' (Medium) whispered to ' + target.name);
   }
 }
+
 function nightActor(state, models, pos, role, actor, recorded, notes) {
   if (pos === 0 && role === 'veteran') {
     if (actor.alertsUsed < 3) {
@@ -335,6 +361,7 @@ function nightActor(state, models, pos, role, actor, recorded, notes) {
   if (pos === 12 && role === 'amnesiac') { amnesiacAction(state, models, actor, recorded, notes); return; }
   if (pos === 13 && role === 'medium') { mediumAction(state, models, actor, recorded, notes); }
 }
+
 function runNight(state, models, recorded, notes) {
   models.mafia.lastKillTarget = models.mafia.killTarget;
   models.mafia.killTarget = null;
@@ -364,6 +391,7 @@ function runNight(state, models, recorded, notes) {
     }
   }
 }
+
 function morningUpdate(state, models, recorded, notes) {
   const strip = function (note) { if (note) note.text = note.text.replace(/:$/, ''); };
   
@@ -472,35 +500,18 @@ function morningUpdate(state, models, recorded, notes) {
     }
   }
 }
-function printNight(notes, nightNum) {
-  const sorted = notes.slice().sort(function (a, b) { return a.pos - b.pos; });
-  console.log('=== Night ' + nightNum + ' (' + sorted.map(function (n) { return n.text; }).join(' / ') + ') ===');
-}
-function printMorning(state, ann) {
-  const parts = [];
-  ann.deaths.forEach(function (d) {
-    parts.push(d.name + ' died (' + d.cause + ', ' + (d.roleShown === '?? UNKNOWN ??' ? 'role hidden' : d.roleShown) + ')');
-  });
-  ann.revivals.forEach(function (n) {
-    const p = state.players.find(function (x) { return x.name === n; });
-    parts.push(n + ' revived (' + (p ? roleName(p.assignedRole) : '?') + ')');
-  });
-  if (ann.inheritanceNote) {
-    const dep = state.players.find(function (p) { return p.assignedRole === 'deputy' && p.inheritedRole === 'sheriff'; });
-    parts.push(dep ? dep.name + ' (Deputy) inherited the Sheriff badge' : ann.inheritanceNote);
-  }
-  if (ann.forgedWills && ann.forgedWills.length) parts.push(ann.forgedWills.map(function (f) { return f.targetName + '\'s will was forged'; }).join(', '));
-  console.log('=== Morning ' + (state.night.number - 1) + ': ' + parts.join('; ') + ' ===');
-}
+
 function vigilanteTarget(state, models) {
   return pick(living(state).filter(function (p) {
     return models.town.sheriffResults[p.id] === 'SUSPICIOUS';
   }));
 }
+
 function undertakerEvil(state, models, accused) {
   const ur = models.town.undertakerResults[accused.id];
   return ur && teamOfRole(ur) === 'MAFIA';
 }
+
 function livingVote(state, models, voter, accused) {
   const a = engine._alignmentOf(state, voter);
   if (a === 'TOWN') {
@@ -516,11 +527,13 @@ function livingVote(state, models, voter, accused) {
   }
   return 'ABSTAIN';
 }
+
 function ghostVote(state, models, accused) {
   if (models.town.sheriffResults[accused.id] === 'SUSPICIOUS' || undertakerEvil(state, models, accused)) return 'GUILTY';
   if (models.town.confirmedTown[accused.id]) return 'INNOCENT';
   return null;
 }
+
 function runTrial(state, models, dayInfo) {
   const accused = mostSuspicious(state, models, null, true);
   if (!accused) return null;
@@ -548,13 +561,14 @@ function runTrial(state, models, dayInfo) {
   let line = '=== Day ' + state.dayNumber + ': ' + accused.name + ' accused by ' + nominator.name +
     '; votes ' + g + '-' + o + (res.lynchedId ? ' GUILTY' : ' no-lynch') + '; ';
   if (res.lynchedId) {
-  const lynched = byId(state, res.lynchedId);
-  line += lynched.name + ' lynched (' + roleName(lynched.assignedRole) + ')';
-  if (res.jesterWin) line += ' - Jester wins!';
-  if (res.executionerWin) line += ' - Executioner wins!';
-} else line += accused.name + ' survived';
+    const lynched = byId(state, res.lynchedId);
+    line += lynched.name + ' lynched (' + roleName(lynched.assignedRole) + ')';
+    if (res.jesterWin) line += ' - Jester wins!';
+    if (res.executionerWin) line += ' - Executioner wins!';
+  } else line += accused.name + ' survived';
   return line + ' ===';
 }
+
 function runDay(state, models, dayInfo) {
   const lines = [];
   const mayor = state.players.find(function (p) { return p.isAlive && p.assignedRole === 'mayor' && !p.revealed; });
@@ -575,96 +589,61 @@ function runDay(state, models, dayInfo) {
   if (trialLine) lines.push(trialLine);
   return lines;
 }
-function checkInvariants(state, ctx) {
-  if (!state.players || state.players.length !== state.playerCount) throw new Error(ctx + ': player count mismatch');
-  const dead = state.players.length - living(state).length;
-  if (state.graveyard.length !== dead) throw new Error(ctx + ': graveyard length ' + state.graveyard.length + ' != dead ' + dead);
-  state.players.forEach(function (p) {
-    if (!engine.ROLES[p.assignedRole]) throw new Error(ctx + ': unknown role ' + p.assignedRole + ' for ' + p.name);
-    if (!p.name) throw new Error(ctx + ': player ' + p.id + ' has no name');
-    if (p.assignedRole === 'jailor' && p.executionsUsed > 3) throw new Error(ctx + ': jailor ' + p.name + ' used ' + p.executionsUsed + ' executions');
-    if (p.assignedRole === 'veteran' && p.alertsUsed > 3) throw new Error(ctx + ': veteran ' + p.name + ' used ' + p.alertsUsed + ' alerts');
-    if (p.assignedRole === 'vigilante' && p.shotsFired > 3) throw new Error(ctx + ': vigilante ' + p.name + ' fired ' + p.shotsFired + ' shots');
-  });
-  const gyIds = state.graveyard.map(function (g) { return g.playerId; });
-  state.players.forEach(function (p) {
-    if (!p.isAlive && gyIds.indexOf(p.id) === -1) throw new Error(ctx + ': dead player ' + p.name + ' missing from graveyard');
-  });
-}
-function roundTrip(state, ctx) {
-  const json = engine.serialize(state);
-  const s2 = engine.deserialize(json);
-  if (s2.phase !== state.phase) throw new Error(ctx + ': round-trip phase mismatch');
-  if (s2.players.length !== state.players.length) throw new Error(ctx + ': round-trip player count mismatch');
-  s2.players.forEach(function (p, i) {
-    const o = state.players[i];
-    if (p.assignedRole !== o.assignedRole || p.isAlive !== o.isAlive || p.name !== o.name) {
-      throw new Error(ctx + ': round-trip player ' + p.id + ' mismatch');
-    }
-  });
-  if (s2.graveyard.length !== state.graveyard.length) throw new Error(ctx + ': round-trip graveyard mismatch');
-  if (s2.night.number !== state.night.number) throw new Error(ctx + ': round-trip night mismatch');
-}
-function pad(s, n) {
-  s = String(s);
-  while (s.length < n) s += ' ';
-  return s;
-}
-function winnerName(w) {
-  return w === 'SERIAL_KILLER' ? 'Serial Killer' : w === 'EXECUTIONER' ? 'Executioner' : (w || 'nobody');
-}
-function printFinal(state) {
-  const w = state.winner;
-  const deaths = { TOWN: 0, MAFIA: 0, NEUTRAL: 0 };
-  state.graveyard.forEach(function (e) { deaths[teamOfRole(e.trueRole)] += 1; });
-  console.log('=== Game Over ===');
-  console.log('Winner: ' + (w ? w.winner + ' (' + w.reason + ')' : 'none'));
-  console.log(pad('Name', 8) + pad('Role', 18) + pad('Team', 9) + 'Status');
-  state.players.forEach(function (p) {
-    const r = engine.ROLES[p.assignedRole];
-    console.log(pad(p.name, 8) + pad(r.name, 18) + pad(r.team, 9) + (p.isAlive ? 'alive' : 'dead'));
-  });
-  console.log('balance: TOWN deaths ' + deaths.TOWN + ', MAFIA deaths ' + deaths.MAFIA +
-    ', NEUTRAL deaths ' + deaths.NEUTRAL + ' | ' + (w ? w.winner + ' won via: ' + w.reason : 'no winner'));
-  console.log('=== GAME OVER: ' + winnerName(w ? w.winner : null) + ' wins after ' + state.dayNumber + ' days ===');
-}
+
 function main() {
-  const state = engine.createGame({ playerCount: PLAYER_COUNT, presetId: PRESET });
-  const names = [];
-  for (let s = 1; s <= PLAYER_COUNT; s += 1) names.push({ seat: s, name: 'P' + s });
-  engine.setPlayerNames(state, names);
-  engine.dealRoles(state);
-  const models = makeModels(state);
-  const dayInfo = {};
-  console.log('=== Town of Vibelm: ' + PLAYER_COUNT + ' players, preset ' + PRESET + ' (' + engine.PRESETS[PRESET].name + ') ===');
-  let days = 0;
-  while (state.phase !== 'END' && days < MAX_DAYS) {
-    if (state.phase !== 'NIGHT') state.phase = 'NIGHT';
-    const recorded = [], notes = [];
-    const nightNum = state.night.number;
-    runNight(state, models, recorded, notes);
-    engine.resolveNight(state);
-    models.lastJailId = state.night.lastJailTarget || null;
-    models.mafia.lastBlackmailId = state.night.lastBlackmailTarget || null;
-    if (state.jester.hauntTarget) {
-      notes.push({ pos: 0, text: 'Jester haunted ' + pname(state, state.jester.hauntTarget) });
+  const results = { preset: PRESET, playerCount: PLAYER_COUNT, games: NUM_GAMES, wins: { TOWN: 0, MAFIA: 0, NEUTRAL: 0, nobody: 0 }, details: [] };
+  
+  for (let i = 0; i < NUM_GAMES; i += 1) {
+    const state = engine.createGame({ playerCount: PLAYER_COUNT, presetId: PRESET });
+    const names = [];
+    for (let s = 1; s <= PLAYER_COUNT; s += 1) names.push({ seat: s, name: 'P' + s });
+    engine.setPlayerNames(state, names);
+    engine.dealRoles(state);
+    const models = makeModels(state);
+    const dayInfo = {};
+    let days = 0;
+    while (state.phase !== 'END' && days < MAX_DAYS) {
+      if (state.phase !== 'NIGHT') state.phase = 'NIGHT';
+      const recorded = [], notes = [];
+      runNight(state, models, recorded, notes);
+      engine.resolveNight(state);
+      models.lastJailId = state.night.lastJailTarget || null;
+      models.mafia.lastBlackmailId = state.night.lastBlackmailTarget || null;
+      if (state.jester.hauntTarget) {
+        notes.push({ pos: 0, text: 'Jester haunted ' + pname(state, state.jester.hauntTarget) });
+      }
+      morningUpdate(state, models, recorded, notes);
+      engine.beginDay(state);
+      if (state.phase === 'END') break;
+      runDay(state, models, dayInfo);
+      if (state.phase === 'END') break;
+      days += 1;
     }
-    const ann = engine.getMorningAnnouncement(state);
-    morningUpdate(state, models, recorded, notes);
-    roundTrip(state, 'after night ' + nightNum);
-    checkInvariants(state, 'after night ' + nightNum);
-    printNight(notes, nightNum);
-    printMorning(state, ann);
-    engine.beginDay(state);
-    if (state.phase === 'END') break;
-    runDay(state, models, dayInfo).forEach(function (l) { console.log(l); });
-    console.log('End Day');
-    if (state.phase === 'END') break;
-    days += 1;
+    if (state.phase !== 'END') engine.endGame(state);
+    
+    const winner = state.winner ? state.winner.winner : 'nobody';
+    if (winner === 'TOWN') results.wins.TOWN += 1;
+    else if (winner === 'MAFIA') results.wins.MAFIA += 1;
+    else if (winner === 'SERIAL_KILLER' || winner === 'EXECUTIONER' || winner === 'JESTER') results.wins.NEUTRAL += 1;
+    else results.wins.nobody += 1;
+    
+    results.details.push({
+      game: i + 1,
+      winner: winner,
+      reason: state.winner ? state.winner.reason : 'max days',
+      days: days,
+      townDeaths: state.graveyard.filter(function (e) { return teamOfRole(e.trueRole) === 'TOWN'; }).length,
+      mafiaDeaths: state.graveyard.filter(function (e) { return teamOfRole(e.trueRole) === 'MAFIA'; }).length,
+      neutralDeaths: state.graveyard.filter(function (e) { return teamOfRole(e.trueRole) === 'NEUTRAL'; }).length
+    });
   }
-  if (state.phase !== 'END') engine.endGame(state);
-  roundTrip(state, 'final');
-  checkInvariants(state, 'final');
-  printFinal(state);
+  
+  results.townWinRate = (results.wins.TOWN / NUM_GAMES * 100).toFixed(1) + '%';
+  results.mafiaWinRate = (results.wins.MAFIA / NUM_GAMES * 100).toFixed(1) + '%';
+  results.neutralWinRate = (results.wins.NEUTRAL / NUM_GAMES * 100).toFixed(1) + '%';
+  
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(results, null, 2));
+  console.log(JSON.stringify(results, null, 2));
 }
+
 main();

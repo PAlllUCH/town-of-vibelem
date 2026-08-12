@@ -49,8 +49,6 @@ python -m http.server 8000    # then open http://<your-ip>:8000 on the phone
 # Simulation tools (dev only, not part of the app):
 node scripts/simulate.js                       # 30 random-play games: crash/invariant checks
 node scripts/agentic.js                        # one game with heuristic-AI players + transcript
-node scripts/llm-sim/runner.js --dry-run       # one game, heuristic fallbacks only (no LLM cost)
-node scripts/llm-sim/runner.js                 # one game with real LLM agents (paid flash via crush)
 ```
 
 **Gotcha:** `node --test tests/` (directory form) fails on Windows Node 26 with "Cannot find module". Always target the file explicitly. `--test-reporter=dot` keeps output small.

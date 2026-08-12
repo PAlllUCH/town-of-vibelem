@@ -2,7 +2,8 @@
 (function (root) {
   var E = root.VillageEngine;
 
-  E.ROLES = {
+  E.ROLES = Object.create(null);
+  var roleDefs = {
     jailor: {
       id: 'jailor', name: 'Jailor', team: 'TOWN', category: 'Town Killing',
       blurb: 'Jails a player each night, then EXECUTES (Unstoppable, max 3) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
@@ -154,6 +155,7 @@
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
     }
   };
+  Object.keys(roleDefs).forEach(function (k) { E.ROLES[k] = roleDefs[k]; });
 
   Object.freeze(E.ROLES);
   Object.keys(E.ROLES).forEach(function (k) { Object.freeze(E.ROLES[k]); });

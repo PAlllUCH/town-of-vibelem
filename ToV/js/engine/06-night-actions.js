@@ -42,7 +42,7 @@
         jailed.jailed = true;
         ctx.log(ctx.jailor.name + ' jailed ' + jailed.name + '.');
         var decision = (ctx.jailAction.extra && ctx.jailAction.extra.jailorDecision) || 'SPARE';
-        if (decision === 'EXECUTE' && ctx.nightNum !== 1 && !ctx.noKillN1 && ctx.jailor.executionsUsed < 3) {
+        if (decision === 'EXECUTE' && ctx.nightNum !== 1 && !ctx.noKillN1) {
           ctx.jailor.executionsUsed += 1;
           ctx.applyAttack(jailTarget, 'unstoppable', 'executed by the Jailor');
         }

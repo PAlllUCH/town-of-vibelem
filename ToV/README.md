@@ -62,7 +62,7 @@ styles/                 # base.css + per-screen styles
 js/engine/              # Pure game logic, DOM-free, Node-testable (00-10 parts)
 js/ui/                  # Screen renderers
 js/app/                 # Configuration, persistence, routing, tap handlers
-scripts/                # Dev tools: bundle.js, simulate.js, agentic.js, llm-sim/
+scripts/                # Dev tools: bundle.js, simulate.js, agentic.js
 tests/                  # node:test suite (no dependencies)
 docs/GDD.md             # Authoritative game rules
 docs/interface.md       # Engine/UI interface contract
@@ -77,8 +77,6 @@ The engine is deliberately separated from the UI: it runs identically in the bro
 ```bash
 node scripts/simulate.js                       # 30 random-play games: crash/invariant checks
 node scripts/agentic.js                        # one game with heuristic-AI players + transcript
-node scripts/llm-sim/runner.js --dry-run       # one game with heuristic fallbacks only
-node scripts/llm-sim/runner.js                 # one game with real LLM agents (paid flash via crush)
 ```
 
-`scripts/llm-sim/` plays a full game with stateless LLM agents that get runner-side memory (per-player journal): identity + memory + news-diff prompts, parallel night actions, a day discussion playground, and knowledge isolation per player. See `SESSION-REPORT.md` for the open balance investigation.
+> **Note:** `scripts/llm-sim/` contains an experimental LLM-based simulator that was discontinued. Files are preserved but should not be used unless explicitly reactivated.
