@@ -6,7 +6,7 @@ Town of Vibelm is a **moderator assistant web app** for a hybrid Town of Salem +
 
 | File | Role |
 |---|---|
-| `docs/GDD.md` | **Authoritative game rules.** 30 roles, 6 presets, night order 0-16, attack/defense model, drunk engine, ghost rules, victory conditions, house rules. If code disagrees with GDD, code is wrong. |
+| `docs/GDD.md` | **Authoritative game rules.** 30 roles, 6 presets, night order 0-14, attack/defense model, drunk engine, ghost rules, victory conditions, house rules. If code disagrees with GDD, code is wrong. |
 | `docs/interface.md` | Engine↔UI API contract. Exact function signatures, state shape, screen structure. |
 | `CONCEPT.md` | Historical concept dump (mangled). Ignore for implementation; GDD supersedes it. |
 
@@ -45,6 +45,12 @@ node --test --test-reporter=dot tests/engine.test.js
 # Run the app (phone testing on same Wi-Fi):
 python -m http.server 8000    # then open http://<your-ip>:8000 on the phone
 # or just double-click index.html (works, but localStorage is per-origin)
+
+# Simulation tools (dev only, not part of the app):
+node scripts/simulate.js                       # 30 random-play games: crash/invariant checks
+node scripts/agentic.js                        # one game with heuristic-AI players + transcript
+node scripts/llm-sim/runner.js --dry-run       # one game, heuristic fallbacks only (no LLM cost)
+node scripts/llm-sim/runner.js                 # one game with real LLM agents (paid flash via crush)
 ```
 
 **Gotcha:** `node --test tests/` (directory form) fails on Windows Node 26 with "Cannot find module". Always target the file explicitly. `--test-reporter=dot` keeps output small.
@@ -54,7 +60,7 @@ python -m http.server 8000    # then open http://<your-ip>:8000 on the phone
 ## Conventions
 
 - **Engine API** is exactly what `docs/interface.md` documents — 21 functions (`createGame`, `getDeckPreview`, `setPlayerNames`, `dealRoles`, `redeal`, `swapRoles`, `getNightSteps`, `recordNightAction`, `resolveNight`, `getMorningAnnouncement`, `beginDay`, `startTrial`, `castVote`, `resolveTrial`, `vigilanteShoot`, `deputyShoot`, `mayorReveal`, `checkVictory`, `serialize`, `deserialize`, `endGame`). UI calls them via `E.<fn>`.
-- **Night steps are 0-14** (`engine.NIGHT_STEPS`): 0 Veteran alert, 1 Poisoner, 2 Witch, 3 Jailor, 4 Escort and Consort (separate steps), 5 Doctor, 6 Mafia (grouped), 7 Janitor and Forger (separate steps), 8 Blackmailer, 9 SK, 10 Framer, 11 Sheriff/Tracker/Lookout/Consigliere/Undertaker (separate steps), 12 Retributionist and Amnesiac (separate steps), 13 Medium/Ghosts (grouped), 14 Morning. Morning is the last step; the will window and pencils-down steps were removed (players keep wills on paper cards, the app never stores or shows them).
+- **Night steps are 0-14** (`engine.NIGHT_STEPS`): 0 Veteran alert, 1 Poisoner, 2 Witch, 3 Jailor, 4 Escort and Consort (separate steps), 5 Doctor, 6 Mafia (grouped), 7 Janitor and Forger (separate steps), 8 Blackmailer, 9 SK, 10 Framer, 11 Sheriff/Tracker/Lookout/Consigliere/Undertaker (separate steps), 12 Retributionist and Amnesiac (separate steps), 13 Medium/Ghosts (grouped), 14 Morning. Morning is the last step. Only Mafia and ghosts are ever woken as a group — every other role wakes in its own step so woken players never learn each other's identities. No will window: players keep wills on paper cards, the app never stores or shows them.
 - **State fields** beyond the interface doc exist: `morning`, `executionerConverted`, `pendingInheritanceNote`, `lastJailTarget`, `lastBlackmailTarget`, `jester`, `retributionist`, `amnesiac`. `deserialize` must default them for old saves.
 - **All user-derived strings** (names, wills) must pass through `esc()` (ui.js) before `innerHTML`; prefer `textContent`. Never inject raw.
 - **Touch targets ≥ 44px** (`.btn-sm` was 40px once; don't regress). No hover-only interactions. Seat positions in the circle layout are clamped 12-88%.
@@ -75,10 +81,12 @@ python -m http.server 8000    # then open http://<your-ip>:8000 on the phone
 
 ## Testing approach
 
-`node:test` (built into Node 18+; this repo runs Node 26). The suite builds deterministic games with an `assignRoles(...)` helper that injects an exact role array (player i gets roles[i-1]) instead of relying on the shuffled deck — this is the pattern to follow for new tests. 93 tests cover ratio table, preset composition, overrides, night resolution, all special roles, victory scenarios, and the regression set.
+`node:test` (built into Node 18+; this repo runs Node 26). The suite builds deterministic games with an `assignRoles(...)` helper that injects an exact role array (player i gets roles[i-1]) instead of relying on the shuffled deck — this is the pattern to follow for new tests. 119 tests cover ratio table, preset composition, overrides, night resolution, all special roles, victory scenarios, and the regression set.
 
 ## Working in this repo (orchestration notes)
 
 - This project is built and maintained via the **orchestrator workflow**: plan → dispatch workers via `crush run "..." -m opencode-go/deepseek-v4-flash --cwd "<project-root>"` (user constraint: Flash workers only, no free tier, no MiMo) → mandatory review pass → fix loop → `node --test` until green.
 - Worker prompts must be **shell-safe** (no backticks, parentheses, `&&`, `<`, `>`). Long specs live in `docs/` and workers are told to read them first.
 - The GDD is deliberately the single source of truth — change rules in `docs/GDD.md` first, then update `docs/interface.md` if the API shape changes, then code + tests.
+- `SESSION-REPORT.md` is the session handoff: read it when starting a new work session, especially the open balance investigation.
+- Engine API is 21 functions plus `E.assignRoles` and `E.mafiaKillActor` (see `docs/interface.md`). `recordNightAction` rejects self-targets except Doctor and the Mafia kill.

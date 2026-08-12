@@ -1,0 +1,89 @@
+=== Town of Vibelm: 10 players, preset p6 (The Clock Strikes Thirteen) ===
+  [FALLBACK] Veteran P6 no alert
+  [FALLBACK] Jailor P2 jails P10 (SPARE)
+  [FALLBACK] Escort P4 targets P2
+  [FALLBACK] Consort P1 targets P3
+  [FALLBACK] Doctor P3 targets P2
+  [FALLBACK] Godfather P8 targets P2
+  [FALLBACK] Serial Killer P7 targets P10
+=== Morning 1: P2 died during the night (role hidden); P10 died during the night (role hidden) ===
+  [Day 1 R1] [FALLBACK] P1: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R1] [FALLBACK] P3: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P4: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P5: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P7: I am Town. Nothing to report.
+  [Day 1 R1] [FALLBACK] P8: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R1] [FALLBACK] P9: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P1: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R2] [FALLBACK] P3: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P4: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P5: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P7: I am Town. Nothing to report.
+  [Day 1 R2] [FALLBACK] P8: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R2] [FALLBACK] P9: I am Town and I have nothing conclusive to report yet.
+  [FALLBACK] nomination: P6 passes
+  [FALLBACK] P1 nominates P7 for trial.
+  [FALLBACK] vote P1: GUILTY
+  [FALLBACK] vote P3: ABSTAIN
+  [FALLBACK] vote P4: ABSTAIN
+  [FALLBACK] vote P5: ABSTAIN
+  [FALLBACK] vote P6: ABSTAIN
+  [FALLBACK] vote P7: ABSTAIN
+  [FALLBACK] vote P8: GUILTY
+  [FALLBACK] vote P9: ABSTAIN
+  [FALLBACK] vote ghost P2: INNOCENT
+  [FALLBACK] vote ghost P10: GUILTY
+=== Day 1: P7 accused; P7 survived (no lynch) ===
+  [FALLBACK] Veteran P6 no alert
+  [FALLBACK] Escort P4 targets P6
+  [FALLBACK] Consort P1 targets P3
+  [FALLBACK] Doctor P3 targets P5
+  [FALLBACK] Godfather P8 targets P3
+  [FALLBACK] Serial Killer P7 targets P9
+=== Morning 2: P3 died during the night (role hidden); P9 died during the night (role hidden) ===
+  [Day 2 R1] [FALLBACK] P1: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R1] [FALLBACK] P4: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R1] [FALLBACK] P5: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R1] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R1] [FALLBACK] P7: I am Town. Nothing to report.
+  [Day 2 R1] [FALLBACK] P8: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R2] [FALLBACK] P1: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R2] [FALLBACK] P4: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P5: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P7: I am Town. Nothing to report.
+  [Day 2 R2] [FALLBACK] P8: I am Town. I have no solid leads yet, but I am listening carefully.
+  [FALLBACK] nomination: P7 passes
+  [FALLBACK] P1 nominates P7 for trial.
+  [FALLBACK] vote P1: GUILTY
+  [FALLBACK] vote P4: ABSTAIN
+  [FALLBACK] vote P5: ABSTAIN
+  [FALLBACK] vote P6: ABSTAIN
+  [FALLBACK] vote P7: ABSTAIN
+  [FALLBACK] vote P8: GUILTY
+  [FALLBACK] vote ghost P3: INNOCENT
+  [FALLBACK] vote ghost P9: INNOCENT
+=== Day 2: P7 accused; P7 survived (no lynch) ===
+  [FALLBACK] Veteran P6 no alert
+  [FALLBACK] Escort P4 targets P8
+  [FALLBACK] Consort P1 targets P4
+  [FALLBACK] Godfather P8 targets P5
+  [FALLBACK] Serial Killer P7 targets P6
+=== Morning 3: P6 died during the night (role hidden) ===
+=== GAME OVER ===
+Winner: MAFIA (The Mafia holds majority.)
+Name    Role              Team     Status
+P1      Consort           MAFIA    alive
+P2      Jailor            TOWN     dead
+P3      Doctor            TOWN     dead
+P4      Escort            TOWN     alive
+P5      Vigilante         TOWN     alive
+P6      Veteran           TOWN     dead
+P7      Serial Killer     NEUTRAL  alive
+P8      Godfather         MAFIA    alive
+P9      Deputy            TOWN     dead
+P10     Mafioso           MAFIA    dead
+=== GAME OVER: MAFIA wins after 3 days ===
+RESULT: preset=p6 players=10 days=2 winner=MAFIA

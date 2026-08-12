@@ -1,0 +1,130 @@
+=== Town of Vibelm: 8 players, preset p1 (Whispers from the Morgue) ===
+  [FALLBACK] Jailor P2 jails P7 (SPARE)
+  [FALLBACK] Doctor P7 targets P3
+  [FALLBACK] Godfather P4 targets P2
+  [FALLBACK] Sheriff P3 targets P5
+  [FALLBACK] Undertaker P1 (no target)
+  [FALLBACK] Amnesiac P8 (no target)
+  [FALLBACK] Medium P6 reads the Ghost Ledger
+=== Morning 1: P2 died during the night (role hidden) ===
+  [Day 1 R1] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P3: I have a strong suspicion about someone but I will wait for the right moment to reveal it.
+  [Day 1 R1] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R1] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R1] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P7: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R1] [FALLBACK] P8: I am Town. Nothing to report.
+  [Day 1 R2] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P3: I have a strong suspicion about someone but I will wait for the right moment to reveal it.
+  [Day 1 R2] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R2] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 1 R2] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P7: I am Town and I have nothing conclusive to report yet.
+  [Day 1 R2] [FALLBACK] P8: I am Town. Nothing to report.
+  [FALLBACK] P3 nominates P5 for trial.
+  [FALLBACK] vote P1: ABSTAIN
+  [FALLBACK] vote P3: GUILTY
+  [FALLBACK] vote P4: INNOCENT
+  [FALLBACK] vote P5: INNOCENT
+  [FALLBACK] vote P6: ABSTAIN
+  [FALLBACK] vote P7: ABSTAIN
+  [FALLBACK] vote P8: ABSTAIN
+  [FALLBACK] vote ghost P2: INNOCENT
+=== Day 1: P5 accused; P5 survived (no lynch) ===
+  [FALLBACK] Doctor P7 targets P3
+  [FALLBACK] Godfather P4 targets P3
+  [FALLBACK] Sheriff P3 targets P1
+  [FALLBACK] Undertaker P1 targets P2
+  [FALLBACK] Amnesiac P8 targets P2
+  [FALLBACK] Medium P6 reads the Ghost Ledger
+=== Morning 2: no deaths ===
+  [Day 2 R1] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R1] [FALLBACK] P3: I have a strong suspicion about someone but I will wait for the right moment to reveal it.
+  [Day 2 R1] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R1] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R1] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R1] [FALLBACK] P7: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R1] [FALLBACK] P8: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P3: I have a strong suspicion about someone but I will wait for the right moment to reveal it.
+  [Day 2 R2] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R2] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 2 R2] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P7: I am Town and I have nothing conclusive to report yet.
+  [Day 2 R2] [FALLBACK] P8: I am Town and I have nothing conclusive to report yet.
+  [FALLBACK] P3 nominates P5 for trial.
+  [FALLBACK] vote P1: ABSTAIN
+  [FALLBACK] vote P3: GUILTY
+  [FALLBACK] vote P4: INNOCENT
+  [FALLBACK] vote P5: INNOCENT
+  [FALLBACK] vote P6: ABSTAIN
+  [FALLBACK] vote P7: ABSTAIN
+  [FALLBACK] vote P8: ABSTAIN
+=== Day 2: P5 accused; P5 survived (no lynch) ===
+  [FALLBACK] Doctor P7 targets P3
+  [FALLBACK] Godfather P4 targets P7
+  [FALLBACK] Sheriff P3 targets P7
+  [FALLBACK] Undertaker P1 (no target)
+  [FALLBACK] Medium P6 reads the Ghost Ledger
+=== Morning 3: P7 died during the night (role hidden) ===
+  [Day 3 R1] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 3 R1] [FALLBACK] P3: I have a strong suspicion about someone but I will wait for the right moment to reveal it.
+  [Day 3 R1] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 3 R1] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 3 R1] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 3 R1] [FALLBACK] P8: I am Town and I have nothing conclusive to report yet.
+  [Day 3 R2] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 3 R2] [FALLBACK] P3: I have a strong suspicion about someone but I will wait for the right moment to reveal it.
+  [Day 3 R2] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 3 R2] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 3 R2] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 3 R2] [FALLBACK] P8: I am Town and I have nothing conclusive to report yet.
+  [FALLBACK] P3 nominates P5 for trial.
+  [FALLBACK] vote P1: ABSTAIN
+  [FALLBACK] vote P3: GUILTY
+  [FALLBACK] vote P4: INNOCENT
+  [FALLBACK] vote P5: INNOCENT
+  [FALLBACK] vote P6: ABSTAIN
+  [FALLBACK] vote P8: ABSTAIN
+  [FALLBACK] vote ghost P7: INNOCENT
+=== Day 3: P5 accused; P5 survived (no lynch) ===
+  [FALLBACK] Godfather P4 targets P3
+  [FALLBACK] Sheriff P3 targets P6
+  [FALLBACK] Undertaker P1 targets P7
+  [FALLBACK] Medium P6 reads the Ghost Ledger
+=== Morning 4: P3 died during the night (role hidden) ===
+  [Day 4 R1] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 4 R1] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 4 R1] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 4 R1] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 4 R1] [FALLBACK] P8: I am Town and I have nothing conclusive to report yet.
+  [Day 4 R2] [FALLBACK] P1: I am Town and I have nothing conclusive to report yet.
+  [Day 4 R2] [FALLBACK] P4: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 4 R2] [FALLBACK] P5: I am Town. I have no solid leads yet, but I am listening carefully.
+  [Day 4 R2] [FALLBACK] P6: I am Town and I have nothing conclusive to report yet.
+  [Day 4 R2] [FALLBACK] P8: I am Town and I have nothing conclusive to report yet.
+  [FALLBACK] P5 nominates P1 for trial.
+  [FALLBACK] vote P1: ABSTAIN
+  [FALLBACK] vote P4: GUILTY
+  [FALLBACK] vote P5: GUILTY
+  [FALLBACK] vote P6: ABSTAIN
+  [FALLBACK] vote P8: ABSTAIN
+  [FALLBACK] vote ghost P3: INNOCENT
+=== Day 4: P1 accused; P1 survived (no lynch) ===
+  [FALLBACK] Godfather P4 targets P6
+  [FALLBACK] Undertaker P1 targets P3
+  [FALLBACK] Medium P6 reads the Ghost Ledger
+=== Morning 5: P6 died during the night (role hidden) ===
+=== GAME OVER ===
+Winner: MAFIA (The Mafia holds majority.)
+Name    Role              Team     Status
+P1      Undertaker        TOWN     alive
+P2      Jailor            TOWN     dead
+P3      Sheriff           TOWN     dead
+P4      Godfather         MAFIA    alive
+P5      Mafioso           MAFIA    alive
+P6      Medium            TOWN     dead
+P7      Doctor            TOWN     dead
+P8      Amnesiac          NEUTRAL  alive
+=== GAME OVER: MAFIA wins after 5 days ===
+RESULT: preset=p1 players=8 days=4 winner=MAFIA
