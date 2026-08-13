@@ -5,8 +5,10 @@ if (typeof module !== 'undefined' && module.exports) {
   require('./engine/02-presets.js');
   require('./engine/03-deck.js');
   require('./engine/04-state.js');
+  require('./engine/04b-start-knowing.js');
   require('./engine/05-night-steps.js');
   require('./engine/06-night-actions.js');
+  require('./engine/06b-night-actions.js');
   require('./engine/07-night-resolution.js');
   require('./engine/07b-night-resolution.js');
   require('./engine/08-ghosts.js');

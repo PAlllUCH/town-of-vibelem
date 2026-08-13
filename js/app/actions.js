@@ -58,6 +58,9 @@
       case 'civ-dec':
         APP.civDec(btn);
         break;
+      case 'civ-reset':
+        APP.civReset();
+        break;
       case 'deck-remove':
         APP.removeRole(btn.getAttribute('data-team'), Number(btn.getAttribute('data-index')));
         APP.refreshSetup();
@@ -100,6 +103,27 @@
       case 'witch-side':
         state.witchSide = btn.getAttribute('data-side') === 'TOWN' ? 'TOWN' : 'MAFIA';
         APP.afterMutation();
+        break;
+      case 'nz-toggle':
+        APP.nzToggle(btn.getAttribute('data-nz'));
+        break;
+      case 'toggle-whispers':
+        APP.toggleWhispers();
+        break;
+      case 'toggle-claims':
+        APP.toggleClaims();
+        break;
+      case 'claim-open':
+        APP.claimOpen(btn.getAttribute('data-seat'));
+        break;
+      case 'claim-pick':
+        APP.claimPick(btn.getAttribute('data-seat'), btn.getAttribute('data-role'));
+        break;
+      case 'claim-clear':
+        APP.claimClear(btn.getAttribute('data-seat'));
+        break;
+      case 'claim-close':
+        APP.claimClose();
         break;
       case 'begin-night':
         APP.beginNight();
@@ -147,6 +171,27 @@
         break;
       case 'wizard-decision':
         APP.wizJailorDecision(btn.getAttribute('data-decision'));
+        break;
+      case 'wizard-witness-confirm':
+        APP.wizWitnessConfirm();
+        break;
+      case 'whisper-done':
+        APP.whisperDone(btn.getAttribute('data-player'), btn.getAttribute('data-night'));
+        break;
+      case 'claim-round-open':
+        APP.claimRoundOpen();
+        break;
+      case 'claim-round-pick':
+        APP.claimRoundPick(btn.getAttribute('data-seat'), btn.getAttribute('data-role'));
+        break;
+      case 'claim-round-cancel':
+        APP.claimRoundCancel();
+        break;
+      case 'claim-round-edit':
+        APP.claimRoundEdit(btn.getAttribute('data-seat'));
+        break;
+      case 'claim-round-done':
+        APP.claimRoundDone();
         break;
       case 'resolve-night':
         APP.resolveNight();
@@ -249,6 +294,7 @@
   function updateReferencePanel() {
     var panel = document.getElementById('reference-panel');
     if (!panel) return;
+    var rb = document.querySelector('.app-header [data-action="toggle-reference"]');
     if (APP.app.referenceOpen) {
       panel.innerHTML = UI.renderRoleReference(APP.state, APP.app);
       panel.classList.add('open');
@@ -258,6 +304,7 @@
       panel.innerHTML = '';
       document.body.classList.remove('reference-open');
     }
+    if (rb && rb.classList) rb.classList.toggle('on', !!APP.app.referenceOpen);
   }
 
   document.addEventListener('click', function (ev) {
@@ -266,20 +313,16 @@
     dispatch(btn.getAttribute('data-action'), btn);
   });
 
-  document.addEventListener('change', function (ev) {
-    var t = ev.target;
-    if (!t || !t.getAttribute) return;
-    if (t.getAttribute('data-action') === 'seat-role') {
-      APP.seatRole(t.getAttribute('data-seat'), t.value);
-    }
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    if (APP.app.claimPicker != null) APP.claimClose();
+    else if (APP.app.claimsOpen) APP.toggleClaims();
+    else if (APP.app.whispersOpen) APP.toggleWhispers();
   });
 
   document.addEventListener('input', function (ev) {
     var t = ev.target;
     if (!t || !t.getAttribute) return;
-    if (t.classList && t.classList.contains('seat-name-input')) {
-      APP.app.names[Number(t.getAttribute('data-seat'))] = t.value;
-    }
     if (t.getAttribute('data-action') === 'reference-search') {
       APP.app.referenceQuery = t.value || '';
       APP.updateReferenceList();

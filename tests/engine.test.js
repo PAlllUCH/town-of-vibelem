@@ -45,11 +45,12 @@ function assignRoles(roles, opts) {
   });
   state.graveyard = [];
   state.deathLog = [];
-  state.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+  state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 };
   state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
   state.dayNumber = 0;
   state.winner = null;
   state.logs = [];
+  state.playerLog = {};
   state.executionerTarget = null;
   state.executionerConverted = false;
   state.jester = { haunted: false, hauntTarget: null };
@@ -92,6 +93,18 @@ function graveyardEntry(state, id) {
     if (state.graveyard[i].playerId === id) return state.graveyard[i];
   }
   return null;
+}
+
+// Deal an exact role array through the real assignRoles path so setup info
+// (Executioner target, GF bluffs, start-knowing claims) is computed.
+function dealExact(roles, opts) {
+  const state = engine.createGame(Object.assign({ playerCount: roles.length, presetId: 'p1' }, opts || {}));
+  state.deck = roles.slice();
+  const seatToRole = {};
+  roles.forEach(function (r, i) { seatToRole[i + 1] = r; });
+  state.players.forEach(function (p) { p.name = 'P' + p.id; });
+  engine.assignRoles(state, seatToRole);
+  return state;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +168,10 @@ describe('preset deck composition', () => {
   test('town overflow is filled with Civilians (15 players, preset p1)', () => {
     const p = preview(engine.createGame({ playerCount: 15, presetId: 'p1' }));
     assert.strictEqual(p.town.length, 9);
-    assert.strictEqual(p.town.filter((id) => id === 'civilian').length, 2); // 7 listed roles, 9 slots
+    // The 10-role Town list covers all 9 slots: the tail roles displace Civilians.
+    assert.strictEqual(p.town.filter((id) => id === 'civilian').length, 0);
+    assert.ok(p.town.includes('oracle'), 'Oracle should fill an 8th Town slot at 15 players');
+    assert.ok(p.town.includes('witness'), 'Witness should fill the 9th Town slot at 15 players');
     assert.strictEqual(p.mafia.length, 4);
     assert.strictEqual(p.neutral.length, 2);
     assert.strictEqual(p.town.length + p.mafia.length + p.neutral.length, 15);
@@ -164,16 +180,30 @@ describe('preset deck composition', () => {
   test('town overflow also applies to shorter town lists (15 players, preset p2)', () => {
     const p = preview(engine.createGame({ playerCount: 15, presetId: 'p2' }));
     assert.strictEqual(p.town.length, 9);
-    assert.strictEqual(p.town.filter((id) => id === 'civilian').length, 3);
+    // The 9-role Town list covers all 9 slots exactly: no Civilians are needed.
+    assert.strictEqual(p.town.filter((id) => id === 'civilian').length, 0);
+    assert.ok(p.town.includes('oracle'));
+    assert.ok(p.town.includes('washerwoman'));
+    assert.ok(p.town.includes('witness'), 'Witness should fill the 9th Town slot in preset p2 at 15 players');
+  });
+
+  test('Oracle reaches every preset from 13 players, and Presets 2-6 also from 11', () => {
+    for (const presetId of ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']) {
+      assert.ok(preview(engine.createGame({ playerCount: 13, presetId })).town.includes('oracle'), '13p ' + presetId);
+    }
+    for (const presetId of ['p2', 'p3', 'p4', 'p5', 'p6']) {
+      assert.ok(preview(engine.createGame({ playerCount: 11, presetId })).town.includes('oracle'), '11p ' + presetId);
+    }
+    assert.ok(!preview(engine.createGame({ playerCount: 11, presetId: 'p1' })).town.includes('oracle'), 'p1 @ 11');
   });
 
   test('preset town priority lists match the GDD', () => {
-    assert.deepStrictEqual(engine.PRESETS.p1.town, ['jailor', 'undertaker', 'medium', 'doctor', 'sheriff', 'tracker', 'retributionist']);
-    assert.deepStrictEqual(engine.PRESETS.p2.town, ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker']);
-    assert.deepStrictEqual(engine.PRESETS.p3.town, ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort']);
-    assert.deepStrictEqual(engine.PRESETS.p4.town, ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker']);
-    assert.deepStrictEqual(engine.PRESETS.p5.town, ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist']);
-    assert.deepStrictEqual(engine.PRESETS.p6.town, ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort']);
+    assert.deepStrictEqual(engine.PRESETS.p1.town, ['jailor', 'undertaker', 'medium', 'doctor', 'sheriff', 'tracker', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef']);
+    assert.deepStrictEqual(engine.PRESETS.p2.town, ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef']);
+    assert.deepStrictEqual(engine.PRESETS.p3.town, ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef']);
+    assert.deepStrictEqual(engine.PRESETS.p4.town, ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef']);
+    assert.deepStrictEqual(engine.PRESETS.p5.town, ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef']);
+    assert.deepStrictEqual(engine.PRESETS.p6.town, ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef']);
   });
 
   test('Framer is preset p4 slot 3 and enters the deck once 3+ Mafia slots exist', () => {
@@ -181,6 +211,17 @@ describe('preset deck composition', () => {
     assert.ok(preview(engine.createGame({ playerCount: 14, presetId: 'p4' })).mafia.includes('framer'));
     assert.ok(preview(engine.createGame({ playerCount: 10, presetId: 'p4' })).mafia.includes('framer'));
     assert.ok(!preview(engine.createGame({ playerCount: 8, presetId: 'p4' })).mafia.includes('framer'));
+  });
+
+  test('Witness enters every preset at 14 players, and Presets 2-6 also from 13', () => {
+    for (const presetId of ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']) {
+      assert.ok(preview(engine.createGame({ playerCount: 14, presetId })).town.includes('witness'), '14p ' + presetId);
+    }
+    for (const presetId of ['p2', 'p3', 'p4', 'p5', 'p6']) {
+      assert.ok(preview(engine.createGame({ playerCount: 13, presetId })).town.includes('witness'), '13p ' + presetId);
+    }
+    assert.ok(!preview(engine.createGame({ playerCount: 13, presetId: 'p1' })).town.includes('witness'), 'p1 @ 13');
+    assert.ok(!preview(engine.createGame({ playerCount: 12, presetId: 'p2' })).town.includes('witness'), 'p2 @ 12');
   });
 
   test('Blackmailer is preset p5 slot 4 and enters the deck at 4 Mafia slots', () => {
@@ -423,6 +464,12 @@ describe('night wizard steps', () => {
     assert.deepStrictEqual(pos11.map((s) => s.roles), [['sheriff'], ['tracker'], ['undertaker']]);
   });
 
+  test('Spy and Oracle each wake in their own position-11 step', () => {
+    const state = assignRoles(['spy', 'oracle', 'sheriff', 'godfather', 'mafioso', 'civilian']);
+    const pos11 = engine.getNightSteps(state).filter((s) => s.position === 11);
+    assert.deepStrictEqual(pos11.map((s) => s.roles), [['sheriff'], ['spy'], ['oracle']]);
+  });
+
   test('an inherited Deputy produces a Sheriff step with roles [deputy]', () => {
     const state = assignRoles(['sheriff', 'deputy', 'godfather', 'mafioso', 'civilian', 'civilian']);
     act(state, 6, 'godfather', 3, 1);
@@ -430,6 +477,396 @@ describe('night wizard steps', () => {
     const sheriffStep = engine.getNightSteps(state).find((s) => s.position === 11 && s.title === 'Sheriff');
     assert.ok(sheriffStep);
     assert.deepStrictEqual(sheriffStep.roles, ['deputy']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Spy
+// ---------------------------------------------------------------------------
+
+describe('Spy', () => {
+  test('learns the team of every player who visited the watched player', () => {
+    const state = assignRoles(['spy', 'civilian', 'blackmailer', 'doctor', 'godfather', 'mafioso']);
+    act(state, 5, 'doctor', 4, 2);
+    act(state, 8, 'blackmailer', 3, 2);
+    act(state, 11, 'spy', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Spy) watches P2: TOWN, MAFIA.'));
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.at === 'N1' && e.text === 'Spy watch on P2: TOWN, MAFIA.'));
+  });
+
+  test('learns "no one" when nobody visited the watched player', () => {
+    const state = assignRoles(['spy', 'civilian', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    act(state, 11, 'spy', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Spy) watches P2: no one.'));
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.text === 'Spy watch on P2: no one.'));
+  });
+
+  test('a Drunk Spy learns one random team per visitor', () => {
+    const state = assignRoles(['spy', 'civilian', 'poisoner', 'blackmailer', 'godfather', 'mafioso']);
+    act(state, 1, 'poisoner', 3, 1);
+    act(state, 8, 'blackmailer', 4, 2);
+    act(state, 11, 'spy', 1, 2);
+    night(state);
+    const info = state.playerLog['1'].find((e) => e.kind === 'info');
+    assert.ok(info && info.text.indexOf('Spy watch on P2: ') === 0);
+    const teams = info.text.replace('Spy watch on P2: ', '').replace('.', '');
+    assert.ok(['TOWN', 'MAFIA', 'NEUTRAL'].indexOf(teams) !== -1);
+  });
+
+  test('a living Spy counts as Neutral: does not block a Town win and shares it', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'spy', 'godfather', 'mafioso', 'civilian']);
+    pid(state, 4).isAlive = false;
+    pid(state, 5).isAlive = false;
+    const victory = engine.checkVictory(state);
+    assert.strictEqual(victory.winner, 'TOWN');
+    assert.ok(victory.survivors.indexOf(3) !== -1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Oracle (N1-only)
+// ---------------------------------------------------------------------------
+
+describe('Oracle', () => {
+  test('night 1 reads TOWN for a Town target', () => {
+    const state = assignRoles(['oracle', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    act(state, 11, 'oracle', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Oracle) reads P2: TOWN.'));
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.at === 'N1' && e.text === 'Oracle read on P2: TOWN.'));
+  });
+
+  test('reads NOT TOWN for a Mafia target', () => {
+    const state = assignRoles(['oracle', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    act(state, 11, 'oracle', 1, 4);
+    night(state);
+    assert.ok(logText(state).includes('(Oracle) reads P4: NOT TOWN.'));
+  });
+
+  test('reads NOT TOWN for a Neutral target', () => {
+    const state = assignRoles(['oracle', 'civilian', 'serialkiller', 'godfather', 'mafioso', 'civilian']);
+    act(state, 11, 'oracle', 1, 3);
+    night(state);
+    assert.ok(logText(state).includes('(Oracle) reads P3: NOT TOWN.'));
+  });
+
+  test('a Drunk Oracle inverts a Town read to NOT TOWN', () => {
+    const state = assignRoles(['oracle', 'civilian', 'poisoner', 'civilian', 'godfather', 'mafioso']);
+    act(state, 1, 'poisoner', 3, 1);
+    act(state, 11, 'oracle', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Oracle) reads P2: NOT TOWN.'));
+  });
+
+  test('a Drunk Oracle inverts a NOT TOWN read to TOWN', () => {
+    const state = assignRoles(['oracle', 'civilian', 'poisoner', 'godfather', 'mafioso', 'civilian']);
+    act(state, 1, 'poisoner', 3, 1);
+    act(state, 11, 'oracle', 1, 4);
+    night(state);
+    assert.ok(logText(state).includes('(Oracle) reads P4: TOWN.'));
+  });
+
+  test('a roleblocked Oracle gets no result and an info log entry', () => {
+    const state = assignRoles(['oracle', 'escort', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    act(state, 4, 'escort', 2, 1);
+    act(state, 11, 'oracle', 1, 3);
+    night(state);
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.text === 'Oracle read on P3: no result (roleblocked).'));
+  });
+
+  test('a Witch-controlled Oracle reads the redirect target', () => {
+    const state = assignRoles(['oracle', 'civilian', 'witch', 'godfather', 'mafioso', 'civilian']);
+    act(state, 2, 'witch', 3, 1, { controlRedirect: 4 });
+    act(state, 11, 'oracle', 1, 5);
+    night(state);
+    assert.ok(logText(state).includes('(Oracle) reads P4: NOT TOWN.'));
+  });
+
+  test('the Oracle does not appear in wizard steps after night 1', () => {
+    const state = assignRoles(['oracle', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    assert.ok(engine.getNightSteps(state).some((s) => s.title === 'Oracle'));
+    night(state);
+    assert.ok(!engine.getNightSteps(state).some((s) => s.title === 'Oracle'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Witness (pairwise info)
+// ---------------------------------------------------------------------------
+
+describe('Witness', () => {
+  test('both targets Town reads Both Town and logs an info entry', () => {
+    const state = assignRoles(['witness', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    act(state, 11, 'witness', 1, 2, { secondTarget: 3 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P2 and P3: Both Town.'));
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.at === 'N1' && e.text === 'Witness check on P2 and P3: Both Town.'));
+  });
+
+  test('both targets Mafia reads Both Mafia', () => {
+    const state = assignRoles(['witness', 'civilian', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    act(state, 11, 'witness', 1, 3, { secondTarget: 4 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P3 and P4: Both Mafia.'));
+  });
+
+  test('one Town one Mafia reads Different alignments', () => {
+    const state = assignRoles(['witness', 'civilian', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    act(state, 11, 'witness', 1, 2, { secondTarget: 3 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P2 and P3: Different alignments.'));
+  });
+
+  test('one Neutral one Mafia reads Different alignments', () => {
+    const state = assignRoles(['witness', 'civilian', 'jester', 'godfather', 'mafioso', 'civilian']);
+    act(state, 11, 'witness', 1, 3, { secondTarget: 4 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P3 and P4: Different alignments.'));
+  });
+
+  test('both Neutral reads Both Neutral', () => {
+    const state = assignRoles(['witness', 'civilian', 'jester', 'survivor', 'godfather', 'mafioso']);
+    act(state, 11, 'witness', 1, 3, { secondTarget: 4 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P3 and P4: Both Neutral.'));
+  });
+
+  test('the Serial Killer counts as Mafia for the comparison (Nemesis rule)', () => {
+    const state = assignRoles(['witness', 'civilian', 'serialkiller', 'civilian', 'godfather', 'mafioso']);
+    act(state, 11, 'witness', 1, 3, { secondTarget: 5 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P3 and P5: Both Mafia.'));
+  });
+
+  test('a dead target is compared by its last assigned alignment', () => {
+    const state = assignRoles(['witness', 'civilian', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 3, 4);
+    act(state, 11, 'witness', 1, 3, { secondTarget: 4 });
+    night(state);
+    assert.strictEqual(pid(state, 4).isAlive, false);
+    assert.ok(logText(state).includes('(Witness) compares P3 and P4: Both Mafia.'));
+  });
+
+  test('a Drunk Witness inverts an equal pair to Different alignments', () => {
+    const state = assignRoles(['witness', 'civilian', 'poisoner', 'civilian', 'godfather', 'mafioso']);
+    act(state, 1, 'poisoner', 3, 1);
+    act(state, 11, 'witness', 1, 2, { secondTarget: 4 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P2 and P4: Different alignments.'));
+  });
+
+  test('a Drunk Witness turns a Different pair into one of the equal options at random', () => {
+    const state = assignRoles(['witness', 'civilian', 'poisoner', 'godfather', 'mafioso', 'civilian']);
+    act(state, 1, 'poisoner', 3, 1);
+    act(state, 11, 'witness', 1, 2, { secondTarget: 3 });
+    night(state);
+    const info = state.playerLog['1'].find((e) => e.kind === 'info');
+    assert.ok(info && /Witness check on P2 and P3: (Both Town|Both Mafia|Both Neutral)\.$/.test(info.text),
+      'unexpected drunk result: ' + (info && info.text));
+  });
+
+  test('a roleblocked Witness gets no result and an info log entry', () => {
+    const state = assignRoles(['witness', 'escort', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    act(state, 4, 'escort', 2, 1);
+    act(state, 11, 'witness', 1, 3, { secondTarget: 4 });
+    night(state);
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.text === 'Witness check on P3 and P4: no result (roleblocked).'));
+  });
+
+  test('a Witch-controlled Witness keeps the second pick and compares the redirect pair', () => {
+    const state = assignRoles(['witness', 'civilian', 'witch', 'godfather', 'civilian', 'mafioso']);
+    act(state, 2, 'witch', 3, 1, { controlRedirect: 4 });
+    act(state, 11, 'witness', 1, 2, { secondTarget: 5 });
+    night(state);
+    assert.ok(logText(state).includes('(Witness) compares P4 and P5: Different alignments.'));
+  });
+
+  test('recordNightAction accepts the second target via extra.secondTarget', () => {
+    const state = assignRoles(['witness', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    const ok = engine.recordNightAction(state, {
+      position: 11, roleId: 'witness', playerId: 1, targetId: 2, extra: { secondTarget: 3 }
+    });
+    assert.ok(ok);
+    assert.strictEqual(state.night.actions.length, 1);
+    assert.strictEqual(state.night.actions[0].targetId, 2);
+    assert.strictEqual(state.night.actions[0].extra.secondTarget, 3);
+  });
+
+  test('recordNightAction rejects a self second target', () => {
+    const state = assignRoles(['witness', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    let ok = engine.recordNightAction(state, {
+      position: 11, roleId: 'witness', playerId: 1, targetId: 2, extra: { secondTarget: 1 }
+    });
+    assert.strictEqual(ok, false);
+    assert.strictEqual(state.night.actions.length, 0);
+    ok = engine.recordNightAction(state, {
+      position: 11, roleId: 'witness', playerId: 1, targetId: 2, extra: { secondTarget: 2 }
+    });
+    assert.strictEqual(ok, false, 'secondTarget equal to the first target is rejected');
+    assert.strictEqual(state.night.actions.length, 0);
+  });
+
+  test('the Witness wakes in its own position-11 step while alive, and never once dead', () => {
+    const state = assignRoles(['witness', 'civilian', 'sheriff', 'godfather', 'mafioso', 'civilian']);
+    const step = engine.getNightSteps(state).find((s) => s.title === 'Witness');
+    assert.ok(step, 'Witness step is generated');
+    assert.strictEqual(step.position, 11);
+    assert.deepStrictEqual(step.roles, ['witness']);
+    pid(state, 1).isAlive = false;
+    assert.ok(!engine.getNightSteps(state).some((s) => s.title === 'Witness'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// N1-only step gating and start-knowing roles
+// ---------------------------------------------------------------------------
+
+describe('N1-only step gating', () => {
+  test('the N1-only Oracle wakes on night 1 and is excluded on night 2', () => {
+    const state = assignRoles(['oracle', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    const steps1 = engine.getNightSteps(state);
+    assert.ok(steps1.some((s) => s.title === 'Oracle'));
+    night(state);
+    const steps2 = engine.getNightSteps(state);
+    assert.ok(!steps2.some((s) => s.title === 'Oracle'));
+  });
+
+  test('start-knowing roles never appear in any wizard step', () => {
+    const state = assignRoles(['washerwoman', 'chef', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    const steps = engine.getNightSteps(state);
+    assert.ok(!steps.some((s) => s.roles.indexOf('washerwoman') !== -1));
+    assert.ok(!steps.some((s) => s.roles.indexOf('chef') !== -1));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Washerwoman (start-knowing)
+// ---------------------------------------------------------------------------
+
+describe('Washerwoman', () => {
+  test('the claim names the holder of a named Town role in the deck', () => {
+    const state = dealExact(['washerwoman', 'sheriff', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    const info = state.playerLog['1'].find((e) => e.kind === 'info' && e.at === 'SETUP');
+    assert.ok(info, 'washerwoman has no SETUP info entry');
+    const m = info.text.match(/^Washerwoman: one of (P\d+), (P\d+) is the ([^.]+)\.$/);
+    assert.ok(m, 'unexpected claim text: ' + info.text);
+    assert.notStrictEqual(m[1], m[2], 'pair must be two distinct players');
+    assert.strictEqual(m[3], 'Sheriff');
+    const first = pid(state, Number(m[1].slice(1)));
+    assert.strictEqual(engine.ROLES[first.assignedRole].name, 'Sheriff');
+  });
+
+  test('with several named Town roles the claim is still true for the holder', () => {
+    const state = dealExact(['washerwoman', 'sheriff', 'doctor', 'lookout', 'godfather', 'mafioso']);
+    const info = state.playerLog['1'].find((e) => e.kind === 'info' && e.at === 'SETUP');
+    const m = info.text.match(/^Washerwoman: one of (P\d+), (P\d+) is the ([^.]+)\.$/);
+    assert.ok(m, 'unexpected claim text: ' + info.text);
+    const first = pid(state, Number(m[1].slice(1)));
+    assert.strictEqual(engine.ROLES[first.assignedRole].name, m[3], 'the first named player must hold the claimed role');
+  });
+
+  test('the misreg fallback still stores a pair when no named Town role besides the Washerwoman is in the deck', () => {
+    const state = dealExact(['washerwoman', 'civilian', 'civilian', 'godfather', 'mafioso', 'civilian']);
+    const info = state.playerLog['1'].find((e) => e.kind === 'info' && e.at === 'SETUP');
+    assert.ok(info, 'washerwoman has no SETUP info entry');
+    const m = info.text.match(/^Washerwoman: one of (P\d+), (P\d+) is the ([^.]+)\.$/);
+    assert.ok(m, 'unexpected claim text: ' + info.text);
+    assert.notStrictEqual(m[1], m[2], 'pair must be two distinct players');
+    assert.ok(m[3] !== 'Godfather' && m[3] !== 'Mafioso', 'the claimed role must be a townsfolk role, got: ' + m[3]);
+    const claim = roleIdByName(m[3]);
+    assert.ok(claim, 'claimed role unknown: ' + m[3]);
+    assert.strictEqual(engine.ROLES[claim].team, 'TOWN', 'claimed role must be Town-aligned');
+  });
+
+  test('a role swap does not recompute the claim', () => {
+    const state = dealExact(['washerwoman', 'sheriff', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    const before = state.playerLog['1'].find((e) => e.kind === 'info' && e.at === 'SETUP').text;
+    engine.swapRoles(state, 2, 3);
+    const after = state.playerLog['1'].filter((e) => e.kind === 'info' && e.at === 'SETUP');
+    assert.strictEqual(after.length, 1);
+    assert.strictEqual(after[0].text, before);
+  });
+
+  test('redeal recomputes the claim', () => {
+    const state = dealExact(['washerwoman', 'sheriff', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    engine.redeal(state);
+    const ww = state.players.find((p) => p.assignedRole === 'washerwoman');
+    const info = state.playerLog[String(ww.id)].filter((e) => e.kind === 'info' && e.at === 'SETUP');
+    assert.strictEqual(info.length, 1);
+    assert.ok(info[0].text.indexOf('Washerwoman: one of ') === 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chef (start-knowing)
+// ---------------------------------------------------------------------------
+
+describe('Chef', () => {
+  function chefInfo(state) {
+    const chef = state.players.find((p) => p.assignedRole === 'chef');
+    return state.playerLog[String(chef.id)].find((e) => e.kind === 'info' && e.at === 'SETUP');
+  }
+
+  test('counts adjacent evil pairs in the seat circle (6 players)', () => {
+    const state = dealExact(['chef', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    assert.strictEqual(chefInfo(state).text, 'Chef: 1 adjacent pair of evil players.');
+  });
+
+  test('counts the wrap-around seat n / seat 1 pair', () => {
+    const state = dealExact(['mafioso', 'chef', 'civilian', 'civilian', 'civilian', 'godfather']);
+    assert.strictEqual(chefInfo(state).text, 'Chef: 1 adjacent pair of evil players.');
+  });
+
+  test('counts pairs for 8 players including the wrap-around pair', () => {
+    const state = dealExact(['mafioso', 'chef', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    assert.strictEqual(chefInfo(state).text, 'Chef: 1 adjacent pair of evil players.');
+  });
+
+  test('counts the Serial Killer as evil but not Neutral Benign roles', () => {
+    const state = dealExact(['chef', 'spy', 'serialkiller', 'mafioso', 'civilian', 'godfather']);
+    assert.strictEqual(chefInfo(state).text, 'Chef: 1 adjacent pair of evil players.');
+  });
+
+  test('reports no adjacent pairs when no two evil players are adjacent', () => {
+    const state = dealExact(['chef', 'godfather', 'civilian', 'mafioso', 'civilian', 'civilian']);
+    assert.strictEqual(chefInfo(state).text, 'Chef: no adjacent pairs of evil players.');
+  });
+
+  test('reports a multi-pair count', () => {
+    const state = dealExact(['chef', 'godfather', 'mafioso', 'serialkiller', 'civilian', 'civilian']);
+    // pairs: (2,3) GF+Mafioso, (3,4) Mafioso+SK -> 2
+    assert.strictEqual(chefInfo(state).text, 'Chef: 2 adjacent pairs of evil players.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Info results in playerLog
+// ---------------------------------------------------------------------------
+
+describe('info results in playerLog', () => {
+  test('a Sheriff check writes an info playerLog entry', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    act(state, 11, 'sheriff', 1, 2);
+    night(state);
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.text === 'Sheriff check on P2: INNOCENT.'));
+  });
+
+  test('a roleblocked Sheriff logs no result (roleblocked)', () => {
+    const state = assignRoles(['sheriff', 'escort', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    act(state, 4, 'escort', 2, 1);
+    act(state, 11, 'sheriff', 1, 3);
+    night(state);
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'info' && e.text === 'Sheriff check on P3: no result (roleblocked).'));
   });
 });
 
@@ -763,6 +1200,10 @@ describe('Blackmailer', () => {
     night(state);
     engine.beginDay(state);
     assert.ok(engine.startTrial(state, 6, 2));
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
     assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'GUILTY' }), true);
   });
 
@@ -956,6 +1397,10 @@ describe('Executioner', () => {
     const state = assignRoles(['executioner', 'sheriff', 'civilian', 'civilian', 'civilian', 'godfather']);
     state.executionerTarget = 4;
     assert.ok(engine.startTrial(state, 4, 2));
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
     assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
     assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
     const resolved = engine.resolveTrial(state);
@@ -971,6 +1416,10 @@ describe('Executioner', () => {
     act(state, 6, 'godfather', 2, 4);
     night(state); // target dies at night -> conversion
     assert.ok(engine.startTrial(state, 1, 5));
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 6, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
     assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'GUILTY' }), true);
     assert.strictEqual(engine.castVote(state, { voterId: 6, verdict: 'GUILTY' }), true);
     const resolved = engine.resolveTrial(state);
@@ -989,6 +1438,10 @@ describe('Executioner', () => {
 describe('Jester', () => {
   function lynchJester(state) {
     assert.ok(engine.startTrial(state, 1, 2));
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
     assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
     assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
     assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'INNOCENT' }), true);
@@ -1024,6 +1477,329 @@ describe('Jester', () => {
     const result = night(state);
     assert.strictEqual(result.deaths.length, 0);
     assert.strictEqual(pid(state, 4).isAlive, true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BotC trial (two-stage: SECONDS then VOTE)
+// ---------------------------------------------------------------------------
+
+describe('BotC trial', () => {
+  function second(state, ids) {
+    ids.forEach((id) => {
+      assert.strictEqual(engine.castVote(state, { voterId: id, verdict: 'AGREE' }), true, 'second by P' + id);
+    });
+  }
+
+  test('a nomination at strict majority (6 living -> 4 incl. nominator) proceeds to VOTE', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    assert.ok(engine.startTrial(state, 6, 1));
+    second(state, [2, 3, 4]);
+    const accepted = engine.resolveTrial(state);
+    assert.strictEqual(accepted.result, 'ACCEPTED');
+    assert.strictEqual(accepted.stage, 'VOTE');
+    assert.strictEqual(accepted.agree, 4);
+    assert.strictEqual(accepted.needed, 4);
+    assert.strictEqual(state.trial.stage, 'VOTE');
+    assert.strictEqual(state.trial.active, true);
+  });
+
+  test('a nomination below the threshold is CANCELLED with no death and the day continues', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    assert.ok(engine.startTrial(state, 6, 1));
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'DISAGREE' }), true);
+    const resolved = engine.resolveTrial(state); // agree = nominator + P2 = 2 < 4
+    assert.strictEqual(resolved.result, 'CANCELLED');
+    assert.strictEqual(state.trial.active, false);
+    assert.strictEqual(state.deathLog.length, 0);
+    assert.strictEqual(state.winner, null);
+    assert.ok(engine.startTrial(state, 5, 2), 'a new nomination is allowed the same day');
+  });
+
+  test('rejects when only the accused could second the nominator (accused excluded, nominator auto-counts)', () => {
+    const state = assignRoles(['civilian', 'civilian', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    pid(state, 3).isAlive = false;
+    pid(state, 4).isAlive = false;
+    pid(state, 5).isAlive = false;
+    pid(state, 6).isAlive = false;
+    assert.ok(engine.startTrial(state, 1, 2)); // only P2 and P1 are living
+    const resolved = engine.resolveTrial(state); // agree = nominator only = 1 < 2
+    assert.strictEqual(resolved.result, 'CANCELLED');
+    assert.strictEqual(resolved.needed, 2);
+    assert.strictEqual(state.trial.active, false);
+    assert.strictEqual(state.deathLog.length, 0);
+  });
+
+  test('ghosts may not second a nomination', () => {
+    const state = assignRoles(['godfather', 'sheriff', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 2);
+    night(state);
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 1, 3));
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'AGREE' }), false);
+  });
+
+  test('a tie verdict acquits the accused (no lynch, no victory check)', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 1, 2));
+    second(state, [3, 4, 5]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'INNOCENT' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'INNOCENT' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 6, verdict: 'ABSTAIN' }), true);
+    const resolved = engine.resolveTrial(state); // guilty 2 vs others 3
+    assert.strictEqual(resolved.result, 'SURVIVES');
+    assert.strictEqual(resolved.lynchedId, null);
+    assert.strictEqual(resolved.victory, null);
+    assert.strictEqual(pid(state, 1).isAlive, true);
+    assert.strictEqual(state.winner, null);
+  });
+
+  test('a SURVIVES tie does not block a second nomination that proceeds to VOTE', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather'],
+      { houseRules: { noLynchD1: false } });
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 1, 2));
+    second(state, [3, 4, 5]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'INNOCENT' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'INNOCENT' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 6, verdict: 'ABSTAIN' }), true);
+    const survived = engine.resolveTrial(state); // guilty 2 vs others 3
+    assert.strictEqual(survived.result, 'SURVIVES');
+    assert.ok(engine.startTrial(state, 6, 1), 'a new nomination is allowed after SURVIVES');
+    second(state, [2, 3, 4]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(state.trial.stage, 'VOTE');
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    const lynched = engine.resolveTrial(state); // guilty 2 vs others 0
+    assert.strictEqual(lynched.result, 'LYNCHED');
+    assert.strictEqual(lynched.lynchedId, 6);
+  });
+
+  test('a guilty strict majority lynches and runs the victory check', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    assert.ok(engine.startTrial(state, 6, 1));
+    second(state, [2, 3, 4]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.result, 'LYNCHED');
+    assert.strictEqual(resolved.lynchedId, 6);
+    assert.strictEqual(resolved.victory.winner, 'TOWN');
+    assert.strictEqual(state.phase, 'END');
+  });
+
+  test('ghost token verdicts count in the vote tally and spend the token', () => {
+    const state = assignRoles(['godfather', 'sheriff', 'civilian', 'civilian', 'civilian', 'civilian'],
+      { houseRules: { noLynchD1: false } });
+    act(state, 6, 'godfather', 1, 2); // P2 dies on night 1
+    night(state);
+    assert.strictEqual(pid(state, 2).hasGhostVote, true);
+    engine.beginDay(state); // 5 living: need 3 seconds incl. nominator
+    assert.ok(engine.startTrial(state, 1, 3));
+    second(state, [4, 5]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY', ghostToken: true }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'INNOCENT' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 6, verdict: 'ABSTAIN' }), true);
+    const resolved = engine.resolveTrial(state); // guilty 3 (incl. ghost) vs others 2
+    assert.strictEqual(resolved.result, 'LYNCHED');
+    assert.strictEqual(resolved.lynchedId, 1);
+    assert.strictEqual(pid(state, 2).ghostVoteSpent, true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY', ghostToken: true }), false); // spent
+  });
+
+  test('a lynched Jester still wins and schedules the haunt', () => {
+    const state = assignRoles(['jester', 'sheriff', 'civilian', 'civilian', 'godfather', 'mafioso']);
+    assert.ok(engine.startTrial(state, 1, 2));
+    second(state, [3, 4, 5]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'INNOCENT' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.result, 'LYNCHED');
+    assert.strictEqual(resolved.jesterWin, true);
+    assert.strictEqual(resolved.victory, null);
+    assert.strictEqual(state.jester.haunted, true);
+    assert.strictEqual(state.jester.hauntTarget, null);
+    assert.strictEqual(pid(state, 1).hasGhostVote, false);
+  });
+
+  test('the Executioner wins when the target is lynched', () => {
+    const state = assignRoles(['executioner', 'sheriff', 'civilian', 'civilian', 'civilian', 'godfather']);
+    state.executionerTarget = 4;
+    assert.ok(engine.startTrial(state, 4, 2));
+    second(state, [1, 3, 5]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'GUILTY' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.executionerWin, true);
+    assert.strictEqual(resolved.victory.winner, 'EXECUTIONER');
+    assert.strictEqual(state.phase, 'END');
+  });
+
+  test('a converted Executioner counts as a Jester when lynched', () => {
+    const state = assignRoles(['executioner', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian']);
+    state.executionerTarget = 4;
+    act(state, 6, 'godfather', 2, 4);
+    night(state); // target dies at night -> conversion
+    assert.ok(engine.startTrial(state, 1, 5));
+    second(state, [2, 3, 6]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 5, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 6, verdict: 'GUILTY' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.jesterWin, true);
+    assert.strictEqual(resolved.executionerWin, false);
+    assert.strictEqual(resolved.victory, null);
+    assert.strictEqual(state.jester.haunted, true);
+  });
+
+  test('noLynchD1 blocks a Day-1 lynch when enabled', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather'],
+      { houseRules: { noLynchD1: true } });
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 6, 1));
+    second(state, [2, 3, 4]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.result, 'SURVIVES');
+    assert.strictEqual(pid(state, 6).isAlive, true);
+    assert.strictEqual(state.winner, null);
+  });
+
+  test('a Day-1 lynch is allowed when noLynchD1 is disabled', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather'],
+      { houseRules: { noLynchD1: false } });
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 6, 1));
+    second(state, [2, 3, 4]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.result, 'LYNCHED');
+    assert.strictEqual(pid(state, 6).isAlive, false);
+  });
+
+  test('createGame defaults noLynchD1 to ON unless explicitly disabled', () => {
+    const on = engine.createGame({ playerCount: 6, presetId: 'p1' });
+    assert.strictEqual(on.houseRules.noLynchD1, true);
+    const off = engine.createGame({ playerCount: 6, presetId: 'p1', houseRules: { noLynchD1: false } });
+    assert.strictEqual(off.houseRules.noLynchD1, false);
+  });
+
+  test('with the default ON, a Day-1 trial still runs SECONDS/VOTE and returns a no-lynch result', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 6, 1));
+    second(state, [2, 3, 4]);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    const resolved = engine.resolveTrial(state);
+    assert.strictEqual(resolved.result, 'SURVIVES');
+    assert.strictEqual(pid(state, 6).isAlive, true);
+    assert.strictEqual(state.winner, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// playerLog (per-player detail sheet)
+// ---------------------------------------------------------------------------
+
+describe('playerLog', () => {
+  test('assignRoles writes a set entry per player', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    engine.assignRoles(state, {
+      1: 'sheriff', 2: 'civilian', 3: 'civilian', 4: 'civilian', 5: 'civilian', 6: 'godfather'
+    });
+    assert.ok(state.playerLog['1'].some((e) => e.kind === 'set' && e.at === 'SETUP'));
+    assert.ok(state.playerLog['6'].some((e) => e.kind === 'set' && e.text.includes('Godfather')));
+  });
+
+  test('a recorded night action writes a night-action entry', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 3);
+    assert.ok(state.playerLog['1'].some((e) =>
+      e.kind === 'night-action' && e.at === 'N1' && e.text.includes('P3')));
+  });
+
+  test('re-recording the same action does not duplicate the night-action entry', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 3);
+    act(state, 6, 'godfather', 1, 3);
+    const entries = state.playerLog['1'].filter((e) => e.kind === 'night-action');
+    assert.strictEqual(entries.length, 1);
+  });
+
+  test('a wizard-back re-record with a changed target keeps exactly one night-action entry', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 3);
+    act(state, 6, 'godfather', 1, 4);
+    const entries = state.playerLog['1'].filter((e) => e.kind === 'night-action');
+    assert.strictEqual(entries.length, 1);
+    assert.ok(entries[0].text.includes('P4'), 'the surviving row must describe the newest target');
+    assert.ok(!entries[0].text.includes('P3'), 'the stale target must not survive');
+  });
+
+  test('a night kill writes a death entry with the deathLog cause', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 3);
+    night(state);
+    assert.ok(state.playerLog['3'].some((e) =>
+      e.kind === 'death' && e.at === 'N1' && e.text.includes('killed by the Mafia')));
+  });
+
+  test('a lynch writes death and lynched entries', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather'],
+      { houseRules: { noLynchD1: false } });
+    engine.beginDay(state);
+    assert.ok(engine.startTrial(state, 6, 1));
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
+    engine.resolveTrial(state);
+    assert.ok(state.playerLog['6'].some((e) => e.kind === 'death' && e.at === 'D1'));
+    assert.ok(state.playerLog['6'].some((e) => e.kind === 'lynched'));
+  });
+
+  test('swapRoles writes swap entries for both players', () => {
+    const state = assignRoles(['jailor', 'sheriff', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    engine.swapRoles(state, 1, 3);
+    assert.ok(state.playerLog['1'].some((e) => e.kind === 'swap' && e.at === 'SETUP' && e.text.includes('Godfather')));
+    assert.ok(state.playerLog['3'].some((e) => e.kind === 'swap' && e.at === 'SETUP' && e.text.includes('Jailor')));
+  });
+
+  test('deserialize defaults playerLog for old saves and the game still plays', () => {
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    const legacy = JSON.parse(engine.serialize(state));
+    delete legacy.playerLog;
+    delete legacy.trial.stage;
+    delete legacy.trial.seconds;
+    const restored = engine.deserialize(JSON.stringify(legacy));
+    assert.deepStrictEqual(restored.playerLog, {});
+    assert.strictEqual(restored.trial.stage, null);
+    assert.deepStrictEqual(restored.trial.seconds, []);
+    assert.ok(engine.startTrial(restored, 6, 1));
   });
 });
 
@@ -1072,6 +1848,10 @@ describe('victory conditions', () => {
   test('Town wins when every Mafia player and the SK are dead (via lynch)', () => {
     const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
     assert.ok(engine.startTrial(state, 6, 1));
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
     assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
     assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
     const resolved = engine.resolveTrial(state);
@@ -1167,9 +1947,14 @@ describe('deathLog', () => {
   });
 
   test('a lynch appends a Day entry', () => {
-    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather']);
+    const state = assignRoles(['sheriff', 'civilian', 'civilian', 'civilian', 'civilian', 'godfather'],
+      { houseRules: { noLynchD1: false } });
     engine.beginDay(state);
     assert.ok(engine.startTrial(state, 6, 1));
+    assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 3, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.castVote(state, { voterId: 4, verdict: 'AGREE' }), true);
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
     assert.strictEqual(engine.castVote(state, { voterId: 1, verdict: 'GUILTY' }), true);
     assert.strictEqual(engine.castVote(state, { voterId: 2, verdict: 'GUILTY' }), true);
     engine.resolveTrial(state);

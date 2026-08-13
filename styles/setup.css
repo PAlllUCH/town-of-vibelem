@@ -13,7 +13,7 @@
   min-height: 64px;
 }
 .stepper-num strong { font-size: 1.6rem; line-height: 1; }
-.stepper-num span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+.stepper-num span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 @keyframes bump {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
@@ -61,6 +61,19 @@
   padding: 6px 10px;
   margin: 8px 0;
 }
+.civ-reset {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: .82rem;
+  font-weight: 600;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
+  cursor: pointer;
+  text-decoration: underline;
+}
 
 /* Preset cards */
 .preset-grid { display: flex; flex-direction: column; gap: 8px; }
@@ -68,7 +81,8 @@
   appearance: none;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
+  width: 100%;
   gap: 2px;
   background: var(--bg2);
   border: 2px solid var(--line);
@@ -79,9 +93,9 @@
   text-align: left;
   cursor: pointer;
 }
-.preset-card.selected { border-color: var(--accent); background: rgba(212, 138, 60, .12); }
-.preset-name { font-weight: 700; }
-.preset-tag { color: var(--muted); font-size: .82rem; }
+.preset-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.preset-name { font-weight: 700; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preset-tag { color: var(--muted); font-size: .82rem; white-space: normal; width: 100%; word-break: break-word; min-width: 0; }
 
 /* Toggles */
 .toggle-row {
@@ -117,7 +131,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--text-bright);
   transition: left .15s ease;
 }
 .toggle.on { background: var(--accent); }
@@ -140,7 +154,7 @@
   font-size: .82rem;
   cursor: pointer;
 }
-.layout-card.selected { border-color: var(--accent); background: rgba(212, 138, 60, .12); }
+.layout-card.selected { border-color: var(--accent); background: var(--accent-dim); }
 .layout-icon {
   width: 56px;
   height: 38px;
@@ -169,7 +183,7 @@
   margin: 6px 0;
 }
 .team-rank { color: var(--muted); font-size: .8rem; width: 18px; text-align: right; flex: none; }
-.team-row-name { flex: 1; font-size: .92rem; }
+.team-row-name { flex: 1; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .role-blurb {
   flex-basis: 100%;
   font-size: .75rem;
@@ -196,7 +210,7 @@
 .deck-team-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .deck-count {
   margin-left: auto;
-  background: rgba(212, 138, 60, .14);
+  background: var(--accent-dim);
   border-radius: 999px;
   padding: 2px 10px;
   font-size: .78rem;
@@ -209,12 +223,16 @@
   border-radius: 999px;
   border: 1px solid var(--tc, var(--line));
   color: var(--tc, var(--text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--panel2);
   background: color-mix(in srgb, var(--tc, var(--line)) 14%, transparent);
 }
 
 /* Resume banner */
 .resume-banner {
-  background: rgba(212, 138, 60, .12);
+  background: var(--accent-dim);
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 14px;

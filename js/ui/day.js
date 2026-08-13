@@ -6,13 +6,14 @@
 
   UI.renderGameHeader = function (state, cfg, app) {
     var label = 'Session';
-    if (state.phase === 'NIGHT') label = 'Night ' + Math.max(1, (state.dayNumber || 0) + 1);
+    if (state.phase === 'NIGHT') label = 'Night ' + Math.max(1, state.night.number || 1);
     else if (state.phase === 'MORNING') label = 'Morning ' + Math.max(1, state.dayNumber || 1);
     else if (state.phase === 'DAY') label = 'Day ' + Math.max(1, state.dayNumber || 1);
     else if (state.phase === 'END') label = 'Session Over';
-    return '<div class="card card-head" style="padding:10px 14px;">' +
-      '<span class="tag tag-accent">' + UI.esc(state.phase) + '</span>' +
+    return '<div class="card card-head">' +
       '<strong>' + label + '</strong>' +
+      '<button class="btn btn-sm' + (app.whispersOpen ? ' on' : '') + '" data-action="toggle-whispers">Whispers</button>' +
+      '<button class="btn btn-sm' + (app.claimsOpen ? ' on' : '') + '" data-action="toggle-claims">Claims</button>' +
       '<button class="btn btn-sm" data-action="toggle-seat-overlay">Seats</button>' +
       '<button class="btn btn-sm" data-action="toggle-logs">Log</button></div>' +
       UI.flowStrip(state.phase);
@@ -62,11 +63,15 @@
       ann.deaths.forEach(function (d) {
         html += '<div class="death-card"><div class="death-head">' +
           '<strong>' + UI.esc(d.name) + '</strong><span class="tag tag-bad">DEAD</span></div>' +
-          '<div class="death-role">' + UI.esc(d.roleShown || '?? UNKNOWN ??') + '</div></div>';
+          '<div class="death-role">' + UI.esc(d.roleShown || '?? UNKNOWN ??') + '</div>' +
+          '<div class="death-cause">' + UI.esc(d.cause || '') + '</div></div>';
       });
     } else {
-      html += '<div class="notice">No deaths last night.</div>';
+      html += '<div class="notice ok">No deaths last night.</div>';
     }
+    var freshNight = Math.max(1, (state.night && state.night.number || 1) - 1);
+    html += UI.whisperResultCard(state, app, freshNight);
+    html += '<div class="notice">Read the announcements above to the table, then tap <strong>Begin Day</strong>.</div>';
     html += '</div>';
     return html;
   }
@@ -122,7 +127,19 @@
     });
     if (!holders.length) return '';
     return '<p class="muted small">Ghost tokens: ' +
-      holders.map(function (p) { return UI.esc(p.name); }).join(', ') + '</p>';
+      holders.map(function (p) { return UI.esc(p.name); }).join(', ') +
+      '. Ghost votes spend the token; a revealed Mayor counts as 3.</p>';
+  }
+
+  function secondsTally(state) {
+    var tr = state.trial || {};
+    var needed = Math.floor(UI.living(state.players).length / 2) + 1;
+    var agree = 1;
+    (tr.seconds || []).forEach(function (s) {
+      if (String(s.voterId) === String(tr.accusedId) || String(s.voterId) === String(tr.nominatorId)) return;
+      if (s.agree) agree += 1;
+    });
+    return { agree: agree, needed: needed };
   }
 
   function trialView(state, cfg, app) {
@@ -130,9 +147,17 @@
     var html = '<div class="card"><div class="card-head"><h2>Trial</h2></div>';
     if (app.lastTrialResult) {
       var r = app.lastTrialResult;
-      html += '<div class="notice ' + (r.lynchedId ? 'bad' : 'ok') + '">' +
-        (r.lynchedId ? '<strong>Lynched:</strong> ' + UI.esc(UI.nameOf(state, r.lynchedId)) :
-          '<strong>Acquitted:</strong> no one was lynched') +
+      var msg;
+      if (r.result === 'CANCELLED') {
+        msg = '<strong>Not enough support</strong> &mdash; nomination fell.';
+      } else if (r.result === 'SURVIVES') {
+        msg = '<strong>Not enough guilty votes</strong> - the accused survives.';
+      } else if (r.lynchedId) {
+        msg = '<strong>Lynched:</strong> ' + UI.esc(UI.nameOf(state, r.lynchedId));
+      } else {
+        msg = '<strong>Acquitted:</strong> no one was lynched';
+      }
+      html += '<div class="notice' + (r.result === 'LYNCHED' ? ' notice-critical' : ' ok') + '">' + msg +
         (r.jesterWin ? '<br><strong>The Jester wins!</strong>' : '') +
         (r.executionerWin ? '<br><strong>The Executioner wins!</strong>' : '') +
         (r.victory ? '<br>' + UI.esc(r.victory.winner || 'Victory!') : '') +
@@ -148,11 +173,48 @@
         html += '<p class="wizard-label">Who is accused?</p>' + livingBtns(state, 'pick-acc', app.trialNom);
       } else {
         html += '<button class="btn btn-block" data-action="start-trial">Start Trial</button>';
-        html += '<p class="muted small">At most one lynch per day. Guilty must strictly exceed all other votes.</p>';
+        html += '<p class="muted small">At most one lynch per day. A nomination needs a majority of living players to second it.</p>';
       }
-    } else {
+    } else if (tr.stage === 'SECONDS') {
       html += '<p><strong>Accused:</strong> ' + UI.esc(UI.nameOf(state, tr.accusedId)) +
         ' &nbsp;<strong>Nominated by:</strong> ' + UI.esc(UI.nameOf(state, tr.nominatorId)) + '</p>';
+      var tally = secondsTally(state);
+      var pct = tally.needed > 0 ? Math.round((tally.agree / tally.needed) * 100) : 0;
+      html += '<div class="tally tally-progress" style="--p:' + pct + '">' +
+        '<span class="tally-chip g">SECONDS ' + tally.agree + ' of ' +
+        tally.needed + '</span></div>';
+      html += '<p class="muted small">The nominator counts as agreeing. The nomination needs ' + tally.needed +
+        ' agreeing votes to proceed.</p>';
+      UI.living(state.players).forEach(function (p) {
+        if (String(p.id) === String(tr.accusedId)) return;
+        var isNom = String(p.id) === String(tr.nominatorId);
+        var rec = null;
+        (tr.seconds || []).forEach(function (s) {
+          if (String(s.voterId) === String(p.id)) rec = s;
+        });
+        var agree = isNom ? true : !!(rec && rec.agree);
+        var disagree = !isNom && !!rec && !rec.agree;
+        html += '<div class="voter-row">' +
+          '<span class="voter-name">' + UI.esc(p.name) +
+          (isNom ? ' <span class="muted">(nominator)</span>' : '') + '</span><span class="vote-btns">';
+        if (isNom) {
+          html += '<button class="btn btn-vote on" disabled>Agree</button>';
+        } else {
+          html += '<button class="btn btn-vote' + (agree ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+            UI.esc(p.id) + '" data-verdict="AGREE" data-ghost="0">Agree</button>' +
+            '<button class="btn btn-vote' + (disagree ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
+            UI.esc(p.id) + '" data-verdict="DISAGREE" data-ghost="0">Disagree</button>';
+        }
+        html += '</span></div>';
+      });
+      html += '<button class="btn btn-primary btn-block" data-action="resolve-trial">Resolve Nomination</button>';
+    } else {
+      html += '<div class="notice ok">Nomination accepted &mdash; voting begins.</div>';
+      html += '<p><strong>Accused:</strong> ' + UI.esc(UI.nameOf(state, tr.accusedId)) +
+        ' &nbsp;<strong>Nominated by:</strong> ' + UI.esc(UI.nameOf(state, tr.nominatorId)) + '</p>';
+      var t2 = secondsTally(state);
+      html += '<p class="muted small">Nomination seconded (' + t2.agree + ' of ' + t2.needed +
+        ') - the trial proceeds to a vote.</p>';
       html += tallyChips(state);
       html += ghostTokens(state);
       var voters = [];
@@ -170,7 +232,7 @@
         var key = String(v.p.id) + (v.ghost ? 'g' : 'l');
         var cur = votesBy[key];
         html += '<div class="voter-row' + (v.ghost ? ' ghost-voter' : '') + '">' +
-          '<span class="voter-name">' + UI.esc(v.p.name) + (v.ghost ? ' <span class="muted">(ghost)</span>' : '') + '</span>' +
+          '<span class="voter-name">' + UI.esc(v.p.name) + (v.ghost ? ' <span class="muted small">(ghost &middot; G/I only)</span>' : '') + '</span>' +
           '<span class="vote-btns">' +
           '<button class="btn btn-vote' + (cur === 'GUILTY' ? ' on' : '') + '" data-action="cast-vote" data-voter="' +
           UI.esc(v.p.id) + '" data-verdict="GUILTY" data-ghost="' + (v.ghost ? '1' : '0') + '">Guilty</button>' +
@@ -181,7 +243,6 @@
             UI.esc(v.p.id) + '" data-verdict="ABSTAIN" data-ghost="0">Abstain</button>') +
           '</span></div>';
       });
-      html += '<p class="muted small">Ghost votes spend the ghost token. A revealed Mayor counts as 3.</p>';
     }
     html += '</div>';
     return html;
@@ -205,7 +266,16 @@
   }
 
   function dayView(state, cfg, app) {
+    if (!app.claimRound && (state.dayNumber || 1) === 1) {
+      var savedCR = null;
+      try {
+        var saved = window.APP.loadSave ? window.APP.loadSave() : null;
+        savedCR = saved && saved.ui && saved.ui.claimRound ? saved.ui.claimRound : null;
+      } catch (e) { savedCR = null; }
+      app.claimRound = savedCR || { active: true, idx: 0, picker: null };
+    }
     var html = '';
+    html += UI.renderClaimRound(state, app);
     html += dayTimerView(app);
     html += '<div class="card"><h2>Day Abilities</h2>' + dayAbilities(state) + '</div>';
     if (app.picker) {
@@ -230,7 +300,8 @@
       b += '<button class="btn btn-bar" data-action="picker-cancel">Cancel</button>';
     }
     if (state.trial && state.trial.active && !app.lastTrialResult) {
-      b += '<button class="btn btn-primary btn-bar" data-action="resolve-trial">Resolve Trial</button>';
+      var lbl = state.trial.stage === 'SECONDS' ? 'Resolve Nomination' : 'Resolve Trial';
+      b += '<button class="btn btn-primary btn-bar" data-action="resolve-trial">' + lbl + '</button>';
     }
     b += '<button class="btn btn-primary btn-bar" data-action="end-day">End Day</button>';
     return b;
@@ -254,7 +325,7 @@
       if (exclude != null && String(exclude) === String(p.id)) return;
       html += '<button class="btn btn-actor" data-action="' + action + '" data-target="' + UI.esc(p.id) + '"' +
         (ability ? ' data-ability="' + UI.esc(ability) + '"' : '') + '>' +
-        UI.esc(p.name) + '</button>';
+        UI.esc(p.name) + ' \u00B7 ' + (p.assignedRole ? UI.roleName(p.assignedRole) : '?') + '</button>';
     });
     html += '</div>';
     return html;

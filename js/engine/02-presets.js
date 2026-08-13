@@ -19,44 +19,44 @@
     p1: {
       id: 'p1', name: 'Whispers from the Morgue',
       tagline: 'The town gathers its information from the dead; the Mafia buries the truth.',
-      town: ['jailor', 'undertaker', 'medium', 'doctor', 'sheriff', 'tracker', 'retributionist'],
+      town: ['jailor', 'undertaker', 'medium', 'doctor', 'sheriff', 'tracker', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'janitor', 'consigliere'],
-      neutral: ['amnesiac', 'jester']
+      neutral: ['amnesiac', 'jester', 'spy']
     },
     p2: {
       id: 'p2', name: 'The Poisoned Pint',
       tagline: 'Sabotage: the Mafia cripples the town\'s power roles one drink at a time.',
-      town: ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker'],
+      town: ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'poisoner', 'consort'],
-      neutral: ['drunk', 'witch']
+      neutral: ['drunk', 'witch', 'spy']
     },
     p3: {
       id: 'p3', name: 'The Gunpowder Plot',
       tagline: 'Firepower on both sides: town guns and an unsuppressible night killer.',
-      town: ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort'],
+      town: ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'consort', 'forger'],
-      neutral: ['serialkiller', 'survivor']
+      neutral: ['serialkiller', 'survivor', 'spy']
     },
     p4: {
       id: 'p4', name: 'The Imposter at the Altar',
       tagline: 'A wedding party where the guest of honor (the Mayor) is a target for both the knife and the noose. The Executioner schemes to hang the guest of honor; the town must shield them.',
-      town: ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker'],
+      town: ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'framer', 'consigliere'],
-      neutral: ['jester', 'executioner']
+      neutral: ['jester', 'executioner', 'spy']
     },
     p5: {
       id: 'p5', name: 'The Widow\'s Vigil',
       tagline: 'Mourning and espionage: the Witch and the Poisoner turn knowledge against the town while the dead keep watching.',
-      town: ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist'],
+      town: ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'poisoner', 'blackmailer'],
-      neutral: ['witch', 'survivor']
+      neutral: ['witch', 'survivor', 'spy']
     },
     p6: {
       id: 'p6', name: 'The Clock Strikes Thirteen',
       tagline: 'Chaos at midnight: two night killers and heavy town firepower make every night decisive.',
-      town: ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort'],
+      town: ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'consort', 'forger'],
-      neutral: ['serialkiller', 'drunk']
+      neutral: ['serialkiller', 'drunk', 'spy']
     }
   };
 
@@ -128,12 +128,24 @@
       prompt: 'Lookout, open your eyes. Point to the player you watch.'
     },
     {
+      position: 11, title: 'Witness', roles: ['witness'],
+      prompt: 'Witness, open your eyes. Point to the first player you compare, then point to the second.'
+    },
+    {
       position: 11, title: 'Consigliere', roles: ['consigliere'],
       prompt: 'Consigliere, open your eyes. Point to the player you inspect.'
     },
     {
       position: 11, title: 'Undertaker', roles: ['undertaker'],
       prompt: 'Undertaker, open your eyes. Point to the corpse you inspect.'
+    },
+    {
+      position: 11, title: 'Spy', roles: ['spy'],
+      prompt: 'Spy, open your eyes. Point to the player you watch.'
+    },
+    {
+      position: 11, title: 'Oracle', roles: ['oracle'],
+      prompt: 'Oracle, open your eyes. Point to the player you read.'
     },
     {
       position: 12, title: 'Retributionist', roles: ['retributionist'],

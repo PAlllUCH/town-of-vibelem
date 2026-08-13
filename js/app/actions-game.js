@@ -39,7 +39,16 @@
       targetId: targetId
     };
     if (extra) action.extra = extra;
-    E.recordNightAction(APP.state, action);
+    if (E.recordNightAction(APP.state, action)) {
+      var actions = (APP.state.night && APP.state.night.actions) || [];
+      for (var i = actions.length - 2; i >= 0; i -= 1) {
+        var existing = actions[i];
+        if (existing.position === action.position && existing.roleId === action.roleId &&
+            String(existing.playerId) === String(action.playerId)) {
+          actions.splice(i, 1);
+        }
+      }
+    }
     APP.afterMutation();
   }
 
@@ -97,6 +106,12 @@
       w.pending = { forge: targetId };
       APP.afterMutation();
       return;
+    } else if (role === 'witness') {
+      var picks = (w.pending && w.pending.witness) ? w.pending.witness.slice() : [];
+      if (picks.indexOf(targetId) === -1) picks.push(targetId);
+      w.pending = { witness: picks };
+      APP.afterMutation();
+      return;
     } else {
       recordWizard(role, pid, targetId, undefined);
     }
@@ -136,6 +151,54 @@
     w.pending = null;
     APP.afterMutation();
   }
+
+  function wizWitnessConfirm() {
+    var w = wiz();
+    var picks = (w.pending && w.pending.witness) || [];
+    if (picks.length < 2) {
+      UI.toast('Pick two players to compare.');
+      return;
+    }
+    recordWizard('witness', w.actor.player, picks[0], { secondTarget: picks[1] });
+    w.actor = null;
+    w.pending = null;
+    APP.afterMutation();
+  }
+
+  function whisperDone(playerId, nightNum) {
+    var relayed = APP.app.relayedWhispers || (APP.app.relayedWhispers = {});
+    relayed['N' + (nightNum || 1) + ':' + playerId] = true;
+    APP.afterMutation();
+  }
+
+  function crPatch(patch) {
+    var cr = APP.app.claimRound;
+    if (!cr) return;
+    Object.keys(patch || {}).forEach(function (k) { cr[k] = patch[k]; });
+    APP.afterMutation();
+  }
+
+  function claimRoundOpen() {
+    var cr = APP.app.claimRound;
+    if (!cr) return;
+    var livingP = UI.living(APP.state.players).slice()
+      .sort(function (a, b) { return (a.seat || 0) - (b.seat || 0); });
+    if (cr.idx < livingP.length) cr.picker = livingP[cr.idx].seat;
+    APP.afterMutation();
+  }
+
+  function claimRoundPick(seat, roleId) {
+    var cr = APP.app.claimRound;
+    if (!cr) return;
+    APP.app.claims[Number(seat)] = roleId;
+    cr.picker = null;
+    cr.idx += 1;
+    APP.afterMutation();
+  }
+
+  function claimRoundCancel() { crPatch({ picker: null }); }
+  function claimRoundEdit(seat) { crPatch({ picker: Number(seat) }); }
+  function claimRoundDone() { crPatch({ active: false }); }
 
   function resolveNight() {
     try {
@@ -178,7 +241,7 @@
     if (v && v.winner) APP.state.winner = v.winner;
     else if (APP.state.winner && typeof APP.state.winner === 'object' && APP.state.winner.winner) APP.state.winner = APP.state.winner.winner;
     try {
-      if (APP.state.phase !== 'END') {
+      if (APP.app.endReveal == null) {
         var er = E.endGame(APP.state);
         APP.app.endReveal = er && er.reveal ? er.reveal : null;
       }
@@ -218,8 +281,15 @@
   function resolveTrial() {
     try {
       var res = E.resolveTrial(APP.state);
+      if (res && res.result === 'ACCEPTED') {
+        APP.app.lastTrialResult = null;
+        APP.afterMutation();
+        return;
+      }
       APP.app.lastTrialResult = res || {};
       if (APP.state.trial && APP.state.trial.active) APP.state.trial.active = false;
+      APP.app.trialStage = null;
+      APP.app.trialNom = null;
       APP.afterMutation();
       checkEnd();
     } catch (e) {
@@ -287,6 +357,13 @@
   APP.wizAlert = wizAlert;
   APP.wizMafiaTarget = wizMafiaTarget;
   APP.wizJailorDecision = wizJailorDecision;
+  APP.wizWitnessConfirm = wizWitnessConfirm;
+  APP.whisperDone = whisperDone;
+  APP.claimRoundOpen = claimRoundOpen;
+  APP.claimRoundPick = claimRoundPick;
+  APP.claimRoundCancel = claimRoundCancel;
+  APP.claimRoundEdit = claimRoundEdit;
+  APP.claimRoundDone = claimRoundDone;
   APP.resolveNight = resolveNight;
   APP.beginDay = beginDay;
   APP.checkEnd = checkEnd;

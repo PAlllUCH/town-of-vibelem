@@ -10,6 +10,7 @@ var CORE_ASSETS = [
   './styles/base.css',
   './styles/setup.css',
   './styles/seats.css',
+  './styles/sheets.css',
   './styles/game.css',
   './styles/end.css',
   './styles/reference.css',
@@ -18,8 +19,10 @@ var CORE_ASSETS = [
   './js/engine/02-presets.js',
   './js/engine/03-deck.js',
   './js/engine/04-state.js',
+  './js/engine/04b-start-knowing.js',
   './js/engine/05-night-steps.js',
   './js/engine/06-night-actions.js',
+  './js/engine/06b-night-actions.js',
   './js/engine/07-night-resolution.js',
   './js/engine/07b-night-resolution.js',
   './js/engine/08-ghosts.js',
@@ -38,7 +41,9 @@ var CORE_ASSETS = [
   './js/app/actions-setup.js',
   './js/app/actions-seats.js',
   './js/app/actions-game.js',
+  './js/app/actions-panels.js',
   './js/app/actions.js',
+  './js/app/actions-sheets.js',
   './js/app.js'
 ];
 

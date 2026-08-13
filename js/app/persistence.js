@@ -13,6 +13,10 @@
       wizardIdx: app.wizard ? app.wizard.idx : 0,
       pendingRoles: app.pendingRoles || {},
       names: app.names || {},
+      nightZeroDone: app.nightZeroDone || {},
+      claims: app.claims || {},
+      claimRound: app.claimRound || null,
+      relayedWhispers: app.relayedWhispers || {},
       dayTimerEnds: app.dayTimerEnds || null,
       dayTimerTotal: app.dayTimerTotal || null
     };

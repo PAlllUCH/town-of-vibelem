@@ -6,15 +6,25 @@
   var APP = window.APP;
 
   function selectPreset(id) {
-    APP.cfg.presetId = id;
     var p = E.PRESETS[id];
-    if (p) {
-      APP.cfg.deckConfig = {
-        town: (p.town || []).slice(),
-        mafia: (p.mafia || []).slice(),
-        neutral: (p.neutral || []).slice()
-      };
+    if (!p) return;
+    var target = {
+      town: (p.town || []).slice(),
+      mafia: (p.mafia || []).slice(),
+      neutral: (p.neutral || []).slice()
+    };
+    var cur = APP.cfg.deckConfig || { town: [], mafia: [], neutral: [] };
+    var same = ['town', 'mafia', 'neutral'].every(function (k) {
+      var a = cur[k] || [];
+      var b = target[k];
+      return a.length === b.length && a.every(function (x, i) { return x === b[i]; });
+    });
+    if (!same && typeof window.confirm === 'function' &&
+        !window.confirm('Switching presets will reset your deck edits. Continue?')) {
+      return;
     }
+    APP.cfg.presetId = id;
+    APP.cfg.deckConfig = target;
   }
 
   function addRole(team) {
@@ -99,6 +109,11 @@
     bumpStepper(btn);
   }
 
+  function civReset() {
+    APP.cfg.civilians = null;
+    APP.refreshSetup();
+  }
+
   function bumpStepper(btn) {
     if (!btn) return;
     var action = btn.getAttribute('data-action') || '';
@@ -163,6 +178,9 @@
       APP.app.namingMode = false;
       APP.app.pendingRoles = (data.ui && data.ui.pendingRoles) || {};
       APP.app.names = (data.ui && data.ui.names) || {};
+      APP.app.nightZeroDone = (data.ui && data.ui.nightZeroDone) || {};
+      APP.app.claims = (data.ui && data.ui.claims) || {};
+      APP.app.relayedWhispers = (data.ui && data.ui.relayedWhispers) || {};
       APP.app.dayTimerEnds = (data.ui && data.ui.dayTimerEnds) || null;
       if (APP.app.dayTimerEnds && APP.app.dayTimerEnds <= Date.now()) APP.app.dayTimerEnds = null;
       APP.app.dayTimerTotal = (data.ui && data.ui.dayTimerTotal) || null;
@@ -200,6 +218,7 @@
   APP.teamDec = teamDec;
   APP.civInc = civInc;
   APP.civDec = civDec;
+  APP.civReset = civReset;
   APP.bumpStepper = bumpStepper;
   APP.startGame = startGame;
   APP.newGame = newGame;

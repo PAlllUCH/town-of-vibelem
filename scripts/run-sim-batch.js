@@ -543,6 +543,11 @@ function runTrial(state, models, dayInfo) {
   const nominator = townAlive.find(function (p) { return p.assignedRole === 'sheriff'; }) || pick(townAlive);
   if (!nominator || !engine.startTrial(state, accused.id, nominator.id)) return null;
   state.players.forEach(function (p) {
+    if (p.isAlive && p.id !== accused.id) engine.castVote(state, { voterId: p.id, verdict: 'AGREE', ghostToken: false });
+  });
+  const accepted = engine.resolveTrial(state);
+  if (!accepted || accepted.result !== 'ACCEPTED') return null;
+  state.players.forEach(function (p) {
     if (p.isAlive) {
       const v = livingVote(state, models, p, accused);
       if (v) engine.castVote(state, { voterId: p.id, verdict: v, ghostToken: false });

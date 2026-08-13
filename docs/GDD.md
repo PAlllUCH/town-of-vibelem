@@ -80,6 +80,10 @@ General rules that apply to every role:
 | **Deputy** | Town Killing | Once per game, during the day, publicly shoot one living player; they die immediately. If the victim was Town-aligned, the Deputy dies of guilt at the start of the following night. Inheritance: when the Sheriff dies while the Deputy is alive, the Deputy permanently inherits the Sheriff's badge and gains the nightly Sheriff check (in addition to the day shot, if unused). |
 | **Tracker** | Town Investigative | Each night, choose a living player and learn which player, if any, they targeted with a night action that night. If they targeted no one, the Tracker learns "no one". |
 | **Lookout** | Town Investigative | Each night, choose a living player and learn which players targeted them with a night action that night. If nobody visited them, the Lookout learns "no one". |
+| **Witness** | Town Investigative | Each night, choose **two living players** and learn whether they share an alignment: "Both Town", "Both Mafia", "Both Neutral", or "Different alignments". The comparison uses threat-membership triage: Town team vs Mafia team vs Neutral. The Serial Killer counts as Mafia for this check (the Nemesis rule: the SK is kill-aligned and the Witness compares threat-membership). Spy, Jester, Executioner, Survivor, The Drunk, Amnesiac, and the Witch count as Neutral regardless of the Witch's declared side. Dead players can still be compared: the check reads their last assigned role, so a corpse's alignment is the alignment they held at death. The result inverts if the Witness is Drunk (Section 6.1). The Witch may control the Witness: only the first pick is redirected, the second pick stays, and the Witness learns the pair (redirected target, second pick). |
+| **Oracle** | Town Investigative | **Night 1 only.** Choose a living player: learn whether they are **TOWN** or **NOT TOWN** (the alignment of their team: Town vs non-Town). The result inverts if the Oracle is Drunk. The Witch may control the pick: the read is redirected to the Witch's chosen target. After Night 1, the Oracle is a plain civilian with no further abilities and never wakes again (Section 5.1). |
+| **Washerwoman** | Town Support | **Start-knowing, no night action.** You start knowing that one of two specified players is a particular Townsfolk role. At deal time the app computes a pair of players and a named (non-Civilian) Town role in the deck that one of them holds, and relays the claim privately during the prep phase (Night Zero); the claim is written to the Washerwoman's player log as an info entry at SETUP. The Washerwoman never wakes at night. If the deck holds no named Town role besides the Washerwoman's own, the app still relays a claim (the Blood on the Clocktower misregistration fallback): it picks the first player among the named Town players when any exist (otherwise two random players) and claims a named Town role present in the deck, preferring one the first player does not hold; if no such role exists the claim defaults to a Civilian. The claim always sounds like a plausible townsfolk claim and never names a Mafia or Neutral role as the claimed role. The claim is a snapshot of the deal: it never changes when roles are swapped, and it is recomputed only when the roles are dealt again (Section 4.1). |
+| **Chef** | Town Support | **Start-knowing, no night action.** You start knowing how many pairs of adjacent evil players there are in the seat circle. At deal time the app counts the adjacent seat pairs (seat i and seat i+1, including the wrap-around seat n and seat 1) in which **both** players are evil, and relays the count privately during the prep phase (Night Zero); the count is written to the Chef's player log as an info entry at SETUP. **Evil** is defined as Mafia-aligned (Section 9.1, including a Witch who sides with Mafia) or the Serial Killer. The Chef never wakes at night. The count is a snapshot of the deal: it never changes when roles are swapped, and it is recomputed only when the roles are dealt again (Section 4.1). |
 | **Escort** | Town Support | Each night, choose a living player to roleblock: their night action fails that night. |
 | **Retributionist** | Town Support | Once per game, at night, choose a dead player to revive. The revived player returns to life at the next morning with their role, abilities, and vote intact, and the revival is announced publicly. Cleaned corpses may be revived. See Section 8 for the ghost vote token. |
 | **Veteran** | Town Killing | Up to three times per game, at the start of a night, declare ALERT. While alert, every player who visits the Veteran with a night action dies (Unstoppable) and their action is void, and the Veteran cannot be killed that night. The alert cannot be roleblocked and is not corrupted by drunkenness. |
@@ -107,6 +111,7 @@ General rules that apply to every role:
 |---|---|---|
 | **Serial Killer** | Neutral Killing | Each night, choose a living player to kill (Basic attack). Night immune: Basic defense blocks Basic attacks. Reads SUSPICIOUS to the Sheriff. Wins when last standing or holding majority (Section 9). |
 | **Survivor** | Neutral Benign | No ability. Wins if alive at game end. |
+| **Spy** | Neutral Benign | Each night, choose a living player and learn the team (Town / Mafia / Neutral) of every player who visited them that night; if nobody visited them, you learn "no one". If the Spy is Drunk, the learned teams are random. Wins if alive at game end (shares the win with whoever triggered the end). |
 | **Jester** | Neutral Evil | No ability. Wins immediately when lynched: the Jester wins their personal victory on the spot, but the game continues for everyone else. The Jester becomes a taunting ghost: a ghost that may speak to and mock living players at any time, an exception to the normal ghost rules (Section 8), and receives no ghost vote token (Section 8.4) because they have already won. Haunt: at the start of the night following the lynch, the Jester ghost may choose one player who voted Guilty in the lynch trial; that player dies by an Unstoppable attack at the start of that night, and the death is announced at the next morning as haunted by the Jester. The haunt fires only if the game continues to the next night. |
 | **Witch** | Neutral Evil | Each night, after the Poisoner, choose a living player to control and a target: the controlled player's targeting night action is redirected to that target. May control any living player except a player who is currently jailed (the Jailor's jail target for the night; if the Jailor jails the Witch's controlled player, the control fails). On a successful control, the Witch learns the exact role of the controlled player. Controlling the Godfather redirects the Mafia kill target to her chosen target, and the Mafia kill still resolves per the Mafia kill rules (Section 5.4). Controlling the Serial Killer redirects his kill to her chosen target. Controlling the Jailor redirects only the jail target; the EXECUTE or SPARE decision stays with the Jailor. If the controlled player has no targeting night ability (or their action fails), the control does nothing but still reveals the role. Victory: sides with a faction (Mafia by default, Town if declared); wins when that faction wins (Section 9). |
 | **The Drunk** | Neutral Benign | No ability. Permanently Drunk: all abilities are disabled (Section 6). Wins if alive at game end. |
@@ -150,14 +155,14 @@ Equivalent rules:
 1. Look up the player count in the Ratio Table (Section 3) to get the required number of Town, Mafia, and Neutral slots.
 2. Fill each team's slots by drawing down that team's priority list from the chosen preset, top to bottom.
 3. If extra Town slots are needed beyond the listed Town roles, fill them with **Civilians**.
-4. Every Mafia list contains exactly 4 roles and every Neutral list exactly 2 roles, so no team list ever runs short in the supported 6 to 15 player range.
+4. Every Mafia list contains exactly 4 roles and every Neutral list exactly 3 roles, so no team list ever runs short in the supported 6 to 15 player range.
 5. The app shuffles the resulting deck and assigns seat numbers; priority order determines which roles are included, not who sits where.
 
 ### 4.2 Preset 1: "Whispers from the Morgue"
 
 The town gathers its information from the dead; the Mafia buries the truth.
 
-- **Town priority**: Jailor, Undertaker, Medium, Doctor, Sheriff, Tracker, Retributionist, then Civilians.
+- **Town priority**: Jailor, Undertaker, Medium, Doctor, Sheriff, Tracker, Retributionist, Oracle, Witness, Washerwoman, Chef, then Civilians.
 - **Mafia priority**: Godfather, Mafioso, Janitor, Consigliere.
 - **Neutral priority**: Amnesiac, Jester.
 
@@ -165,7 +170,7 @@ The town gathers its information from the dead; the Mafia buries the truth.
 
 Sabotage: the Mafia cripples the town's power roles one drink at a time.
 
-- **Town priority**: Jailor, Doctor, Sheriff, Lookout, Escort, Tracker, then Civilians.
+- **Town priority**: Jailor, Doctor, Sheriff, Lookout, Escort, Tracker, Oracle, Witness, Washerwoman, Chef, then Civilians.
 - **Mafia priority**: Godfather, Mafioso, Poisoner, Consort.
 - **Neutral priority**: The Drunk, Witch.
 
@@ -173,7 +178,7 @@ Sabotage: the Mafia cripples the town's power roles one drink at a time.
 
 Firepower on both sides: town guns and an unsuppressible night killer.
 
-- **Town priority**: Jailor, Deputy, Veteran, Vigilante, Doctor, Escort, then Civilians.
+- **Town priority**: Jailor, Deputy, Veteran, Vigilante, Doctor, Escort, Oracle, Witness, Washerwoman, Chef, then Civilians.
 - **Mafia priority**: Godfather, Mafioso, Consort, Forger.
 - **Neutral priority**: Serial Killer, Survivor.
 
@@ -181,7 +186,7 @@ Firepower on both sides: town guns and an unsuppressible night killer.
 
 A wedding party where the guest of honor (the Mayor) is a target for both the knife and the noose. The Executioner schemes to hang the guest of honor; the town must shield them.
 
-- **Town priority**: Jailor, Mayor, Doctor, Sheriff, Lookout, Tracker, then Civilians.
+- **Town priority**: Jailor, Mayor, Doctor, Sheriff, Lookout, Tracker, Oracle, Witness, Washerwoman, Chef, then Civilians.
 - **Mafia priority**: Godfather, Mafioso, Framer, Consigliere.
 - **Neutral priority**: Jester, Executioner.
 
@@ -189,7 +194,7 @@ A wedding party where the guest of honor (the Mayor) is a target for both the kn
 
 Mourning and espionage: the Witch and the Poisoner turn knowledge against the town while the dead keep watching.
 
-- **Town priority**: Jailor, Sheriff, Undertaker, Medium, Doctor, Retributionist, then Civilians.
+- **Town priority**: Jailor, Sheriff, Undertaker, Medium, Doctor, Retributionist, Oracle, Witness, Washerwoman, Chef, then Civilians.
 - **Mafia priority**: Godfather, Mafioso, Poisoner, Blackmailer.
 - **Neutral priority**: Witch, Survivor.
 
@@ -197,11 +202,23 @@ Mourning and espionage: the Witch and the Poisoner turn knowledge against the to
 
 Chaos at midnight: two night killers and heavy town firepower make every night decisive.
 
-- **Town priority**: Jailor, Vigilante, Veteran, Deputy, Doctor, Escort, then Civilians.
+- **Town priority**: Jailor, Vigilante, Veteran, Deputy, Doctor, Escort, Oracle, Witness, Washerwoman, Chef, then Civilians.
 - **Mafia priority**: Godfather, Mafioso, Consort, Forger.
 - **Neutral priority**: Serial Killer, The Drunk.
 
-### 4.8 Worked example
+### 4.8 Deck reach
+
+The N1-only Oracle is the town's strongest first-day information, and it is single-use: once Night 1 passes it becomes a plain civilian. Each preset therefore places it directly after its core roles so it reaches the biggest preset games: the Oracle enters every 13+ player game, and Presets 2-6 also field it from 11 players. The nightly Witness sits directly behind it: the Witness enters every 14+ player game (Presets 2-6 also from 13 players), giving the biggest games a second recurring investigator. The start-knowing roles (Washerwoman, Chef) sit behind the Witness: the Washerwoman enters Presets 2-6 from 14 players and is override-only in Preset 1, and the Chef is override-only in every preset. The Spy sits third in every Neutral list behind the 2-slot Neutral cap and is override-only in every preset. In short, the priority order is deliberate: the single-shot first-day Oracle first, the recurring nightly Witness next, the start-knowing roles last, so the rarest information never rots in an unused deck slot.
+
+| Role | Preset reach |
+|---|---|
+| Oracle | Every preset from 13 players; Presets 2-6 also from 11 |
+| Witness | Every preset from 14 players; Presets 2-6 also from 13 |
+| Washerwoman | Presets 2-6 from 14 players; Preset 1 override-only |
+| Chef | Override-only in every preset |
+| Spy | Override-only in every preset |
+
+### 4.9 Worked example
 
 10 players, Preset 1: the table gives 6 Town, 3 Mafia, 1 Neutral. The deck is Jailor, Undertaker, Medium, Doctor, Sheriff, Tracker (Town); Godfather, Mafioso, Janitor (Mafia); Amnesiac (Neutral). 8 players, Preset 4: 5 Town, 2 Mafia, 1 Neutral: Jailor, Mayor, Doctor, Sheriff, Lookout (Town); Godfather, Mafioso (Mafia); Jester (Neutral).
 
@@ -231,8 +248,11 @@ Actions are recorded in the scripted night wizard order (the moderator wakes pla
 | 11 | **Sheriff** | Checks one player: SUSPICIOUS if Mafia-aligned (except the Godfather) or the Serial Killer, INNOCENT otherwise; inverted if the Sheriff is Drunk. The Deputy with the inherited badge performs this check from the night after the Sheriff dies. |
 | 11 | **Tracker** | Follows one player and learns which player, if any, they targeted that night. |
 | 11 | **Lookout** | Watches one player and learns which players targeted them that night. |
+| 11 | **Witness** | Compares two chosen players and learns whether they share an alignment: "Both Town", "Both Mafia", "Both Neutral", or "Different alignments" (threat-membership triage, Section 2.1). The result inverts if the Witness is Drunk. Dead targets are compared by their last assigned role. |
 | 11 | **Consigliere** | Inspects one player and learns their exact role (a false role if Drunk). |
 | 11 | **Undertaker** | Inspects one corpse and learns its true role (unaffected by drunkenness; fails on Janitor-cleaned corpses). |
+| 11 | **Oracle** | Reads one player: learns TOWN or NOT TOWN (the alignment of their team). **Night 1 only**; inverted if the Oracle is Drunk. |
+| 11 | **Spy** | Watches one player: learns the team (Town / Mafia / Neutral) of every player who visited them that night (random teams if the Spy is Drunk). |
 | 12 | **Retributionist** | Records the corpse to revive (once per game); the revival takes effect at morning. |
 | 12 | **Amnesiac** | Once per game, records the corpse whose role is remembered; permanently becomes that role. |
 | 13 | **Medium and Ghosts** | Ghosts write in the Ghost Ledger; the alive Medium reads it for 30 seconds; a dead Medium whispers with one living target for 60 seconds (Section 8). |
@@ -243,6 +263,7 @@ Notes on order:
 - The **Veteran's alert** is declared before the night begins (a pre-night step, position 0). It is a defensive state, not an action in the order.
 - The **Jester's haunt** also resolves at the start of the night, at the same point as the Veteran's alert: if the Jester was lynched the previous day, the Jester ghost may choose one player who voted Guilty in that lynch trial, and that player dies by an Unstoppable attack (Section 2.3). The haunt fires only if the game continued to this night.
 - **Day abilities** (Vigilante shot, Deputy shot, Mayor reveal) are used during the day phase, never at night.
+- **N1-only roles** (Oracle) wake only on Night 1, at their position-11 step. On every later night the app does not generate their step; the role becomes a plain civilian. The start-knowing roles (Washerwoman, Chef) have no step in any night: their information was already relayed at the prep phase.
 - Deaths resolve immediately at their position: a player who dies at position 3 is dead for every later step, and their recorded later actions are void.
 
 ### 5.2 Attack and defense model
@@ -298,7 +319,7 @@ Every kill in the game is one of two attack types; every target has one of two d
 
 ### 6.1 What "Drunk" is
 
-Drunk is a status effect that corrupts specific abilities. It has exactly two sources and exactly four effects.
+Drunk is a status effect that corrupts specific abilities. It has exactly two sources and exactly six effects.
 
 **Sources**
 
@@ -312,11 +333,14 @@ Drunk is a status effect that corrupts specific abilities. It has exactly two so
 | Drunk player | Effect |
 |---|---|
 | Sheriff | The check result is inverted: INNOCENT becomes SUSPICIOUS and vice versa. |
+| Oracle | The read is inverted: TOWN becomes NOT TOWN and vice versa. |
+| Spy | The learned teams are random (one random team per visitor). |
 | Consigliere | The learned role is false: a random role of a different alignment is shown instead. |
+| Witness | The comparison result inverts: "Both Town" / "Both Mafia" / "Both Neutral" become "Different alignments", and a "Different alignments" result becomes one of "Both Town", "Both Mafia", or "Both Neutral" chosen at random. |
 | Janitor | The clean action fails: the corpse is not cleaned. |
 | Doctor | The protection fails: the chosen player is not protected. |
 
-No other ability is affected by drunkenness. A Drunk Tracker, Lookout, Escort, Jailor, Poisoner, Witch, Framer, Blackmailer, Undertaker, Medium, or Retributionist acts normally. Drunkenness does not disable voting or speaking.
+No other ability is affected by drunkenness. A Drunk Tracker, Lookout, Escort, Jailor, Poisoner, Witch, Framer, Blackmailer, Undertaker, Medium, Retributionist, Washerwoman, or Chef acts normally. Drunkenness does not disable voting or speaking.
 
 ### 6.2 The Drunk role
 
@@ -324,7 +348,7 @@ A player holding **The Drunk** role is permanently Drunk, which means **all of t
 
 - The Drunk has no night action and no day action.
 - The Drunk cannot gain or use any ability from any source, and no rule or ability can restore them.
-- The four corruption effects above describe what happens when specific roles are Drunk; a Drunk-role player never has those roles' abilities, so nothing to corrupt exists.
+- The corruption effects above describe what happens when specific roles are Drunk; a Drunk-role player never has those roles' abilities, so nothing to corrupt exists.
 
 **What this means for the game**: The Drunk is a purely social role. They talk, bluff, argue, and vote like anyone else, and their only path to victory is surviving until the game ends (Section 9). Every other player should know that the Drunk has no powers, and the moderator enforces that the Drunk never acts.
 
@@ -383,7 +407,7 @@ A player holding **The Drunk** role is permanently Drunk, which means **all of t
 ### 8.4 Ghost vote tokens
 
 - Each player receives **exactly one ghost vote token**, granted at their first death, and the app tracks it. The Jester receives no ghost vote token: a lynched Jester has already won (Section 2.3).
-- During any single day trial, a ghost may spend their token to cast **one extra vote** (Guilty or Innocent). The token is spent forever.
+- During the **vote stage of a day trial**, a ghost may spend their token to cast **one extra vote** (Guilty or Innocent). Ghosts may never second a nomination: they are dead (Section 12.3). The token is spent forever.
 - A revived player returns to life and votes normally; they lose their token while alive (spent or unspent). If they die again, they do **not** receive a second token.
 
 ---
@@ -398,7 +422,7 @@ Victory is computed from living players only. Each living player belongs to exac
 |---|---|
 | **Town-aligned** | All Town roles; an Amnesiac who remembered a Town role; a Witch who declared she sides with Town. |
 | **Mafia-aligned** | Godfather; Mafioso; an Amnesiac who remembered a Mafia role; a Witch who sides with Mafia (including a Witch who never declared, since the default is Mafia). |
-| **Neutral** | Serial Killer; Jester; Executioner; Survivor; The Drunk; an Amnesiac who has not yet remembered. Neutrals count toward no faction's majority. |
+| **Neutral** | Serial Killer; Jester; Executioner; Survivor; The Drunk; Spy; an Amnesiac who has not yet remembered. Neutrals count toward no faction's majority. |
 
 ### 9.2 Individual victory conditions
 
@@ -424,6 +448,7 @@ Checked (a) immediately after a lynch resolves, (b) immediately after the mornin
 | Role | Condition |
 |---|---|
 | **Survivor** | Wins if alive when the game ends (shares the win with whoever triggered the end). |
+| **Spy** | Wins if alive when the game ends (shares the win with whoever triggered the end). |
 | **The Drunk** | Wins if alive when the game ends (shares the win with whoever triggered the end). |
 | **Witch** | Wins when the faction she sides with wins: Mafia by default, Town if she declared Town. If she sides with Mafia, she counts as Mafia-aligned; if Town, as Town-aligned. |
 | **Amnesiac** | Wins with the team of the remembered role. If the game ends before the Amnesiac remembers, the Amnesiac wins if alive at game end. |
@@ -441,19 +466,19 @@ Examples:
 - All Mafia-aligned players are dead but the SK lives: Town's condition is not met; the game continues.
 - Mafia count >= Town count and the SK is dead: the Mafia condition is checked before Town and wins.
 
-Living Survivors and The Drunk share the win in every case.
+Living Survivors, The Drunk, and the Spy share the win in every case.
 
 ---
 
 ## 10. House Rule Toggles
 
-The moderator app offers three toggles, selectable at setup:
+The moderator app offers three toggles, selectable at setup. The default values are: **No Kill on Night One ON**, **No Lynch on Day One ON**, **Classic Reveal Mode OFF**.
 
-| Toggle | Effect |
-|---|---|
-| **No Kill on Night One** | All night kills on night 1 are void: the Mafia kill, the Serial Killer's kill, the Jailor's execution, and the Veteran's alert kills resolve to nothing (an alerted Veteran is still safe). Poisoning, roleblocking, blackmailing, framing, protection, investigation, cleaning, forging, controlling, reviving, and the seance resolve normally. Day kills (Vigilante, Deputy) are unaffected. |
-| **No Lynch on Day One** | No trial may end in a lynch on day 1. The town may still discuss and hold informational votes, and day abilities still work. |
-| **Classic Reveal Mode** | Replaces mystery deaths: the morning announcement shows each victim's **true role**; the moderator reads their last will from the player's card. A Janitor-cleaned corpse still shows as unknown and still cannot be inspected by the Undertaker. The Undertaker's private inspection remains available. |
+| Toggle | Default | Effect |
+|---|---|---|
+| **No Kill on Night One** | ON | All night kills on night 1 are void: the Mafia kill, the Serial Killer's kill, the Jailor's execution, and the Veteran's alert kills resolve to nothing (an alerted Veteran is still safe). Poisoning, roleblocking, blackmailing, framing, protection, investigation, cleaning, forging, controlling, reviving, and the seance resolve normally. Day kills (Vigilante, Deputy) are unaffected. |
+| **No Lynch on Day One** | ON | No trial may end in a lynch on day 1. The town may still discuss, nominate, second, and hold informational votes, and day abilities still work. |
+| **Classic Reveal Mode** | OFF | Replaces mystery deaths: the morning announcement shows each victim's **true role**; the moderator reads their last will from the player's card. A Janitor-cleaned corpse still shows as unknown and still cannot be inspected by the Undertaker. The Undertaker's private inspection remains available. |
 
 ---
 
@@ -478,7 +503,7 @@ There is no post-game play: victory ends the game on the spot. The one exception
 |---|---|
 | **Setup** | Select player count (6 to 15) and preset (1 to 6); toggle house rules (Section 10). The app shows the computed alignment ratio and a deck preview. |
 | **Deck generation** | The app fills team slots from the preset's priority lists (Section 4), appends Civilians to fill Town overflow, ensures no duplicate roles, and shuffles the deck. If the deck contains the Executioner, the app secretly assigns a Town-aligned target. If it contains the Godfather, the app shows the moderator three Town bluff roles, chosen from Town roles NOT in the deck, to whisper to the Godfather at role dealing. If it contains the Witch, her victory side defaults to Mafia (editable before the game starts). |
-| **Role dealing** | The moderator deals one role per player in private (face-down cards or a one-at-a-time app reveal). Each player knows only their own role. The moderator records names and seat numbers. The Executioner is told their target privately; the Godfather is whispered their three Town bluff roles; the Witch is asked (in private) whether she sides with Town or stays with Mafia by default. |
+| **Role dealing** | The moderator deals one role per player in private (face-down cards or a one-at-a-time app reveal). Each player knows only their own role. The moderator records names and seat numbers. The Executioner is told their target privately; the Godfather is whispered their three Town bluff roles; the Witch is asked (in private) whether she sides with Town or stays with Mafia by default. If the deck contains the Washerwoman or the Chef, the moderator relays their start-knowing claim or count privately during the prep phase (Night Zero), from the player's log (Section 2.1). |
 | **Night wizard** | The scripted sequence below. The app records every target, resolves the night (Section 5), and prepares the morning announcement. |
 | **Seat grid** | One tile per player, showing name and moderator-only role, with status tags: [ALIVE], [GHOST], [DRUNK], [INHERITED SHERIFF], plus [JAILED], [PROTECTED], [POISONED], [ALERT], [REVEALED] (Mayor), and [CLEANED] as applicable. |
 | **Day phase** | Morning announcements (deaths, with wills read from the players' cards, revivals, badge inheritance); open discussion; whisper windows (Section 12.3); day abilities (Vigilante secret shot, max 3 per game, Deputy public shot, Mayor reveal); trials and voting as described in 12.3; victory checks after the lynch, after any day kill, and after the morning announcements. |
@@ -496,13 +521,14 @@ There is no post-game play: victory ends the game on the spot. The one exception
 - Open discussion follows. Day abilities may be used at any point: the Vigilante signals a secret shot to the moderator (max 3 shots per game); the Deputy's shot is public; the Mayor may reveal. **Victory is checked immediately after any day kill**, such as a Vigilante shot or a Deputy shot.
 - At any point during the day, the moderator may call a **two-minute whisper window**: any two living players may pair up and talk privately, roaming the room. Ghosts may not join, and blackmailed players may not join.
 - A **blackmailed player** cannot speak during the day: no table talk, no whisper window, no trial defense. They may still vote by hand gesture and may still use gesture-based day abilities (Section 2.2).
-- **Trial**: a living player nominates another living player. The accused may defend (unless blackmailed). Then every living player votes **Guilty**, **Innocent**, or **Abstain** by raised hand or voice. Ghosts may spend their ghost vote token to add one extra Guilty or Innocent vote (Section 8). A revealed Mayor's vote counts as 3.
-- **Majority counting** (the app does this automatically): a player is lynched if the number of Guilty votes strictly exceeds the number of all other votes (Innocent + Abstain, including ghost votes). Otherwise the accused is acquitted.
+- **Trial (two stages)**: a living player nominates another living player; trials are allowed from Day 1. The accused may defend (unless blackmailed). **Seconding**: every living player except the accused is asked whether they agree with the nomination; the nominator counts as already agreeing. The nomination proceeds to a vote iff the agree count is a **strict majority of all living players** (agree >= floor(living / 2) + 1, the nominator included: 6 living need 4, 5 living need 3). If the nomination is not accepted, it is cancelled, nobody dies, and the day continues; a new nomination may be made. **Vote**: after a successful seconding, every living player votes **Guilty**, **Innocent**, or **Abstain** by raised hand or voice. Ghosts may spend their ghost vote token to add one extra Guilty or Innocent vote in the vote stage (Section 8.4). A revealed Mayor's vote counts as 3.
+- **Majority counting** (the app does this automatically): the accused is lynched if the number of Guilty votes strictly exceeds the number of all other votes (Innocent + Abstain, including ghost votes). Ties acquit the accused and the day continues. Otherwise the accused is acquitted.
+- **Per-player action log**: the app keeps a per-player log (`state.playerLog`) for the moderator's detail sheet: role assignment and swaps, night actions, status changes (poison, jail, blackmail, inheritance, promotion, haunt, revival), trial nominations, verdicts, and lynches. Every privately relayed information result is logged too, as an `info` entry on the actor: Sheriff checks, Tracker follows, Lookout watches, Witness comparisons, Consigliere inspections, Undertaker corpse inspections, the Witch's learned roles, Spy watchers, and Oracle reads. The Washerwoman's and Chef's start-knowing claims are logged as `info` entries at SETUP on their own players during the prep phase. A result that was voided by a roleblock is logged with "no result (roleblocked)"; a result corrupted by drunkenness is logged with the corrupted wording (Section 6).
 - At most **one lynch per day**. After a lynch, or if the town votes to abstain as a whole, or when the moderator calls time, the day ends and night begins. Victory is checked after every lynch, after any day kill, and after the morning death announcements.
 
 ### 12.4 The night wizard script
 
-The moderator reads this aloud every night. Bracketed instructions are for the moderator and are handled by the app; the wizard is generated from the living roles, so empty steps are skipped.
+The moderator reads this aloud every night. Bracketed instructions are for the moderator and are handled by the app; the wizard is generated from the living roles, so empty steps are skipped. The N1-only step (Oracle) is generated on Night 1 only.
 
 **Position 0. Veteran alert** (pre-night): "Veteran, open your eyes. Are you on alert tonight? Signal yes or no." Record the choice (max 3 alerts per game). (If the Jester was lynched yesterday and the game continued, resolve the haunt now: the Jester ghost may point to one player who voted Guilty in that lynch trial; that player dies by an Unstoppable attack at the start of the night.) "Veteran, close your eyes."
 
@@ -536,9 +562,15 @@ The moderator reads this aloud every night. Bracketed instructions are for the m
 
 **Position 11. Lookout**: "Lookout, open your eyes. Point to the player you watch." (Record; deliver the result by gesture or app display.) "Lookout, close your eyes."
 
+**Position 11. Witness**: "Witness, open your eyes. Point to the first player you compare, then point to the second." (Record both targets; deliver the result by gesture or app display: Both Town, Both Mafia, Both Neutral, or Different alignments. Dead targets may be pointed to; the comparison uses their last assigned role. The result inverts if the Witness is Drunk. If the Witch controls the Witness, only the first pick is redirected; the second pick stays.) "Witness, close your eyes."
+
 **Position 11. Consigliere**: "Consigliere, open your eyes. Point to the player you inspect." (Record; deliver the exact role by gesture or app display. A false role is delivered if the Consigliere is Drunk.) "Consigliere, close your eyes."
 
 **Position 11. Undertaker**: "Undertaker, open your eyes. Point to the corpse you inspect." (Record; deliver the true role by gesture or app display. Unaffected by drunkenness; fails on Janitor-cleaned corpses.) "Undertaker, close your eyes."
+
+**Position 11. Spy**: "Spy, open your eyes. Point to the player you watch." (Record; deliver the result by gesture or app display: the team of every player who visited them, or no one. Random teams if the Spy is Drunk.) "Spy, close your eyes."
+
+**Position 11. Oracle** (Night 1 only): "Oracle, open your eyes. Point to the player you read." (Record; deliver the result by gesture or app display: TOWN or NOT TOWN. The result inverts if the Oracle is Drunk.) "Oracle, close your eyes."
 
 **Position 12. Retributionist**: "Retributionist, open your eyes. Point to the corpse you revive." (Record; once per game.) "Retributionist, close your eyes."
 

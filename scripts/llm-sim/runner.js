@@ -599,6 +599,18 @@ function applyDayShots(ctx, decisions) {
   }
 }
 
+function secondTrial(ctx) {
+  const state = ctx.state;
+  if (!state.trial.active) return false;
+  state.players.forEach(function (p) {
+    if (p.isAlive && p.id !== state.trial.accusedId) {
+      engine.castVote(state, { voterId: p.id, verdict: 'AGREE', ghostToken: false });
+    }
+  });
+  const res = engine.resolveTrial(state);
+  return res && res.result === 'ACCEPTED';
+}
+
 async function runVotes(ctx, dayInfo) {
   const state = ctx.state;
   let accusedId = state.trial.active ? state.trial.accusedId : null;
@@ -626,6 +638,7 @@ async function runVotes(ctx, dayInfo) {
     if (!state.trial.active) return;
     accusedId = state.trial.accusedId;
   }
+  if (!secondTrial(ctx)) return;
   const batch = await collectVoteBatch(ctx, dayInfo, accusedId, true);
   applyDayReveals(ctx, batch);
   if (state.phase === 'END') return;

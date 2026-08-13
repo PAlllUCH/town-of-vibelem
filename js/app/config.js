@@ -22,6 +22,13 @@
       swapSel: null,
       names: {},
       pendingRoles: {},
+      nightZeroDone: {},
+      claims: {},
+      claimRound: null,
+      relayedWhispers: {},
+      whispersOpen: false,
+      claimsOpen: false,
+      claimPicker: null,
       endReveal: null,
       timerDeadline: null,
       dayTimerEnds: null,
@@ -39,7 +46,7 @@
     return {
       playerCount: 8,
       presetId: keys[0],
-      houseRules: { noKillN1: true, noLynchD1: false, classicReveal: false },
+      houseRules: { noKillN1: true, noLynchD1: true, classicReveal: false },
       layout: (E.SEAT_LAYOUTS && E.SEAT_LAYOUTS[0]) || 'circle',
       teamCounts: { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral },
       civilians: null,
@@ -124,6 +131,13 @@
     APP.app.swapSel = null;
     APP.app.names = {};
     APP.app.pendingRoles = {};
+    APP.app.nightZeroDone = {};
+    APP.app.claims = {};
+    APP.app.claimRound = null;
+    APP.app.relayedWhispers = {};
+    APP.app.whispersOpen = false;
+    APP.app.claimsOpen = false;
+    APP.app.claimPicker = null;
     APP.app.endReveal = null;
     APP.app.dayTimerEnds = null;
     APP.app.dayTimerTotal = null;

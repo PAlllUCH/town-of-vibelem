@@ -41,17 +41,23 @@
 
     html += '<div class="card"><div class="card-head"><h2>Role Reveal</h2></div>';
     if (app.endReveal && app.endReveal.length) {
-      html += '<div class="seat-tiles">';
-      app.endReveal.forEach(function (r) {
-        var tags = r.isAlive ? '<span class="tag tag-ok">ALIVE</span>' : '<span class="tag tag-ghost">GHOST</span>';
-        if (r.inheritedRole) tags += '<span class="tag tag-warn">INHERITED SHERIFF</span>';
-        html += '<div class="seat-tile team-' + r.team + '">' +
-          '<div class="seat-tile-top"><span class="seat-label">' + UI.esc(r.seat) + '</span>' +
-          '<span class="seat-name">' + UI.esc(r.name) + '</span></div>' +
-          '<div class="seat-role">' + UI.esc(r.roleName || r.role) + '</div>' +
-          '<div class="seat-tags">' + tags + '</div></div>';
+      ['TOWN', 'MAFIA', 'NEUTRAL'].forEach(function (team) {
+        var list = app.endReveal.filter(function (r) { return r.team === team; });
+        if (!list.length) return;
+        html += '<h3 class="end-team-head"><span class="team-dot team-' + team + '"></span>' +
+          UI.teamLabel(team) + '</h3>' +
+          '<div class="seat-tiles">';
+        list.forEach(function (r) {
+          var tags = r.isAlive ? '<span class="tag tag-ok">ALIVE</span>' : '<span class="tag tag-ghost">GHOST</span>';
+          if (r.inheritedRole) tags += '<span class="tag tag-warn">INHERITED SHERIFF</span>';
+          html += '<div class="seat-tile team-' + r.team + '">' +
+            '<div class="seat-tile-top"><span class="seat-label">' + UI.esc(r.seat) + '</span>' +
+            '<span class="seat-name">' + UI.esc(r.name) + '</span></div>' +
+            '<div class="seat-role">' + UI.esc(r.roleName || r.role) + '</div>' +
+            '<div class="seat-tags">' + tags + '</div></div>';
+        });
+        html += '</div>';
       });
-      html += '</div>';
     } else {
       html += UI.seatTiles(state, false);
     }

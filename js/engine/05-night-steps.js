@@ -59,9 +59,11 @@
         step = { position: tpl.position, title: tpl.title, roles: [], prompt: tpl.prompt };
         if (tpl.timerSeconds) step.timerSeconds = tpl.timerSeconds;
       } else {
-        var present = tpl.roles.some(function (r) { return hasLivingRole(r); });
+        var rolesHere = tpl.roles.filter(function (r) { return isNightOne || !E.ROLES[r].n1Only; });
+        if (rolesHere.length === 0) continue;
+        var present = rolesHere.some(function (r) { return hasLivingRole(r); });
         if (!present) continue;
-        step = { position: tpl.position, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
+        step = { position: tpl.position, title: tpl.title, roles: rolesHere, prompt: tpl.prompt };
       }
       if (step) steps.push(step);
     }
@@ -81,6 +83,9 @@
         (input.position === 6 && (input.roleId === 'godfather' || input.roleId === 'mafioso'));
       if (!selfAllowed) return false;
     }
+    var secondTarget = input.extra && input.extra.secondTarget;
+    if (secondTarget != null && String(secondTarget) === String(input.playerId)) return false;
+    if (secondTarget != null && String(secondTarget) === String(input.targetId)) return false;
     var action = {
       position: input.position,
       roleId: input.roleId,
@@ -88,7 +93,51 @@
       targetId: input.targetId != null ? input.targetId : null,
       extra: input.extra != null ? input.extra : null
     };
+    var isNew = !state.night.actions.some(function (a) {
+      return a.position === action.position && a.roleId === action.roleId &&
+        a.playerId === action.playerId && a.targetId === action.targetId &&
+        JSON.stringify(a.extra || null) === JSON.stringify(action.extra || null);
+    });
+    var replacing = state.night.actions.some(function (a) {
+      return a.position === action.position && a.roleId === action.roleId &&
+        a.playerId === action.playerId;
+    });
     state.night.actions.push(action);
+    if (isNew) {
+      if (replacing) {
+        var atKey = E._logAt(state);
+        var logKey = String(input.playerId);
+        var logArr = state.playerLog && state.playerLog[logKey];
+        if (logArr) {
+          state.playerLog[logKey] = logArr.filter(function (e) {
+            return !(e.kind === 'night-action' && e.at === atKey);
+          });
+        }
+      }
+      var role = E.ROLES[action.roleId];
+      var roleName = role ? role.name : action.roleId;
+      var tgt = action.targetId != null ? E._byId(state, action.targetId) : null;
+      var targetName = tgt ? tgt.name : String(action.targetId);
+      var extra2 = action.extra || {};
+      var text;
+      if (action.roleId === 'veteran' && extra2.alert) {
+        text = roleName + ' went on alert.';
+      } else if (action.roleId === 'jailor') {
+        text = roleName + ' jailed ' + targetName + ' and chose ' + (extra2.jailorDecision || 'SPARE') + '.';
+      } else if (action.roleId === 'medium' && tgt) {
+        text = roleName + ' whispered with ' + targetName + '.';
+      } else if (action.roleId === 'medium') {
+        text = roleName + ' read the Ghost Ledger.';
+      } else if (action.roleId === 'witness' && extra2.secondTarget != null) {
+        var st2 = E._byId(state, extra2.secondTarget);
+        text = roleName + ' targeted ' + targetName + ' and ' + (st2 ? st2.name : String(extra2.secondTarget)) + '.';
+      } else if (action.targetId == null) {
+        text = roleName + ' acted.';
+      } else {
+        text = roleName + ' targeted ' + targetName + '.';
+      }
+      E._logPlayer(state, input.playerId, E._logAt(state), 'night-action', text);
+    }
     if (action.targetId != null) p.nightTarget = action.targetId;
     if (input.position === 3 && input.extra && input.extra.jailorDecision) {
       p.jailorDecision = input.extra.jailorDecision;

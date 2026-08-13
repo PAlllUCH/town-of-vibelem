@@ -127,13 +127,18 @@ function runDay(state) {
       const nom = pick(alive);
       const acc = pick(alive.filter(function (x) { return x.id !== nom.id; }));
       if (nom && acc && engine.startTrial(state, acc.id, nom.id)) {
-        const voters = [];
-        state.players.forEach(function (p) {
-          if (p.isAlive) voters.push({ voterId: p.id, verdict: pick(['GUILTY', 'INNOCENT', 'ABSTAIN']), ghostToken: false });
-          else if (p.hasGhostVote && !p.ghostVoteSpent) voters.push({ voterId: p.id, verdict: pick(['GUILTY', 'INNOCENT']), ghostToken: true });
+        living(state).forEach(function (p) {
+          if (p.id !== acc.id) engine.castVote(state, { voterId: p.id, verdict: 'AGREE', ghostToken: false });
         });
-        voters.forEach(function (v) { engine.castVote(state, v); });
-        engine.resolveTrial(state);
+        if (engine.resolveTrial(state).result === 'ACCEPTED') {
+          const voters = [];
+          state.players.forEach(function (p) {
+            if (p.isAlive) voters.push({ voterId: p.id, verdict: pick(['GUILTY', 'INNOCENT', 'ABSTAIN']), ghostToken: false });
+            else if (p.hasGhostVote && !p.ghostVoteSpent) voters.push({ voterId: p.id, verdict: pick(['GUILTY', 'INNOCENT']), ghostToken: true });
+          });
+          voters.forEach(function (v) { engine.castVote(state, v); });
+          engine.resolveTrial(state);
+        }
       }
     }
   }

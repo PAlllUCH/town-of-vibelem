@@ -439,6 +439,12 @@ function runGame(population, preset, playerCount) {
         
         if (accused && engine.startTrial(state, accused.id, nominator.id)) {
           state.players.forEach(function (p) {
+            if (p.isAlive && p.id !== accused.id) {
+              engine.castVote(state, { voterId: p.id, verdict: 'AGREE', ghostToken: false });
+            }
+          });
+          if (engine.resolveTrial(state).result === 'ACCEPTED') {
+          state.players.forEach(function (p) {
             if (p.isAlive) {
               const agent = agents[p.id];
               const verdict = agent.getVoteVerdict(state, memories, p.id, accused.id);
@@ -464,6 +470,7 @@ function runGame(population, preset, playerCount) {
             m.voteHistory[p.id] = vote ? vote.verdict : 'ABSTAIN';
             m.lastLynchAccusedId = accused.id;
           });
+          }
         }
       }
     }
@@ -500,12 +507,12 @@ function runGame(population, preset, playerCount) {
     }
     
     if (mem.roleId === 'doctor') {
-      const protected = living(state).filter(function (p) {
+      const protectedCount = living(state).filter(function (p) {
         return p.isAlive && !state.graveyard.some(function (e) {
           return e.playerId === p.id && e.cause.includes('killed');
         });
       });
-      agent.fitness += protected.length;
+      agent.fitness += protectedCount.length;
     }
     
     agent.gamesPlayed++;

@@ -10,11 +10,12 @@
     state.graveyard = [];
     state.deathLog = [];
     state.ghosts = { ledgerEnabled: true };
-    state.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+    state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 };
     state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
     state.dayNumber = 0;
     state.winner = null;
     state.logs = [];
+    state.playerLog = {};
     state.executionerConverted = false;
     state.jester = { haunted: false, hauntTarget: null };
     state.retributionist = { used: false };
@@ -61,6 +62,7 @@
       state.gfBluffs = E._shuffle(pool).slice(0, 3);
     }
     state.witchSide = 'MAFIA';
+    E._computeStartKnowing(state);
   }
 
   function dealCommon(state, label) {
@@ -81,10 +83,11 @@
     }
     var presetId = opts.presetId || 'p1';
     if (!E.PRESETS[presetId]) throw new Error('Unknown preset: ' + presetId);
+    var hrOpts = opts.houseRules || {};
     var houseRules = {
-      noKillN1: !!(opts.houseRules && opts.houseRules.noKillN1),
-      noLynchD1: !!(opts.houseRules && opts.houseRules.noLynchD1),
-      classicReveal: !!(opts.houseRules && opts.houseRules.classicReveal)
+      noKillN1: !!hrOpts.noKillN1,
+      noLynchD1: hrOpts.noLynchD1 !== false,
+      classicReveal: !!hrOpts.classicReveal
     };
     var teamCounts = null;
     if (opts.teamCounts != null) {
@@ -129,11 +132,12 @@
       graveyard: [],
       deathLog: [],
       ghosts: { ledgerEnabled: true },
-      trial: { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 },
+      trial: { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 },
       night: { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null },
       phase: 'SETUP',
       dayNumber: 0,
       logs: [],
+      playerLog: {},
       winner: null,
       executionerTarget: null,
       executionerConverted: false,
@@ -178,7 +182,20 @@
     var ra = E.ROLES[a.assignedRole] || { name: a.assignedRole };
     var rb = E.ROLES[b.assignedRole] || { name: b.assignedRole };
     state.logs.push(a.name + ' and ' + b.name + ' swapped roles (' + ra.name + ' / ' + rb.name + ').');
+    E._logPlayer(state, aId, 'SETUP', 'swap', 'Swapped roles with ' + b.name + '; now ' + ra.name + '.');
+    E._logPlayer(state, bId, 'SETUP', 'swap', 'Swapped roles with ' + a.name + '; now ' + rb.name + '.');
     return state;
+  };
+
+  E._logPlayer = function (state, pid, at, kind, text) {
+    if (!state.playerLog || typeof state.playerLog !== 'object') state.playerLog = {};
+    var key = String(pid);
+    if (!state.playerLog[key]) state.playerLog[key] = [];
+    state.playerLog[key].push({ at: at, kind: kind, text: text });
+  };
+
+  E._logAt = function (state) {
+    return state.phase === 'NIGHT' ? 'N' + state.night.number : 'D' + (state.dayNumber || 1);
   };
 
   E.setPlayerNames = function (state, entries) {
@@ -242,6 +259,10 @@
     assignSetupInfo(state);
     state.phase = 'SEATS';
     state.logs.push('Roles assigned.');
+    state.players.forEach(function (p) {
+      var rn = E.ROLES[p.assignedRole] ? E.ROLES[p.assignedRole].name : p.assignedRole;
+      E._logPlayer(state, p.id, 'SETUP', 'set', rn + ' assigned.');
+    });
     return state;
   };
 
@@ -290,21 +311,28 @@
     });
     if (!Array.isArray(data.deathLog)) data.deathLog = [];
     if (!data.trial || typeof data.trial !== 'object') {
-      data.trial = { active: false, accusedId: null, nominatorId: null, votes: [], dayTrialsDone: 0 };
+      data.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 };
     }
+    if (data.trial.stage !== 'SECONDS' && data.trial.stage !== 'VOTE') data.trial.stage = null;
+    if (!Array.isArray(data.trial.seconds)) data.trial.seconds = [];
     if (!data.night || typeof data.night !== 'object') {
       data.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
     }
+    if (data.night.lastJailTarget == null) data.night.lastJailTarget = null;
+    if (data.night.lastBlackmailTarget == null) data.night.lastBlackmailTarget = null;
     if (!data.jester || typeof data.jester !== 'object') data.jester = { haunted: false, hauntTarget: null };
     if (!data.retributionist || typeof data.retributionist !== 'object') data.retributionist = { used: false };
     if (!data.amnesiac || typeof data.amnesiac !== 'object') data.amnesiac = { used: false, rememberedRole: null };
     if (!Array.isArray(data.logs)) data.logs = [];
+    if (!data.playerLog || typeof data.playerLog !== 'object' || Array.isArray(data.playerLog)) data.playerLog = {};
     if (!data.morning || typeof data.morning !== 'object') {
       data.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] };
     }
     if (!Array.isArray(data.morning.deaths)) data.morning.deaths = [];
     if (!Array.isArray(data.morning.revivals)) data.morning.revivals = [];
     if (!Array.isArray(data.morning.forgedWills)) data.morning.forgedWills = [];
+    if (typeof data.executionerConverted !== 'boolean') data.executionerConverted = false;
+    if (data.pendingInheritanceNote == null) data.pendingInheritanceNote = '';
     if (data.version == null) data.version = 1;
     return data;
   };

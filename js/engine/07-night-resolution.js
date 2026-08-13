@@ -49,6 +49,8 @@
     state.executionerConverted = true;
     state.logs.push('The Executioner\'s target ' + (p ? p.name : String(state.executionerTarget)) +
       ' died (' + cause + '); the Executioner becomes a Jester.');
+    var exe = state.players.find(function (pl) { return pl.assignedRole === 'executioner'; });
+    if (exe) E._logPlayer(state, exe.id, E._logAt(state), 'converted', 'Became a Jester: the target died (' + cause + ').');
   }
 
   E._recordDeath = function (state, pid, cause, byLynch, skipToken) {
@@ -76,6 +78,7 @@
       roleShown: shownRole,
       cause: cause
     });
+    E._logPlayer(state, pid, E._logAt(state), 'death', p.name + ' died: ' + cause + '.');
     if (!byLynch && state.executionerTarget === pid) convertExecutioner(state, cause);
     return entry;
   };
@@ -84,7 +87,7 @@
     return state.players.filter(function (p) {
       if (!p.isAlive) return false;
       var r = p.assignedRole;
-      return r === 'survivor' || r === 'drunk' || (r === 'amnesiac' && !state.amnesiac.used);
+      return r === 'survivor' || r === 'drunk' || r === 'spy' || (r === 'amnesiac' && !state.amnesiac.used);
     }).map(function (p) { return p.id; });
   };
 
@@ -95,12 +98,14 @@
       deputy.inheritedRole = 'sheriff';
       state.pendingInheritanceNote = 'The Deputy has inherited the Sheriff\'s badge.';
       state.logs.push('The Deputy has inherited the Sheriff\'s badge.');
+      E._logPlayer(state, deputy.id, E._logAt(state), 'inherited', 'Inherited the Sheriff\'s badge.');
     }
     var gf = state.players.find(function (p) { return p.assignedRole === 'godfather'; });
     var mafioso = state.players.find(function (p) { return p.assignedRole === 'mafioso'; });
     if (gf && !gf.isAlive && mafioso && mafioso.isAlive && mafioso.inheritedRole !== 'godfather') {
       mafioso.inheritedRole = 'godfather';
       state.logs.push('The Mafioso has become the new Godfather.');
+      E._logPlayer(state, mafioso.id, E._logAt(state), 'promoted', 'Became the new Godfather.');
     }
   };
 

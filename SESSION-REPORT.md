@@ -102,3 +102,28 @@ Trained weights saved to `weights/` directory (gitignored).
 3. **Test different player counts** — 10, 12, 14 players
 4. **Integrate into companion app** — Add "Balance Check" feature to setup screen
 5. **Consider multiplayer** — AI runs server-side, sends actions via API
+
+
+## Session: UI readability, edge-case playthrough, BotC rules (latest)
+
+- Readability hygiene: 0.72rem font floor, ~20 hardcoded colors tokenized (17 new :root tokens incl. --scrim), spacing scale --space-1..5, ellipsis/overflow on circle tiles and chips, color-mix fallback, theme-color aligned, dead .toast-warn removed.
+- New suite tests/game-loop.test.js (15 tests): full-app Node driver with a stubbed DOM playing real games (setup to victory). Exposed + fixed 3 app bugs: endReveal never populated, wizard-back duplicate night actions, deserialize missing executionerConverted + lastJail/lastBlackmail backfills.
+- Flow change: Day 1 now comes FIRST. Seats dealt view is the prep phase -> Begin Day 1 -> Night 1 wizard (N1 rules apply) -> Morning -> Day 2. Header labels NIGHT by state.night.number.
+- Trials are now BotC-style two-stage: nomination -> SECONDS round -> strict-majority acceptance (floor(living/2)+1, nominator auto-agrees) -> verdict vote where GUILTY must strictly outnumber INNOCENT; ties acquit; at most one lynch per day (survives/cancels don't consume it); trials allowed Day 1 onward.
+- New state.playerLog: structured per-player action history appended by the engine (role set, night actions, deaths, swaps, verdicts, etc.), rendered newest-first in the new player-detail sheet. deserialize defaults it.
+- Seats screen: naming mode is now a tappable .seat-btn grid opening a bottom sheet (name + role picker); civilian is offered only while deck capacity remains (fixes the civilian-without-sheriff lockout). Dealt view + mid-game Seats overlay open a player-detail sheet (role/tags/blurb/log).
+- Scenario/preset cards fixed: .preset-card stretches, names ellipsize, taglines wrap inside the card.
+- New part js/app/actions-sheets.js (seats-sheet handlers, focus trap). New styles/sheets.css (sheet styles, z 30/31). Registered in index.html + sw.js CORE_ASSETS.
+- Sims fixed for two-stage trials: scripts + js/sim second before verdicts; simulate.js now produces real lynches.
+- Tests: 213 pass / 0 fail. Docs: GDD + interface.md updated (trial stages, playerLog, result shapes).
+
+## Session 2 addendum: roles + moderator toolbox + audit wave 1
+
+- 4 new roles (34 total): Spy (Neutral Benign, shared win), N1-only Oracle, start-knowing Washerwoman / Chef. Deck-reach table per preset in GDD §4.8. Night Watcher, Informer, and Informant were added and then DELETED at the owner's request (Night Watcher = weaker Lookout, Informer/Informant disliked).
+- Moderator toolbox: Night Zero prep checklist (bluffs / Witch side / Executioner target / N1 relays / deal), Tonight's Whispers info panel (all kind 'info' playerLog rows), public Claims grid (day view, zero engine impact).
+- UI audit Wave 1 (docs/reports/ui-audit.md, 44 findings) implemented: flow-strip legibility, sticky wizard Step counter + Resolve Night banner, SECONDS→VOTE transition banners, team-grouped role picker, playerLog kind tags, Back-vs-Skip weighting, toast replace, :focus-visible, dead-code cleanup.
+- ToS/BotC comparison (docs/reports/tos-botc-comparison.md) and N1-only role designs (docs/reports/first-night-roles.md) live in docs/reports/.
+- noLynchD1 house rule now defaults ON (Day 1 = discussion/claims; lynches from Day 2) with the flag toggleable.
+- New parts: js/engine/04b-start-knowing.js, js/engine/06b-night-actions.js, js/app/actions-panels.js (all registered in index.html + sw.js CORE_ASSETS + barrel).
+- Tests: 213 pass / 0 fail. Sims: 30 runs / 0 failures (MAFIA ~22-27 / TOWN 3-8 — balance still Mafia-heavy, see open balance investigation).
+35 roles total (Witness added for pairwise info). Final polish wave: tally chips, death cause, ghost SVG, end-screen grouping, timer, toast, circle scaling, exit animation, claim round, whispers step integration, 6 wizard fixes (cleaned tags, summary card, veteran chip, forged note, drunk consul, prev step always). ready for NN training.

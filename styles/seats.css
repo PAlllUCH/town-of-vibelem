@@ -8,6 +8,11 @@
   font-size: .85rem;
 }
 
+/* Night Zero checklist */
+.toggle-row.on { border-color: var(--accent); background: var(--accent-faint); }
+.toggle-row:active { background: var(--accent-faint); }
+.toggle-row.on .toggle-text strong { color: var(--text-bright); }
+
 /* Seat grids */
 .seat-grid { display: grid; gap: 8px; margin: 12px 0; }
 .seat-grid.layout-two_rows { grid-template-columns: repeat(2, 1fr); }
@@ -28,16 +33,6 @@
   font-weight: 700;
   flex: none;
 }
-.seat-name-input {
-  min-height: 44px;
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  padding: 8px 10px;
-  font-size: 1rem;
-  width: 100%;
-}
 
 /* Circle layout */
 .circle {
@@ -53,14 +48,13 @@
   align-items: center;
   gap: 2px;
 }
-.circle .seat-name-input { width: 72px; font-size: .82rem; min-height: 44px; padding: 6px 6px; text-align: center; border-radius: 999px; }
 
 /* Seat overlay tiles inside the chosen layout */
 .seat-grid .seat-tile-wrap { min-width: 0; }
 .seat-grid .seat-tile { height: 100%; }
 .circle .seat-tile-wrap { position: absolute; transform: translate(-50%, -50%); }
 .circle .seat-tile {
-  width: 90px;
+  width: var(--tile-w, 90px);
   text-align: center;
   padding: 6px 8px;
   background: var(--tile-bg);
@@ -71,14 +65,14 @@
 }
 .circle .seat-tile:active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px rgba(0, 0, 0, .4);
+  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px var(--black-40);
   filter: brightness(1.15);
 }
 .circle .seat-tile-top { justify-content: center; gap: 4px; }
-.circle .seat-tile .seat-name { font-size: .78rem; font-weight: 700; }
-.circle .seat-tile .seat-role { font-size: .72rem; letter-spacing: .02em; }
+.circle .seat-tile .seat-name { font-size: .78rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.circle .seat-tile .seat-role { font-size: .72rem; letter-spacing: .02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .circle .seat-tile .seat-tags { justify-content: center; gap: 2px; margin-top: 2px; }
-.circle .seat-tile .seat-tags .tag { font-size: .64rem; padding: 2px 5px; }
+.circle .seat-tile .seat-tags .tag { font-size: .72rem; padding: 2px 4px; }
 
 /* Seat tiles (dealt) */
 .seat-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; margin: 12px 0; }
@@ -92,7 +86,7 @@
 }
 .seat-tile:active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px rgba(0, 0, 0, .4);
+  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px var(--black-40);
   filter: brightness(1.15);
 }
 .seat-tile-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -112,13 +106,13 @@
 }
 .seat-dealt:active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px rgba(0, 0, 0, .4);
+  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px var(--black-40);
   filter: brightness(1.15);
 }
 .seat-dealt-name { font-weight: 700; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seat-grid .seat-dealt { height: 100%; }
 .circle .seat-dealt {
-  width: 90px;
+  width: var(--tile-w, 90px);
   text-align: center;
   padding: 6px 8px;
   background: var(--tile-bg);
@@ -129,13 +123,13 @@
 }
 .circle .seat-dealt:active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px rgba(0, 0, 0, .4);
+  box-shadow: 0 0 0 2px var(--glow), inset 0 2px 8px var(--black-40);
   filter: brightness(1.15);
 }
-.circle .seat-dealt-name { font-size: .78rem; font-weight: 700; }
+.circle .seat-dealt-name { font-size: .78rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .circle .seat-dealt .seat-role { font-size: .72rem; }
 .circle .seat-dealt .seat-tags { justify-content: center; gap: 2px; margin-top: 2px; }
-.circle .seat-dealt .seat-tags .tag { font-size: .64rem; padding: 2px 5px; }
+.circle .seat-dealt .seat-tags .tag { font-size: .72rem; padding: 2px 4px; }
 
 /* Swap mode */
 .seat-dealt[data-action='swap-select'] { cursor: pointer; }

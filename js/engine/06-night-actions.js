@@ -12,6 +12,7 @@
         poisonedTarget.isDrunk = true;
         poisonedTarget.poisoned = true;
         ctx.setEff(poisoner.id, poisonAction.targetId);
+        E._logPlayer(ctx.state, poisonAction.targetId, E._logAt(ctx.state), 'poisoned', poisonedTarget.name + ' was poisoned and is Drunk for one cycle.');
         ctx.log(poisoner.name + ' poisoned ' + poisonedTarget.name + '.');
       }
     }
@@ -24,7 +25,10 @@
       ctx.setEff(w.id, ctx.control.controlledId);
       var ctrl = E._byId(ctx.state, ctx.control.controlledId);
       var ctrlRole = E.ROLES[ctrl.assignedRole];
-      ctx.log('The Witch controls ' + ctrl.name + ' and learns their role: ' + (ctrlRole ? ctrlRole.name : ctrl.assignedRole) + '.');
+      var ctrlName = ctrlRole ? ctrlRole.name : ctrl.assignedRole;
+      ctx.log('The Witch controls ' + ctrl.name + ' and learns their role: ' + ctrlName + '.');
+      E._logPlayer(ctx.state, w.id, E._logAt(ctx.state), 'info',
+        'Witch learned the role of ' + ctrl.name + ': ' + ctrlName + '.');
     }
   }
 
@@ -40,6 +44,7 @@
         ctx.setEff(ctx.jailor.id, jailTarget);
         var jailed = E._byId(ctx.state, jailTarget);
         jailed.jailed = true;
+        E._logPlayer(ctx.state, jailTarget, E._logAt(ctx.state), 'jailed', jailed.name + ' was jailed by the Jailor.');
         ctx.log(ctx.jailor.name + ' jailed ' + jailed.name + '.');
         var decision = (ctx.jailAction.extra && ctx.jailAction.extra.jailorDecision) || 'SPARE';
         if (decision === 'EXECUTE' && ctx.nightNum !== 1 && !ctx.noKillN1) {
@@ -155,6 +160,7 @@
         E._byId(ctx.state, bmAction.targetId).blackmailed = true;
         ctx.state.night.lastBlackmailTarget = bmAction.targetId;
         ctx.setEff(bm.id, bmAction.targetId);
+        E._logPlayer(ctx.state, bmAction.targetId, E._logAt(ctx.state), 'blackmailed', E._byId(ctx.state, bmAction.targetId).name + ' was blackmailed; silenced next day.');
         ctx.log(bm.name + ' blackmailed ' + E._byId(ctx.state, bmAction.targetId).name + '.');
       }
     }
@@ -191,128 +197,6 @@
     }
   }
 
-  function resolveInvestigators(ctx) {
-    var invActions = ctx.actions.filter(function (a) { return a.position === 11 && !ctx.isVoided(a); });
-    for (var ii = 0; ii < invActions.length; ii += 1) {
-      var ia = invActions[ii];
-      var actor = E._byId(ctx.state, ia.playerId);
-      if (!actor || !actor.isAlive || ctx.isBlocked(actor.id)) continue;
-      var tgt = ia.targetId;
-      if (!tgt) continue;
-      var isSheriffActor = actor.assignedRole === 'sheriff' ||
-        (actor.assignedRole === 'deputy' && actor.inheritedRole === 'sheriff');
-      if ((ia.roleId === 'sheriff' || ia.roleId === 'deputy') && isSheriffActor) {
-        if (!ctx.alive(tgt)) continue;
-        ctx.setEff(actor.id, tgt);
-        var target = E._byId(ctx.state, tgt);
-        var result = target.framed
-          ? 'SUSPICIOUS'
-          : (ctx.sheriffSuspicious(ctx.state, target) ? 'SUSPICIOUS' : 'INNOCENT');
-        if (actor.isDrunk) result = result === 'SUSPICIOUS' ? 'INNOCENT' : 'SUSPICIOUS';
-        ctx.log(actor.name + ' (Sheriff) checks ' + target.name + ': ' + result + '.');
-      } else if (ia.roleId === 'tracker') {
-        if (!ctx.alive(tgt)) continue;
-        ctx.setEff(actor.id, tgt);
-        ctx.deferred.push({ actor: actor, kind: 'tracker', targetId: tgt });
-      } else if (ia.roleId === 'lookout') {
-        if (!ctx.alive(tgt)) continue;
-        ctx.setEff(actor.id, tgt);
-        ctx.deferred.push({ actor: actor, kind: 'lookout', targetId: tgt });
-      } else if (ia.roleId === 'consigliere') {
-        if (!ctx.alive(tgt)) continue;
-        ctx.setEff(actor.id, tgt);
-        var learned = E._byId(ctx.state, tgt).assignedRole;
-        if (actor.isDrunk) {
-          var aligned = E._alignmentOf(ctx.state, E._byId(ctx.state, tgt));
-          var pool = Object.keys(E.ROLES).filter(function (id) { return E.ROLES[id].team !== aligned; });
-          learned = pool[E._randInt(pool.length)];
-        }
-        var lRole = E.ROLES[learned];
-        ctx.log(actor.name + ' (Consigliere) learns the role of ' + E._byId(ctx.state, tgt).name + ': ' +
-          (lRole ? lRole.name : learned) + '.');
-      } else if (ia.roleId === 'undertaker') {
-        if (actor.assignedRole !== 'undertaker') continue;
-        var uEntry = ctx.latestEntry(ctx.state, tgt);
-        if (!uEntry || uEntry.wasCleaned) continue;
-        if (uEntry.inspectedByUndertaker) continue;
-        uEntry.inspectedByUndertaker = true;
-        ctx.setEff(actor.id, tgt);
-        var uRole = E.ROLES[uEntry.trueRole];
-        ctx.log(actor.name + ' (Undertaker) inspects the corpse of ' + E._byId(ctx.state, tgt).name + ': ' +
-          (uRole ? uRole.name : uEntry.trueRole) + '.');
-      }
-    }
-  }
-
-  function resolveRevivers(ctx) {
-    var retAction = ctx.actions.find(function (a) { return a.position === 12 && a.roleId === 'retributionist'; });
-    if (retAction) {
-      var ret = E._byId(ctx.state, retAction.playerId);
-      if (ret && ret.isAlive && !ctx.isBlocked(ret.id) && !ctx.isVoided(retAction) &&
-          !ret.usedOncePerGame && retAction.targetId && !ctx.alive(retAction.targetId)) {
-        ret.usedOncePerGame = true;
-        ctx.state.retributionist.used = true;
-        ctx.reviveTarget = retAction.targetId;
-        ctx.setEff(ret.id, retAction.targetId);
-        ctx.log(ret.name + ' will revive ' + E._byId(ctx.state, retAction.targetId).name + '.');
-      }
-    }
-    var amnAction = ctx.actions.find(function (a) { return a.position === 12 && a.roleId === 'amnesiac'; });
-    if (amnAction) {
-      var amn = E._byId(ctx.state, amnAction.playerId);
-      if (amn && amn.isAlive && !ctx.isBlocked(amn.id) && !ctx.isVoided(amnAction) &&
-          !ctx.state.amnesiac.used && amnAction.targetId && !ctx.alive(amnAction.targetId)) {
-        var amnEntry = ctx.latestEntry(ctx.state, amnAction.targetId);
-        if (amnEntry) {
-          ctx.state.amnesiac.used = true;
-          ctx.state.amnesiac.rememberedRole = amnEntry.trueRole;
-          amn.usedOncePerGame = true;
-          ctx.setEff(amn.id, amnAction.targetId);
-          var amnRole = E.ROLES[amnEntry.trueRole];
-          ctx.log(amn.name + ' (Amnesiac) remembered the role of ' + E._byId(ctx.state, amnAction.targetId).name + ': ' +
-            (amnRole ? amnRole.name : amnEntry.trueRole) + '.');
-        }
-      }
-    }
-  }
-
-  function resolveMedium(ctx) {
-    var medAction = ctx.actions.find(function (a) { return a.position === 13 && a.roleId === 'medium'; });
-    if (medAction && !ctx.isVoided(medAction)) {
-      var med = E._byId(ctx.state, medAction.playerId);
-      if (med) {
-        if (med.isAlive) {
-          if (!ctx.isBlocked(med.id)) ctx.log(med.name + ' reads the Ghost Ledger.');
-        } else if (medAction.targetId && ctx.alive(medAction.targetId)) {
-          ctx.setEff(med.id, medAction.targetId);
-          ctx.log(med.name + ' whispers with ' + E._byId(ctx.state, medAction.targetId).name + '.');
-        }
-      }
-    }
-  }
-
-  function resolveDeferred(ctx) {
-    for (var di = 0; di < ctx.deferred.length; di += 1) {
-      var d = ctx.deferred[di];
-      if (d.kind === 'tracker') {
-        var eff = ctx.getEff(d.targetId);
-        ctx.log(d.actor.name + ' (Tracker) tracks ' + E._byId(ctx.state, d.targetId).name + ': ' +
-          (eff ? E._byId(ctx.state, eff).name : 'no one') + '.');
-      } else {
-        var visitors = [];
-        for (var ei = 0; ei < ctx.effectiveTargets.length; ei += 1) {
-          var e2 = ctx.effectiveTargets[ei];
-          if (e2.targetId === d.targetId && e2.playerId !== d.actor.id) {
-            var vp = E._byId(ctx.state, e2.playerId);
-            if (vp) visitors.push(vp.name);
-          }
-        }
-        ctx.log(d.actor.name + ' (Lookout) watches ' + E._byId(ctx.state, d.targetId).name + ': ' +
-          (visitors.length > 0 ? visitors.join(', ') : 'no one') + '.');
-      }
-    }
-  }
-
   E._nightActions = {
     poisoner: resolvePoisoner,
     witchReveal: resolveWitchReveal,
@@ -324,10 +208,6 @@
     forger: resolveForger,
     blackmailer: resolveBlackmailer,
     serialkiller: resolveSerialKiller,
-    framer: resolveFramer,
-    investigators: resolveInvestigators,
-    revivers: resolveRevivers,
-    medium: resolveMedium,
-    deferred: resolveDeferred
+    framer: resolveFramer
   };
 })(typeof window !== 'undefined' ? window : globalThis);

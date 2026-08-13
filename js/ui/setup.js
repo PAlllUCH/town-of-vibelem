@@ -69,7 +69,9 @@
           '<div class="civ-stepper-num"><strong>' + civs + '</strong></div>' +
           '<button class="btn btn-stepper-sm" data-action="civ-inc" aria-label="More civilians"' +
           (civs >= townSlots ? ' disabled' : '') + '>+</button>' +
-          (cfg.civilians == null ? '<span class="muted small">auto</span>' : '') +
+          (cfg.civilians == null
+            ? '<span class="muted small">auto</span>'
+            : '<button class="civ-reset" data-action="civ-reset">Reset to auto</button>') +
           '</div>';
       }
       out += '<div class="team-add">' +
@@ -196,6 +198,9 @@
       '<p class="muted small">Edit each team priority list, then check the live deck preview.</p>' +
       deckBuilder(cfg) + deckPreview(cfg) + '</div>';
 
+    if (total !== pc) {
+      html += '<div class="notice bad">Team totals (' + total + ') must equal ' + pc + ' players.</div>';
+    }
     html += '<button class="btn btn-primary btn-block btn-big" data-action="start-game">Start Session</button>';
     return html;
   };

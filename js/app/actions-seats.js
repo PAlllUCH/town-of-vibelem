@@ -9,13 +9,6 @@
     return (APP.state.players || []).find(function (p) { return String(p.seat) === String(seat); }) || null;
   }
 
-  function seatRole(seat, roleId) {
-    var s = Number(seat);
-    if (roleId) APP.app.pendingRoles[s] = roleId;
-    else delete APP.app.pendingRoles[s];
-    APP.afterMutation();
-  }
-
   function autoFill() {
     var leftovers = UI.leftoverRoles(APP.state, APP.app.pendingRoles);
     leftovers = E._shuffle(leftovers);
@@ -81,18 +74,23 @@
     APP.renderScreen('seats');
   }
 
-  function beginNight() {
-    APP.state.phase = 'NIGHT';
+  function beginDay1() {
+    var v = E.beginDay(APP.state);
+    if (v) {
+      APP.finish(v);
+      return;
+    }
+    APP.state.phase = 'DAY';
     APP.app.namingMode = false;
-    APP.app.wizard = { steps: E.getNightSteps(APP.state), idx: 0, actor: null, pending: null };
+    APP.app.wizard = null;
     APP.afterMutation();
     APP.goto('game');
   }
 
-  APP.seatRole = seatRole;
   APP.autoFill = autoFill;
   APP.lockRoles = lockRoles;
   APP.swapSelect = swapSelect;
   APP.editNames = editNames;
-  APP.beginNight = beginNight;
+  APP.beginDay1 = beginDay1;
+  APP.beginNight = beginDay1;
 })();

@@ -3,7 +3,7 @@
   text-align: center;
   padding: 22px 12px;
   margin: 14px 0;
-  background: linear-gradient(180deg, rgba(212, 138, 60, .18), transparent);
+  background: linear-gradient(180deg, var(--accent-faint-strong), transparent);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
@@ -21,3 +21,12 @@
 .recap-night { flex: none; min-width: 3.2em; font-weight: 700; color: var(--accent); }
 .recap-name { flex: 1; overflow-wrap: anywhere; font-weight: 500; }
 .recap-cause { flex: none; color: var(--muted); font-size: .9em; text-align: right; }
+
+.end-team-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 8px;
+  font-size: 1rem;
+}
+.end-team-head:first-of-type { margin-top: 4px; }

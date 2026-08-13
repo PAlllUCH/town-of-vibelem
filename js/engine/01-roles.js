@@ -44,6 +44,26 @@
       blurb: 'Each night, learns which players targeted the chosen player with a night action.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
+    witness: {
+      id: 'witness', name: 'Witness', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, chooses two living players and learns whether they share an alignment: Both Town, Both Mafia, Both Neutral, or Different alignments. Inverts if Drunk.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    oracle: {
+      id: 'oracle', name: 'Oracle', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Night 1 only: learns whether a player is TOWN or NOT TOWN. Inverts if Drunk. Becomes a plain civilian after Night 1.',
+      nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1, n1Only: true
+    },
+    washerwoman: {
+      id: 'washerwoman', name: 'Washerwoman', team: 'TOWN', category: 'Town Support',
+      blurb: 'Starts knowing that one of two specified players is a particular Townsfolk role. No night action.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null, startKnowing: true
+    },
+    chef: {
+      id: 'chef', name: 'Chef', team: 'TOWN', category: 'Town Support',
+      blurb: 'Starts knowing how many pairs of adjacent evil players sit in the seat circle. No night action.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null, startKnowing: true
+    },
     escort: {
       id: 'escort', name: 'Escort', team: 'TOWN', category: 'Town Support',
       blurb: 'Each night, roleblocks one player: their night action fails that night.',
@@ -128,6 +148,11 @@
       id: 'survivor', name: 'Survivor', team: 'NEUTRAL', category: 'Neutral Benign',
       blurb: 'No ability. Wins if alive at game end.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    spy: {
+      id: 'spy', name: 'Spy', team: 'NEUTRAL', category: 'Neutral Benign',
+      blurb: 'Each night, watches one player: learns the team of every player who visited them. Random teams if Drunk. Wins if alive at game end.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null, n1Only: false
     },
     jester: {
       id: 'jester', name: 'Jester', team: 'NEUTRAL', category: 'Neutral Evil',

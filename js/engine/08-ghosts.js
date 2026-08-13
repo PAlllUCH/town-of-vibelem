@@ -12,6 +12,7 @@
         if (votedGuilty && alive(hauntAction.targetId)) {
           if (applyAttack(hauntAction.targetId, 'unstoppable', 'haunted by the Jester')) {
             state.jester.hauntTarget = hauntAction.targetId;
+            E._logPlayer(state, hauntAction.targetId, E._logAt(state), 'haunted', 'Was haunted by the Jester ghost.');
           }
         }
       }

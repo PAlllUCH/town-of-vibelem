@@ -62,6 +62,7 @@
       if (type === 'unstoppable') return killPlayer(targetId, cause);
       if (target.isProtected) {
         log(target.name + ' survived an attack (Doctor protection).');
+        E._logPlayer(state, targetId, E._logAt(state), 'protected', target.name + ' survived an attack thanks to Doctor protection.');
         return false;
       }
       if (E._hasBasicDefense(state, target)) {
@@ -250,6 +251,7 @@
       state.graveyard = state.graveyard.filter(function (e) { return e.playerId !== rp.id; });
       revivals.push(ctx.reviveTarget);
       log(rp.name + ' has been revived.');
+      E._logPlayer(state, rp.id, E._logAt(state), 'revive', rp.name + ' was revived.');
     }
 
     E._updateInheritance(state);
