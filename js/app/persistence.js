@@ -15,10 +15,10 @@
       names: app.names || {},
       nightZeroDone: app.nightZeroDone || {},
       claims: app.claims || {},
-      claimRound: app.claimRound || null,
       relayedWhispers: app.relayedWhispers || {},
       dayTimerEnds: app.dayTimerEnds || null,
-      dayTimerTotal: app.dayTimerTotal || null
+      dayTimerTotal: app.dayTimerTotal || null,
+      collapsed: app.collapsed || {}
     };
     var payload = { cfg: APP.cfg, ui: ui, game: APP.state ? E.serialize(APP.state) : null };
     try {

@@ -24,10 +24,10 @@
       pendingRoles: {},
       nightZeroDone: {},
       claims: {},
-      claimRound: null,
       relayedWhispers: {},
-      whispersOpen: false,
+      tokensOpen: false,
       claimsOpen: false,
+      modOpen: false,
       claimPicker: null,
       endReveal: null,
       timerDeadline: null,
@@ -35,7 +35,8 @@
       dayTimerTotal: null,
       referenceOpen: false,
       referenceQuery: '',
-      referenceDetail: null
+      referenceDetail: null,
+      collapsed: {}
     }
   };
 
@@ -133,17 +134,19 @@
     APP.app.pendingRoles = {};
     APP.app.nightZeroDone = {};
     APP.app.claims = {};
-    APP.app.claimRound = null;
     APP.app.relayedWhispers = {};
-    APP.app.whispersOpen = false;
+    APP.app.tokensOpen = false;
     APP.app.claimsOpen = false;
+    APP.app.modOpen = false;
     APP.app.claimPicker = null;
     APP.app.endReveal = null;
+    APP.app.timerDeadline = null;
     APP.app.dayTimerEnds = null;
     APP.app.dayTimerTotal = null;
     APP.app.referenceOpen = false;
     APP.app.referenceQuery = '';
     APP.app.referenceDetail = null;
+    APP.app.collapsed = {};
   }
 
   APP.defaultCfg = defaultCfg;

@@ -16,6 +16,9 @@
       case 'pick-role':
         APP.pickRole(btn);
         break;
+      case 'clear-role':
+        APP.clearRole();
+        break;
       case 'save-seat':
         APP.saveSeat();
         break;
@@ -46,6 +49,14 @@
     }
     var cur = host.querySelector('.seat-sheet-current strong');
     if (cur) cur.textContent = UI.roleName(role);
+  }
+
+  function clearRole() {
+    var app = APP.app;
+    if (!app || !app.sheet || app.sheet.kind !== 'naming') return;
+    app.sheet.role = '';
+    app.sheet.focusFirst = false;
+    UI.mountSheet(APP.state, APP.cfg, app);
   }
 
   function playerBySeat(seat) {
@@ -156,6 +167,7 @@
   APP.openDetailSheet = openDetailSheet;
   APP.updateSheetDom = updateSheetDom;
   APP.pickRole = pickRole;
+  APP.clearRole = clearRole;
   APP.saveSeat = saveSeat;
   APP.closeSheet = closeSheet;
 })();

@@ -59,7 +59,7 @@
         step = { position: tpl.position, title: tpl.title, roles: [], prompt: tpl.prompt };
         if (tpl.timerSeconds) step.timerSeconds = tpl.timerSeconds;
       } else {
-        var rolesHere = tpl.roles.filter(function (r) { return isNightOne || !E.ROLES[r].n1Only; });
+        var rolesHere = tpl.roles.slice();
         if (rolesHere.length === 0) continue;
         var present = rolesHere.some(function (r) { return hasLivingRole(r); });
         if (!present) continue;

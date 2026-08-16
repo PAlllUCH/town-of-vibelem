@@ -32,6 +32,14 @@
         E._logPlayer(state, t.id, 'D' + state.dayNumber, 'silenced', t.name + ' was silenced by blackmail for the day.');
       }
     }
+    if (state.trial.active) {
+      state.trial.active = false;
+      state.trial.stage = null;
+      state.trial.seconds = [];
+      state.trial.votes = [];
+      state.trial.sentenceVotes = [];
+      state.logs.push('A trial was left unresolved when the day ended; it was closed on the new day.');
+    }
     state.trial.dayTrialsDone = 0;
     var victory = E.checkVictory(state);
     return victory;
@@ -80,7 +88,26 @@
       }
       return true;
     }
+    if (state.trial.stage === 'SENTENCE') {
+      var sverdict = vote.verdict;
+      if (sverdict !== 'GUILTY' && sverdict !== 'INNOCENT' && sverdict !== 'ABSTAIN') return false;
+      if (!voter.isAlive) return false;
+      if (vote.voterId === state.trial.accusedId) return false;
+      if (!state.trial.sentenceVotes) state.trial.sentenceVotes = [];
+      var srec = { voterId: vote.voterId, verdict: sverdict };
+      var sidx = state.trial.sentenceVotes.findIndex(function (s) { return s.voterId === vote.voterId; });
+      var sChanged = sidx < 0 || state.trial.sentenceVotes[sidx].verdict !== sverdict;
+      if (sidx >= 0) state.trial.sentenceVotes[sidx] = srec;
+      else state.trial.sentenceVotes.push(srec);
+      var acc3 = E._byId(state, state.trial.accusedId);
+      if (sChanged) {
+        E._logPlayer(state, vote.voterId, at, 'verdict', 'Voted ' + sverdict.toLowerCase() +
+          ' in the sentence of ' + (acc3 ? acc3.name : 'the accused') + '.');
+      }
+      return true;
+    }
     if (state.trial.stage !== 'VOTE') return false;
+    if (vote.voterId === state.trial.accusedId) return false;
     var verdict = vote.verdict;
     if (verdict !== 'GUILTY' && verdict !== 'INNOCENT' && verdict !== 'ABSTAIN') return false;
     var isGhost = !voter.isAlive;
@@ -103,15 +130,16 @@
 
   E.resolveTrial = function (state) {
     if (!state.trial.active) return null;
+    if (state.trial.stage === 'SENTENCE') return null;
     var accused = E._byId(state, state.trial.accusedId);
     if (state.trial.stage === 'SECONDS') {
       var livingCount = state.players.filter(function (p) { return p.isAlive; }).length;
       var needed = Math.floor(livingCount / 2) + 1;
-      var agree = 1;
+      var agree = 0;
       var secs = state.trial.seconds || [];
       for (var si = 0; si < secs.length; si += 1) {
         var s = secs[si];
-        if (s.voterId === state.trial.accusedId || s.voterId === state.trial.nominatorId) continue;
+        if (s.voterId === state.trial.accusedId) continue;
         if (s.agree) agree += 1;
       }
       if (agree >= needed) {
@@ -135,31 +163,93 @@
       };
     }
     var guilty = 0;
-    var others = 0;
+    var innocent = 0;
     for (var i = 0; i < state.trial.votes.length; i += 1) {
       var v = state.trial.votes[i];
       var voter = E._byId(state, v.voterId);
       var weight = 1;
       if (voter && voter.isAlive && voter.revealed && voter.assignedRole === 'mayor') weight = 3;
       if (v.verdict === 'GUILTY') guilty += weight;
-      else others += weight;
+      else if (v.verdict === 'INNOCENT') innocent += weight;
     }
-    var noLynchD1 = !!state.houseRules.noLynchD1 && state.dayNumber === 1;
-    var lynch = guilty > others && !noLynchD1;
-    var lynchedId = null;
+    if (!!state.houseRules.noLynchD1 && state.dayNumber === 1) {
+      state.trial.active = false;
+      state.trial.stage = null;
+      if (accused) {
+        E._logPlayer(state, accused.id, E._logAt(state), 'acquitted', 'The trial ended without a lynch; the day continues.');
+      }
+      return {
+        result: 'SURVIVES', lynchedId: null, guilty: guilty, innocent: innocent,
+        jesterWin: false, executionerWin: false, victory: null, reason: 'no-lynch-day-1'
+      };
+    }
+    if (guilty > 0 && guilty > innocent) {
+      state.trial.stage = 'SENTENCE';
+      state.trial.sentenceVotes = [];
+      return {
+        result: 'SENTENCED', guilty: guilty, innocent: innocent, reason: 'guilty-majority',
+        lynchedId: null, jesterWin: false, executionerWin: false, victory: null
+      };
+    }
+    state.trial.active = false;
+    state.trial.stage = null;
+    if (accused) {
+      E._logPlayer(state, accused.id, E._logAt(state), 'acquitted', 'The trial ended without a lynch; the day continues.');
+    }
+    return {
+      result: 'SURVIVES', lynchedId: null, guilty: guilty, innocent: innocent,
+      jesterWin: false, executionerWin: false, victory: null,
+      reason: guilty === innocent ? 'tie' : 'not-guilty'
+    };
+  };
+
+  E.resolveSentence = function (state) {
+    if (!state.trial.active || state.trial.stage !== 'SENTENCE') return null;
+    var accused = E._byId(state, state.trial.accusedId);
+    var guilty = 0;
+    var innocent = 0;
+    var sv = state.trial.sentenceVotes || [];
+    for (var i = 0; i < sv.length; i += 1) {
+      var v = sv[i];
+      var voter = E._byId(state, v.voterId);
+      var weight = 1;
+      if (voter && voter.isAlive && voter.revealed && voter.assignedRole === 'mayor') weight = 3;
+      if (v.verdict === 'INNOCENT') innocent += weight;
+      else if (v.verdict === 'GUILTY') guilty += weight;
+    }
+    if (!accused || !accused.isAlive) {
+      state.trial.active = false;
+      state.trial.stage = null;
+      return {
+        result: 'SURVIVES', lynchedId: null, guilty: guilty, innocent: innocent,
+        jesterWin: false, executionerWin: false, victory: null, reason: 'accused-dead'
+      };
+    }
+    var livingCount = state.players.filter(function (p) { return p.isAlive; }).length;
+    if (innocent >= Math.floor(livingCount / 2) + 1) {
+      state.trial.active = false;
+      state.trial.stage = null;
+      state.trial.seconds = [];
+      state.trial.votes = [];
+      state.trial.sentenceVotes = [];
+      state.logs.push(accused.name + ' was spared by the sentence vote.');
+      E._logPlayer(state, accused.id, E._logAt(state), 'acquitted', 'The accused was spared by the sentence vote.');
+      return {
+        result: 'SPARED', lynchedId: null, guilty: guilty, innocent: innocent,
+        jesterWin: false, executionerWin: false, victory: null, reason: 'spared'
+      };
+    }
+    var lynchedId = accused.id;
+    state.trial.dayTrialsDone += 1;
     var jesterWin = false;
     var executionerWin = false;
-    if (lynch && accused && accused.isAlive) {
-      lynchedId = accused.id;
-      state.trial.dayTrialsDone += 1;
-      var isJesterLike = accused.assignedRole === 'jester' ||
-        (accused.assignedRole === 'executioner' && state.executionerConverted);
-      if (isJesterLike) jesterWin = true;
-      E._recordDeath(state, accused.id, 'lynched by the town', true, jesterWin);
-      state.logs.push(accused.name + ' was lynched by the town.');
-      E._logPlayer(state, accused.id, E._logAt(state), 'lynched', 'Was lynched by the town.');
-      if (accused.id === state.executionerTarget) executionerWin = true;
-    }
+    var isJesterLike = accused.assignedRole === 'jester' ||
+      (accused.assignedRole === 'executioner' && state.executionerConverted);
+    if (isJesterLike) jesterWin = true;
+    E._recordDeath(state, accused.id, 'lynched by the town', true, jesterWin);
+    state.logs.push(accused.name + ' was lynched by the town.');
+    E._logPlayer(state, accused.id, E._logAt(state), 'lynched', 'Was lynched by the town.');
+    if (accused.id === state.executionerTarget) executionerWin = true;
     state.trial.active = false;
     state.trial.stage = null;
     E._updateInheritance(state);
@@ -173,74 +263,23 @@
       state.winner = victory;
       state.phase = 'END';
       state.logs.push('The Executioner wins!');
-    } else if (lynchedId) {
+    } else {
       victory = E.checkVictory(state);
       if (!victory && jesterWin) {
         state.jester.haunted = true;
         state.jester.hauntTarget = null;
         state.logs.push('The Jester wins and becomes a taunting ghost!');
       }
-    } else if (accused) {
-      E._logPlayer(state, accused.id, E._logAt(state), 'acquitted', 'The trial ended without a lynch; the day continues.');
     }
-    var result = {
-      result: lynchedId ? 'LYNCHED' : 'SURVIVES',
+    return {
+      result: 'LYNCHED',
       lynchedId: lynchedId,
       guilty: guilty,
-      others: others,
+      innocent: innocent,
       jesterWin: jesterWin,
       executionerWin: executionerWin,
-      victory: victory
+      victory: victory,
+      reason: 'guilty-stands'
     };
-    return result;
-  };
-
-  E.vigilanteShoot = function (state, shooterId, targetId) {
-    var shooter = E._byId(state, shooterId);
-    var target = E._byId(state, targetId);
-    if (!shooter || !target) return null;
-    if (shooter.assignedRole !== 'vigilante' || !shooter.isAlive) return null;
-    if (!target.isAlive || targetId === shooterId) return null;
-    if (shooter.shotsFired >= 3) return null;
-    shooter.shotsFired += 1;
-    var guilty = E._alignmentOf(state, target) === 'TOWN';
-    if (guilty) shooter.guiltPending = true;
-    E._recordDeath(state, targetId, 'shot during the day', false, false);
-    state.logs.push(target.name + ' was shot during the day.');
-    E._logPlayer(state, shooterId, E._logAt(state), 'shot', shooter.name + ' shot ' + target.name + '.');
-    E._logPlayer(state, targetId, E._logAt(state), 'shot', 'Was shot during the day.');
-    E._updateInheritance(state);
-    var victory = E.checkVictory(state);
-    return { killedId: targetId, guilty: guilty, victory: victory };
-  };
-
-  E.deputyShoot = function (state, deputyId, targetId) {
-    var deputy = E._byId(state, deputyId);
-    var target = E._byId(state, targetId);
-    if (!deputy || !target) return null;
-    if (deputy.assignedRole !== 'deputy' || !deputy.isAlive) return null;
-    if (deputy.usedOncePerGame) return null;
-    if (!target.isAlive || targetId === deputyId) return null;
-    deputy.usedOncePerGame = true;
-    var guilty = E._alignmentOf(state, target) === 'TOWN';
-    if (guilty) deputy.guiltPending = true;
-    E._recordDeath(state, targetId, 'shot by the Deputy', false, false);
-    state.logs.push('The Deputy publicly shot ' + target.name + '.');
-    E._logPlayer(state, deputyId, E._logAt(state), 'shot', deputy.name + ' shot ' + target.name + '.');
-    E._logPlayer(state, targetId, E._logAt(state), 'shot', 'Was shot by the Deputy.');
-    E._updateInheritance(state);
-    var victory = E.checkVictory(state);
-    return { killedId: targetId, guilty: guilty, victory: victory };
-  };
-
-  E.mayorReveal = function (state, mayorId) {
-    var mayor = E._byId(state, mayorId);
-    if (!mayor) return null;
-    if (mayor.assignedRole !== 'mayor' || !mayor.isAlive || mayor.revealed) return null;
-    mayor.revealed = true;
-    mayor.usedOncePerGame = true;
-    state.logs.push('The Mayor has revealed!');
-    E._logPlayer(state, mayorId, E._logAt(state), 'revealed', mayor.name + ' revealed as the Mayor (votes count 3).');
-    return { revealed: true };
   };
 })(typeof window !== 'undefined' ? window : globalThis);

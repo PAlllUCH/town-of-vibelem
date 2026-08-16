@@ -10,7 +10,7 @@
     state.graveyard = [];
     state.deathLog = [];
     state.ghosts = { ledgerEnabled: true };
-    state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 };
+    state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], sentenceVotes: [], dayTrialsDone: 0 };
     state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
     state.dayNumber = 0;
     state.winner = null;
@@ -311,10 +311,12 @@
     });
     if (!Array.isArray(data.deathLog)) data.deathLog = [];
     if (!data.trial || typeof data.trial !== 'object') {
-      data.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 };
+      data.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], sentenceVotes: [], dayTrialsDone: 0 };
     }
-    if (data.trial.stage !== 'SECONDS' && data.trial.stage !== 'VOTE') data.trial.stage = null;
+    if (data.trial.stage !== 'SECONDS' && data.trial.stage !== 'VOTE' && data.trial.stage !== 'SENTENCE') data.trial.stage = null;
     if (!Array.isArray(data.trial.seconds)) data.trial.seconds = [];
+    if (!Array.isArray(data.trial.votes)) data.trial.votes = [];
+    if (!Array.isArray(data.trial.sentenceVotes)) data.trial.sentenceVotes = [];
     if (!data.night || typeof data.night !== 'object') {
       data.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
     }

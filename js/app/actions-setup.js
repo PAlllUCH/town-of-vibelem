@@ -185,6 +185,7 @@
       if (APP.app.dayTimerEnds && APP.app.dayTimerEnds <= Date.now()) APP.app.dayTimerEnds = null;
       APP.app.dayTimerTotal = (data.ui && data.ui.dayTimerTotal) || null;
       if (!APP.app.dayTimerEnds) APP.app.dayTimerTotal = null;
+      APP.app.collapsed = (data.ui && data.ui.collapsed) || {};
       APP.app.lastTrialResult = null;
       APP.app.lastVictory = null;
       APP.app.picker = null;

@@ -13,6 +13,7 @@ if (typeof module !== 'undefined' && module.exports) {
   require('./engine/07b-night-resolution.js');
   require('./engine/08-ghosts.js');
   require('./engine/09-day.js');
+  require('./engine/09b-day-actions.js');
   require('./engine/10-victory.js');
   module.exports = globalThis.VillageEngine;
 }

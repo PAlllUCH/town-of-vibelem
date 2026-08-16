@@ -174,18 +174,11 @@
       add('executioner', 'Brief the Executioner',
         'Executioner target: ' + UI.esc(UI.nameOf(state, state.executionerTarget)));
     }
-    var n1Roles = deck.filter(function (rid) {
-      return E.ROLES[rid] && E.ROLES[rid].n1Only;
-    });
     var relayRoles = deck.filter(function (rid) {
-      return E.ROLES[rid] && (E.ROLES[rid].n1Only || E.ROLES[rid].startKnowing);
+      return E.ROLES[rid] && E.ROLES[rid].startKnowing;
     });
     if (relayRoles.length) {
       add('relays', 'Inform blind roles', relayRoles.map(UI.roleName).join(', ') + ' relays');
-    }
-    if (n1Roles.length) {
-      add('n1', 'Wake first-night roles',
-        n1Roles.map(UI.roleName).join(', ') + ' wake on Night 1 only.');
     }
     add('deal', 'Deal role cards', 'Deal each player their role card / name tag.');
     var doneCount = 0;
@@ -208,6 +201,9 @@
     var seat = app.sheet.seat;
     var name = app.sheet.name != null ? app.sheet.name : (app.names[seat] || ('Player ' + seat));
     var cur = app.sheet.role != null ? app.sheet.role : currentRole(state, app, seat);
+    var dealt = state.players && state.players[seat - 1] ? state.players[seat - 1].assignedRole : '';
+    var sheetSet = app.sheet.role != null && app.sheet.role !== '';
+    var showClear = sheetSet && cur !== dealt;
     var picker = availableRoles(state, app, seat);
     var ids = picker.ids.slice();
     if (cur && ids.indexOf(cur) === -1) ids.push(cur);
@@ -252,6 +248,7 @@
     });
     html += '</div>';
     html += '<div class="seat-sheet-footer">' +
+      (showClear ? '<button class="btn btn-danger" data-action="clear-role">Clear Role</button>' : '') +
       '<button class="btn" data-action="close-sheet">Cancel</button>' +
       '<button class="btn btn-primary" data-action="save-seat">Save</button></div>';
     html += '</div>';

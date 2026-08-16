@@ -107,11 +107,14 @@
       case 'nz-toggle':
         APP.nzToggle(btn.getAttribute('data-nz'));
         break;
-      case 'toggle-whispers':
-        APP.toggleWhispers();
+      case 'toggle-tokens':
+        APP.toggleTokens();
         break;
       case 'toggle-claims':
         APP.toggleClaims();
+        break;
+      case 'toggle-mod':
+        APP.toggleMod();
         break;
       case 'claim-open':
         APP.claimOpen(btn.getAttribute('data-seat'));
@@ -175,23 +178,8 @@
       case 'wizard-witness-confirm':
         APP.wizWitnessConfirm();
         break;
-      case 'whisper-done':
-        APP.whisperDone(btn.getAttribute('data-player'), btn.getAttribute('data-night'));
-        break;
-      case 'claim-round-open':
-        APP.claimRoundOpen();
-        break;
-      case 'claim-round-pick':
-        APP.claimRoundPick(btn.getAttribute('data-seat'), btn.getAttribute('data-role'));
-        break;
-      case 'claim-round-cancel':
-        APP.claimRoundCancel();
-        break;
-      case 'claim-round-edit':
-        APP.claimRoundEdit(btn.getAttribute('data-seat'));
-        break;
-      case 'claim-round-done':
-        APP.claimRoundDone();
+      case 'token-shown':
+        APP.tokenShown(btn.getAttribute('data-player'), btn.getAttribute('data-night'));
         break;
       case 'resolve-night':
         APP.resolveNight();
@@ -219,6 +207,15 @@
       case 'resolve-trial':
         APP.resolveTrial();
         break;
+      case 'resolve-sentence':
+        APP.resolveSentence();
+        break;
+      case 'kill-player':
+        APP.killPlayer();
+        break;
+      case 'undo-kill':
+        APP.undoKill();
+        break;
       case 'clear-trial':
         app.lastTrialResult = null;
         app.trialStage = null;
@@ -243,6 +240,9 @@
         app.dayTimerTotal = Number(btn.getAttribute('data-seconds')) || 0;
         APP.afterMutation();
         break;
+      case 'adjust-day-timer':
+        APP.adjustDayTimer(Number(btn.getAttribute('data-delta')) || 0);
+        break;
       case 'stop-day-timer':
         app.dayTimerEnds = null;
         app.dayTimerTotal = null;
@@ -256,6 +256,9 @@
       case 'toggle-logs':
         app.logsOpen = !app.logsOpen;
         APP.afterMutation();
+        break;
+      case 'toggle-card':
+        APP.toggleCard(btn.getAttribute('data-card'));
         break;
       case 'toggle-reference':
         app.referenceOpen = !app.referenceOpen;
@@ -285,28 +288,6 @@
     }
   }
 
-  function updateReferenceList() {
-    var list = document.querySelector('#reference-panel .reference-list');
-    if (!list || !APP.app.referenceOpen) return;
-    list.innerHTML = UI.renderReferenceList(APP.app);
-  }
-
-  function updateReferencePanel() {
-    var panel = document.getElementById('reference-panel');
-    if (!panel) return;
-    var rb = document.querySelector('.app-header [data-action="toggle-reference"]');
-    if (APP.app.referenceOpen) {
-      panel.innerHTML = UI.renderRoleReference(APP.state, APP.app);
-      panel.classList.add('open');
-      document.body.classList.add('reference-open');
-    } else {
-      panel.classList.remove('open');
-      panel.innerHTML = '';
-      document.body.classList.remove('reference-open');
-    }
-    if (rb && rb.classList) rb.classList.toggle('on', !!APP.app.referenceOpen);
-  }
-
   document.addEventListener('click', function (ev) {
     var btn = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
     if (!btn) return;
@@ -317,18 +298,33 @@
     if (ev.key !== 'Escape') return;
     if (APP.app.claimPicker != null) APP.claimClose();
     else if (APP.app.claimsOpen) APP.toggleClaims();
-    else if (APP.app.whispersOpen) APP.toggleWhispers();
+    else if (APP.app.tokensOpen) APP.toggleTokens();
+    else if (APP.app.modOpen) APP.toggleMod();
   });
 
-  document.addEventListener('input', function (ev) {
-    var t = ev.target;
-    if (!t || !t.getAttribute) return;
-    if (t.getAttribute('data-action') === 'reference-search') {
-      APP.app.referenceQuery = t.value || '';
-      APP.updateReferenceList();
+  function toggleCard(key) {
+    var app = APP.app;
+    if (!key) return;
+    if (!app.collapsed) app.collapsed = {};
+    app.collapsed[key] = !app.collapsed[key];
+    APP.afterMutation();
+  }
+  APP.toggleCard = toggleCard;
+
+  function adjustDayTimer(delta) {
+    var app = APP.app;
+    if (!app.dayTimerEnds) return;
+    var remaining = Math.max(0, Math.round((app.dayTimerEnds - Date.now()) / 1000));
+    var next = remaining + delta;
+    if (next <= 0) {
+      app.dayTimerEnds = null;
+      app.dayTimerTotal = null;
+      APP.afterMutation();
+      return;
     }
-  });
-
-  APP.updateReferencePanel = updateReferencePanel;
-  APP.updateReferenceList = updateReferenceList;
+    app.dayTimerEnds = app.dayTimerEnds + delta * 1000;
+    app.dayTimerTotal = Math.max((app.dayTimerTotal == null ? remaining : app.dayTimerTotal + delta), next);
+    APP.afterMutation();
+  }
+  APP.adjustDayTimer = adjustDayTimer;
 })();

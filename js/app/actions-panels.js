@@ -23,24 +23,26 @@
 
   function updatePanels() {
     var app = APP.app;
-    var open = app.whispersOpen || app.claimsOpen || app.claimPicker != null;
+    var open = app.tokensOpen || app.claimsOpen || app.modOpen || app.claimPicker != null;
     var host = panelRoot();
-    if (app.whispersOpen) {
-      host.innerHTML = UI.renderWhispers(APP.state, app);
+    if (app.tokensOpen) {
+      host.innerHTML = UI.renderTokens(APP.state, app);
     } else if (app.claimsOpen) {
       var html = UI.renderClaimsPanel(APP.state, APP.cfg, app);
       if (app.claimPicker != null) html += UI.renderClaimPicker(APP.state, app);
       host.innerHTML = html;
+    } else if (app.modOpen) {
+      host.innerHTML = UI.renderModPanel(APP.state, app);
     } else {
       host.innerHTML = '';
     }
     if (document.body) document.body.classList.toggle('panel-open', open);
   }
 
-  function toggleWhispers() {
+  function toggleTokens() {
     var app = APP.app;
-    app.whispersOpen = !app.whispersOpen;
-    if (app.whispersOpen) app.claimsOpen = false;
+    app.tokensOpen = !app.tokensOpen;
+    if (app.tokensOpen) { app.claimsOpen = false; app.modOpen = false; }
     app.claimPicker = null;
     APP.afterMutation();
     updatePanels();
@@ -49,8 +51,20 @@
   function toggleClaims() {
     var app = APP.app;
     app.claimsOpen = !app.claimsOpen;
-    if (app.claimsOpen) app.whispersOpen = false;
+    if (app.claimsOpen) { app.tokensOpen = false; app.modOpen = false; }
     app.claimPicker = null;
+    APP.afterMutation();
+    updatePanels();
+  }
+
+  function toggleMod() {
+    var app = APP.app;
+    app.modOpen = !app.modOpen;
+    if (app.modOpen) {
+      app.tokensOpen = false;
+      app.claimsOpen = false;
+      app.claimPicker = null;
+    }
     APP.afterMutation();
     updatePanels();
   }
@@ -82,8 +96,9 @@
   }
 
   APP.nzToggle = nzToggle;
-  APP.toggleWhispers = toggleWhispers;
+  APP.toggleTokens = toggleTokens;
   APP.toggleClaims = toggleClaims;
+  APP.toggleMod = toggleMod;
   APP.claimOpen = claimOpen;
   APP.claimPick = claimPick;
   APP.claimClear = claimClear;

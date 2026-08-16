@@ -6,7 +6,7 @@
   var roleDefs = {
     jailor: {
       id: 'jailor', name: 'Jailor', team: 'TOWN', category: 'Town Killing',
-      blurb: 'Jails a player each night, then EXECUTES (Unstoppable, max 3) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
+      blurb: 'Jails a player each night, then EXECUTES (Unstoppable) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: 3
     },
     undertaker: {
@@ -21,7 +21,7 @@
     },
     doctor: {
       id: 'doctor', name: 'Doctor', team: 'TOWN', category: 'Town Protective',
-      blurb: 'Each night, protects one player from the first Basic attack against them. Fails if Drunk or roleblocked.',
+      blurb: 'Each night, protects one player from all Basic attacks against them that night. Fails if Drunk or roleblocked.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     sheriff: {
@@ -51,8 +51,8 @@
     },
     oracle: {
       id: 'oracle', name: 'Oracle', team: 'TOWN', category: 'Town Investigative',
-      blurb: 'Night 1 only: learns whether a player is TOWN or NOT TOWN. Inverts if Drunk. Becomes a plain civilian after Night 1.',
-      nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1, n1Only: true
+      blurb: 'Each night, learns whether a player is TOWN or NOT TOWN. Inverts if Drunk.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     washerwoman: {
       id: 'washerwoman', name: 'Washerwoman', team: 'TOWN', category: 'Town Support',
