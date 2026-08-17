@@ -138,7 +138,7 @@
 .toggle.on .toggle-knob { left: 25px; }
 
 /* Layout picker */
-.layout-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.layout-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .layout-card {
   appearance: none;
   display: flex;
@@ -164,9 +164,7 @@
   opacity: .95;
 }
 .layout-icon-circle { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cellipse cx='32' cy='22' rx='24' ry='15' fill='none' stroke='%237a9ab5' stroke-width='2'/%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='32' cy='5' r='3'/%3E%3Ccircle cx='54' cy='22' r='3'/%3E%3Ccircle cx='32' cy='39' r='3'/%3E%3Ccircle cx='10' cy='22' r='3'/%3E%3Ccircle cx='19' cy='9' r='3'/%3E%3Ccircle cx='45' cy='35' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
-.layout-icon-two_rows { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='32' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
 .layout-icon-u_shape { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='32' cy='12' r='3'/%3E%3Ccircle cx='52' cy='12' r='3'/%3E%3Ccircle cx='12' cy='32' r='3'/%3E%3Ccircle cx='52' cy='32' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
-.layout-icon-rectangular { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 44'%3E%3Cg fill='%23ede8de'%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Ccircle cx='32' cy='10' r='3'/%3E%3Ccircle cx='52' cy='10' r='3'/%3E%3Ccircle cx='12' cy='22' r='3'/%3E%3Ccircle cx='32' cy='22' r='3'/%3E%3Ccircle cx='52' cy='22' r='3'/%3E%3Ccircle cx='12' cy='34' r='3'/%3E%3Ccircle cx='32' cy='34' r='3'/%3E%3Ccircle cx='52' cy='34' r='3'/%3E%3C/g%3E%3C/svg%3E"); }
 
 /* Deck builder */
 .team-edit { margin: 12px 0; }

@@ -32,6 +32,26 @@
     }
   }
 
+  function resolveInnkeeper(ctx) {
+    var action = ctx.actions.find(function (a) { return a.position === 4 && a.roleId === 'innkeeper'; });
+    if (!action) return;
+    var innkeeper = E._byId(ctx.state, action.playerId);
+    if (!innkeeper || !innkeeper.isAlive || ctx.isBlocked(innkeeper.id) || ctx.isVoided(action)) return;
+    if (innkeeper.isDrunk) return;
+    var guestId = action.targetId;
+    if (!guestId || !ctx.alive(guestId)) return;
+    var guest = E._byId(ctx.state, guestId);
+    innkeeper.isProtected = true;
+    guest.isProtected = true;
+    guest.protectedByInnkeeper = true;
+    innkeeper.protectedByInnkeeper = true;
+    ctx.blocked.push(guestId);
+    ctx.setEff(innkeeper.id, guestId);
+    E._logPlayer(ctx.state, guestId, E._logAt(ctx.state), 'protected', guest.name + ' drank at the inn and was protected.');
+    E._logPlayer(ctx.state, innkeeper.id, E._logAt(ctx.state), 'protected', innkeeper.name + ' worked at the inn and was protected.');
+    ctx.log(innkeeper.name + ' shared a drink with ' + guest.name + ' at the inn; both are protected.');
+  }
+
   function resolveJailor(ctx) {
     if (ctx.jailAction) {
       var jailTarget = ctx.jailAction.targetId;
@@ -87,11 +107,21 @@
 
   function resolveMafia(ctx) {
     var mafiaAction = ctx.actions.find(function (a) {
-      return a.position === 6 && (a.roleId === 'godfather' || a.roleId === 'mafioso');
+      return a.position === 6 && (a.roleId === 'godfather' || a.roleId === 'mafioso' || a.roleId === 'amnesiac');
     });
     if (mafiaAction && !ctx.isVoided(mafiaAction)) {
-      var gf = ctx.state.players.find(function (p) { return p.assignedRole === 'godfather'; });
-      var mafioso = ctx.state.players.find(function (p) { return p.assignedRole === 'mafioso'; });
+      var rememberedRole = ctx.state.amnesiac && ctx.state.amnesiac.rememberedRole;
+      var amnesiac = ctx.state.players.find(function (p) {
+        return p.assignedRole === 'amnesiac' &&
+          (rememberedRole === 'godfather' || rememberedRole === 'mafioso');
+      });
+      var effectiveRole = function (p) {
+        if (p.assignedRole === 'godfather' || p.assignedRole === 'mafioso') return p.assignedRole;
+        if (p === amnesiac) return rememberedRole;
+        return null;
+      };
+      var gf = ctx.state.players.find(function (p) { return effectiveRole(p) === 'godfather'; });
+      var mafioso = ctx.state.players.find(function (p) { return effectiveRole(p) === 'mafioso'; });
       var gfAlive = !!gf && gf.isAlive;
       var mfAlive = !!mafioso && mafioso.isAlive;
       var gfBlocked = gfAlive && ctx.isBlocked(gf.id);
@@ -101,10 +131,12 @@
       else if (mfAlive && !mfBlocked) killer = mafioso;
       if (killer) {
         var mTarget = mafiaAction.targetId;
-        if (ctx.control && ctx.control.valid && ctx.control.controlledId === gf.id && ctx.control.redirect) {
+        if (ctx.control && ctx.control.valid && gf && ctx.control.controlledId === gf.id && ctx.control.redirect) {
           mTarget = ctx.control.redirect;
         }
-        if (mTarget && ctx.alive(mTarget)) {
+        if (mTarget === killer.id) {
+          ctx.log('The Mafia kill failed: the kill may not target the kill leader.');
+        } else if (mTarget && ctx.alive(mTarget)) {
           ctx.setEff(killer.id, mTarget);
           if (ctx.noKillN1) {
             ctx.log('The Mafia kill is void (No Kill on Night One): ' + E._byId(ctx.state, mTarget).name + ' is unharmed.');
@@ -116,6 +148,29 @@
       } else {
         ctx.log('The Mafia kill failed: no available killer.');
       }
+    }
+  }
+
+  function resolveDemon(ctx) {
+    var action = ctx.actions.find(function (a) { return a.position === 9 && a.roleId === 'demon'; });
+    if (!action || ctx.isVoided(action)) return;
+    var demon = E._byId(ctx.state, action.playerId);
+    if (demon && demon.isAlive && !ctx.isBlocked(demon.id) && action.targetId && ctx.alive(action.targetId)) {
+      ctx.setEff(demon.id, action.targetId);
+      if (!ctx.noKillN1) ctx.applyAttack(action.targetId, 'basic', 'killed by the Demon');
+      ctx.log(demon.name + ' attacked ' + E._byId(ctx.state, action.targetId).name + '.');
+    }
+  }
+
+  function resolveSuccubus(ctx) {
+    var action = ctx.actions.find(function (a) { return a.position === 11 && a.roleId === 'succubus'; });
+    if (!action || ctx.isVoided(action)) return;
+    var succubus = E._byId(ctx.state, action.playerId);
+    if (succubus && succubus.isAlive && !ctx.isBlocked(succubus.id) && action.targetId && ctx.alive(action.targetId)) {
+      var target = E._byId(ctx.state, action.targetId);
+      target.enchanted = true;
+      ctx.setEff(succubus.id, target.id);
+      ctx.log(succubus.name + ' enchanted ' + target.name + '.');
     }
   }
 
@@ -200,6 +255,7 @@
   E._nightActions = {
     poisoner: resolvePoisoner,
     witchReveal: resolveWitchReveal,
+    innkeeper: resolveInnkeeper,
     jailor: resolveJailor,
     roleblockers: resolveRoleblockers,
     doctor: resolveDoctor,
@@ -207,7 +263,9 @@
     janitor: resolveJanitor,
     forger: resolveForger,
     blackmailer: resolveBlackmailer,
+    demon: resolveDemon,
     serialkiller: resolveSerialKiller,
-    framer: resolveFramer
+    framer: resolveFramer,
+    succubus: resolveSuccubus
   };
 })(typeof window !== 'undefined' ? window : globalThis);

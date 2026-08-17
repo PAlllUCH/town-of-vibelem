@@ -315,3 +315,75 @@ describe('noKillN1 mafia log', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Regression: engine review fixes (M3, M4, H2, H3, L1, L2, L4)
+// ---------------------------------------------------------------------------
+
+describe('review fixes', () => {
+  test('the Mafia kill leader cannot target themselves', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    assert.strictEqual(engine.recordNightAction(state, { position: 6, roleId: 'godfather', playerId: 1, targetId: 1 }), false);
+    assert.strictEqual(state.night.actions.length, 0);
+  });
+
+  test('a Witch redirecting the Mafia kill onto the kill leader voids the kill', () => {
+    const state = assignRoles(['witch', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    act(state, 2, 'witch', 1, 2, { controlRedirect: 2 });
+    act(state, 6, 'godfather', 2, 4);
+    const result = night(state);
+    assert.strictEqual(result.deaths.length, 0);
+    assert.strictEqual(pid(state, 4).isAlive, true);
+  });
+
+  test('a Mafioso promoted mid-night after the Godfather dies has Basic defense and reads INNOCENT', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'veteran', 'serialkiller', 'sheriff', 'civilian', 'civilian', 'civilian']);
+    act(state, 0, 'veteran', 3, null, { alert: true });
+    act(state, 6, 'godfather', 1, 3);
+    act(state, 9, 'serialkiller', 4, 2);
+    act(state, 11, 'sheriff', 5, 2);
+    const result = night(state);
+    assert.strictEqual(pid(state, 1).isAlive, false, 'godfather died');
+    assert.strictEqual(pid(state, 2).isAlive, true, 'promoted mafioso survives the same-night SK attack');
+    assert.ok(logText(state).includes('(Sheriff) checks P2: INNOCENT'), 'sheriff reads the promoted mafioso as INNOCENT');
+  });
+
+  test('the Jailor can re-jail a player after skipping a night', () => {
+    const state = assignRoles(['jailor', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 3, 'jailor', 1, 2);
+    night(state);
+    assert.strictEqual(pid(state, 2).jailed, true);
+    night(state);
+    act(state, 3, 'jailor', 1, 2);
+    night(state);
+    assert.strictEqual(pid(state, 2).jailed, true, 're-jail after a skip is allowed');
+  });
+
+  test('a Lookout sees the Witness visit its second target', () => {
+    const state = assignRoles(['lookout', 'witness', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 11, 'witness', 2, 3, { secondTarget: 4 });
+    act(state, 11, 'lookout', 1, 4);
+    night(state);
+    assert.ok(logText(state).includes('(Lookout) watches P4:'), 'lookout must watch P4');
+    assert.ok(logText(state).includes('Witness'), 'lookout must see the Witness at P4');
+  });
+
+  test('a Retributionist revival removes the player from the morning deaths list', () => {
+    const state = assignRoles(['retributionist', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian']);
+    engine._recordDeath(state, 2, 'killed in the night', false, true);
+    act(state, 12, 'retributionist', 1, 2);
+    const result = night(state);
+    assert.ok(result.revived.indexOf(2) !== -1, 'P2 was revived');
+    assert.ok(!state.morning.deaths.some((d) => d.playerId === 2), 'revived player not listed as dead in the morning');
+  });
+
+  test('undoKill removes the player from the morning deaths list', () => {
+    const state = assignRoles(['godfather', 'mafioso', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 6, 'godfather', 1, 3);
+    night(state);
+    assert.ok(state.morning.deaths.some((d) => d.playerId === 3), 'P3 initially dead in the morning');
+    engine.undoKill(state, 3);
+    assert.ok(!state.morning.deaths.some((d) => d.playerId === 3), 'undoKill clears P3 from the morning deaths');
+    assert.strictEqual(pid(state, 3).isAlive, true);
+  });
+});
+

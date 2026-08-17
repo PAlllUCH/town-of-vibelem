@@ -18,14 +18,14 @@
 <link rel="stylesheet" href="styles/clock.css">
 <link rel="stylesheet" href="styles/end.css">
 <link rel="stylesheet" href="styles/reference.css">
+<link rel="stylesheet" href="styles/helper.css">
 </head>
 <body>
 <div class="app">
 
   <header class="app-header">
+    <button class="btn btn-sm btn-icon" data-action="toggle-sidebar" aria-label="Menu">&#9776;</button>
     <h1>Town of Vibelm</h1>
-    <span class="app-sub">Moderator Assistant</span>
-    <button class="btn btn-sm" data-action="toggle-reference">Roles</button>
   </header>
 
   <section class="screen" data-screen="setup">
@@ -42,6 +42,13 @@
     <div id="game-body"></div>
     <nav id="game-bar" class="bottom-bar" aria-label="Game actions"></nav>
   </section>
+
+  <div id="sidebar-backdrop"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Moderator sidebar" aria-hidden="true">
+    <div class="sidebar-head"><h2>Menu</h2><button class="btn btn-sm" data-action="close-sidebar">\u2715</button></div>
+    <div class="sidebar-body" id="sidebar-body"></div>
+    <div class="sidebar-event-log" id="sidebar-event-log"></div>
+  </aside>
 
   <section class="screen" data-screen="end">
     <div id="end-body"></div>
@@ -77,6 +84,7 @@
 <script src="js/ui/day-trial.js"></script>
 <script src="js/ui/end.js"></script>
 <script src="js/ui/reference.js"></script>
+<script src="js/ui/helper.js"></script>
 <script src="js/app/config.js"></script>
 <script src="js/app/persistence.js"></script>
 <script src="js/app/router.js"></script>

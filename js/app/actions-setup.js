@@ -171,6 +171,7 @@
   function resumeGame() {
     var data = APP.loadSave();
     if (!data || !data.game) { UI.toast('No saved game found.'); return; }
+    APP.hydrateUi(data && data.ui);
     try {
       APP.state = E.deserialize(data.game);
       if (data.cfg) APP.cfg = APP.mergeCfg(APP.cfg, data.cfg);

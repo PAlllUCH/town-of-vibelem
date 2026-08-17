@@ -27,11 +27,8 @@
       '<span class="cycle-clock-phase">' + word + '</span>' +
       '</div>' +
       '</div>' +
-      '<button class="btn btn-sm' + (app.tokensOpen ? ' on' : '') + '" data-action="toggle-tokens">Tokens</button>' +
-      '<button class="btn btn-sm' + (app.claimsOpen ? ' on' : '') + '" data-action="toggle-claims">Claims</button>' +
-      '<button class="btn btn-sm" data-action="toggle-seat-overlay">Seats</button>' +
-      '<button class="btn btn-sm" data-action="toggle-logs">Log</button>' +
-      '<button class="btn btn-sm' + (app.modOpen ? ' on' : '') + '" data-action="toggle-mod">Mod</button></div>';
+      '</div>' +
+      '</div>';
   };
 
   UI.renderGame = function (state, cfg, app) {
@@ -68,6 +65,28 @@
     }
     body += logsCard(state, app);
     return { body: body, bar: bar };
+  };
+
+  UI.renderSidebar = function (state, app) {
+    var items = [
+      { label: app.mode === 'helper' ? 'Switch to App' : 'Switch to Helper', action: 'toggle-mode' },
+      { label: 'Tokens', action: 'toggle-tokens' },
+      { label: 'Claims', action: 'toggle-claims' },
+      { label: 'Seats', action: 'toggle-seat-overlay' },
+      { label: 'Log', action: 'toggle-logs' },
+      { label: 'Mod', action: 'toggle-mod' },
+      { label: 'Roles', action: 'toggle-reference' }
+    ];
+    var h = '';
+    items.forEach(function (item) {
+      h += '<div class="sidebar-item" data-action="' + item.action + '">' + UI.esc(item.label) + '</div>';
+    });
+    return h;
+  };
+
+  UI.renderSidebarLog = function (state) {
+    var logs = (state.logs || []).slice(-20);
+    return logs.map(function (l) { return '<p>' + UI.esc(l) + '</p>'; }).join('');
   };
 
   function morningView(state, cfg, app) {
@@ -209,4 +228,22 @@
   }
 
   UI.livingBtns = livingBtns;
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var act = el.getAttribute('data-action');
+    if (act === 'toggle-sidebar') {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-backdrop').classList.toggle('open');
+      e.preventDefault();
+    } else if (act === 'close-sidebar') {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.remove('open');
+      e.preventDefault();
+    } else if (el.closest('.sidebar-item')) {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.remove('open');
+    }
+  });
 })();

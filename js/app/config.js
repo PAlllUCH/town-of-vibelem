@@ -4,10 +4,14 @@
   var E = window.VillageEngine || {};
   var APP = {
     SAVE_KEY: 'villagepub-save',
+    locale: null,
     state: null,
     cfg: null,
     app: {
       screen: 'setup',
+      mode: 'app',
+      statuses: {},
+      helperSheetPid: null,
       wizard: null,
       rolesHidden: false,
       namingMode: false,
@@ -66,13 +70,11 @@
     if (saved.houseRules && typeof saved.houseRules === 'object') {
       var hr = {};
       Object.keys(saved.houseRules).forEach(function (k) {
-        if (Object.prototype.hasOwnProperty.call(saved.houseRules, k)) {
-          hr[k] = saved.houseRules[k];
-        }
+        if (Object.prototype.hasOwnProperty.call(saved.houseRules, k)) hr[k] = saved.houseRules[k];
       });
       out.houseRules = Object.assign({}, out.houseRules, hr);
     }
-    if (saved.layout) out.layout = saved.layout;
+    if (saved.layout && E.SEAT_LAYOUTS && E.SEAT_LAYOUTS.indexOf(saved.layout) !== -1) out.layout = saved.layout;
     if (saved.teamCounts && saved.teamCounts.town != null) {
       out.teamCounts = { town: saved.teamCounts.town, mafia: saved.teamCounts.mafia, neutral: saved.teamCounts.neutral };
     } else {
@@ -98,7 +100,9 @@
     return { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral' }[t] || t;
   }
 
-  function deckList(team) { return APP.cfg.deckConfig[String(team).toLowerCase()]; }
+  function deckList(team) {
+    return APP.cfg.deckConfig[String(team).toLowerCase()];
+  }
 
   function teamAddAllowed(team) {
     var tc = teamCountsObj();
@@ -147,6 +151,9 @@
     APP.app.referenceQuery = '';
     APP.app.referenceDetail = null;
     APP.app.collapsed = {};
+    APP.app.helperSheetPid = null;
+    APP.app.statuses = {};
+    APP.app.mode = 'app';
   }
 
   APP.defaultCfg = defaultCfg;
@@ -157,9 +164,25 @@
   APP.teamAddAllowed = teamAddAllowed;
   APP.townLeftoverCivilians = townLeftoverCivilians;
   APP.resetAppFlags = resetAppFlags;
+  APP.toggleLocale = function () {
+    var next = (APP.locale || E.locale || 'en').toLowerCase() === 'pl' ? 'en' : 'pl';
+    if (typeof E.setLocale === 'function') E.setLocale(next);
+    APP.locale = E.locale || next;
+    if (typeof APP.renderScreen === 'function') APP.renderScreen(APP.app.screen);
+  };
+  APP.toggleMode = function () {
+    APP.app.mode = APP.app.mode === 'helper' ? 'app' : 'helper';
+    if (typeof APP.afterMutation === 'function') APP.afterMutation();
+  };
+  APP.toggleHelperStatus = function (pid, status) {
+    if (!APP.app.statuses) APP.app.statuses = {};
+    if (!APP.app.statuses[pid]) APP.app.statuses[pid] = {};
+    APP.app.statuses[pid][status] = !APP.app.statuses[pid][status];
+  };
   APP.init = function () {
     APP.state = null;
     APP.cfg = APP.defaultCfg();
+    APP.locale = E.locale || 'en';
   };
 
   window.APP = APP;

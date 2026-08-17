@@ -95,23 +95,27 @@ body.panel-open { overflow: hidden; }
 .player-log-row.log-bold { font-weight: 700; }
 .log-kind-tag { margin: 0; flex: none; font-size: .72rem; padding: 1px 6px; }
 
-/* Moderator overlays: whispers + claims */
 .panel-backdrop {
   position: fixed; inset: 0; z-index: 30; background: var(--scrim);
 }
 .panel-overlay {
-  position: fixed; top: 0; bottom: 0; left: 0; right: 0;
-  z-index: 31; max-width: 600px; margin: 0 auto;
-  background: var(--bg);
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 31;
+  width: min(280px, 85vw); margin: 0;
+  background: var(--bg); border-right: 1px solid var(--line);
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: 0 16px calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-100%);
+  transition: transform .2s ease;
 }
+body.panel-open .panel-overlay { transform: translateX(0); }
 .panel-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; position: sticky; top: 0; z-index: 1;
   background: var(--bg); padding: 12px 0 8px;
 }
 .panel-head h2 { margin: 0; }
+
+.btn-col .btn { min-height: 44px; }
 
 .whisper-group { margin: 12px 0 4px; }
 .whisper-actor { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
@@ -121,6 +125,7 @@ body.panel-open { overflow: hidden; }
   border-radius: var(--radius-sm); padding: 8px 10px; margin: 6px 0;
   font-size: .88rem;
 }
+
 .whisper-text { flex: 1; min-width: 0; }
 
 .claim-row {

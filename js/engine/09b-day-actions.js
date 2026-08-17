@@ -37,6 +37,21 @@
         }
       }
     }
+    if (state.morning) {
+      var morningLists = ['deaths', 'forgedWills', 'revivals'];
+      for (var k = 0; k < morningLists.length; k += 1) {
+        var list = state.morning[morningLists[k]];
+        if (!Array.isArray(list)) continue;
+        for (var m = list.length - 1; m >= 0; m -= 1) {
+          var item = list[m];
+          var itemId = item && typeof item === 'object' ?
+            (item.playerId !== undefined ? item.playerId :
+              (item.targetId !== undefined ? item.targetId :
+                (item.victimId !== undefined ? item.victimId : item.id))) : item;
+          if (String(itemId) === String(playerId)) list.splice(m, 1);
+        }
+      }
+    }
     p.isAlive = true;
     p.hasGhostVote = false;
     p.nightTarget = null;
@@ -62,7 +77,10 @@
     var shooter = E._byId(state, shooterId);
     var target = E._byId(state, targetId);
     if (!shooter || !target) return null;
-    if (shooter.assignedRole !== 'vigilante' || !shooter.isAlive) return null;
+    var shooterRole = shooter.assignedRole;
+    if (shooterRole === 'amnesiac' && state.amnesiac &&
+        state.amnesiac.rememberedRole === 'vigilante') shooterRole = 'vigilante';
+    if (shooterRole !== 'vigilante' || !shooter.isAlive) return null;
     if (!target.isAlive || targetId === shooterId) return null;
     if (shooter.shotsFired >= 3) return null;
     shooter.shotsFired += 1;
@@ -81,8 +99,13 @@
     var deputy = E._byId(state, deputyId);
     var target = E._byId(state, targetId);
     if (!deputy || !target) return null;
-    if (deputy.assignedRole !== 'deputy' || !deputy.isAlive) return null;
-    if (deputy.usedOncePerGame) return null;
+    var deputyRole = deputy.assignedRole;
+    if (deputyRole === 'amnesiac' && state.amnesiac &&
+        state.amnesiac.rememberedRole === 'deputy') deputyRole = 'deputy';
+    if (deputyRole !== 'deputy' || !deputy.isAlive) return null;
+    var rememberedDeputy = deputy.assignedRole === 'amnesiac' && state.amnesiac &&
+      state.amnesiac.rememberedRole === 'deputy';
+    if (deputy.usedOncePerGame && !rememberedDeputy) return null;
     if (!target.isAlive || targetId === deputyId) return null;
     deputy.usedOncePerGame = true;
     var guilty = E._alignmentOf(state, target) === 'TOWN';
@@ -99,7 +122,10 @@
   E.mayorReveal = function (state, mayorId) {
     var mayor = E._byId(state, mayorId);
     if (!mayor) return null;
-    if (mayor.assignedRole !== 'mayor' || !mayor.isAlive || mayor.revealed) return null;
+    var mayorRole = mayor.assignedRole;
+    if (mayorRole === 'amnesiac' && state.amnesiac &&
+        state.amnesiac.rememberedRole === 'mayor') mayorRole = 'mayor';
+    if (mayorRole !== 'mayor' || !mayor.isAlive || mayor.revealed) return null;
     mayor.revealed = true;
     mayor.usedOncePerGame = true;
     state.logs.push('The Mayor has revealed!');

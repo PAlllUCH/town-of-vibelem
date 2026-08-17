@@ -6,7 +6,9 @@ const {
   APP, engine, els, html, roleButton, startRoles,
   driveNight, secondAll, castAll
 } = require('./helpers.js');
+require('../js/ui/helper.js');
 const E = engine;
+E.setLocale('en');
 
 describe('app UI layer', () => {
 
@@ -476,9 +478,10 @@ describe('moderator toolbox', () => {
     const names = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'G', 8: 'H' };
     startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles, names);
     APP.beginDay1();
-    let h = html('game-header');
-    assert.ok(h.indexOf('data-action="toggle-mod"') !== -1, 'Mod button in the header');
-    assert.ok(h.indexOf('>Mod</button>') !== -1);
+    let h = html('sidebar-body');
+    assert.ok(h.indexOf('data-action="toggle-mod"') !== -1, 'Mod item in the sidebar');
+    assert.ok(h.indexOf('Mod</div>') !== -1);
+    assert.ok(html('game-header').indexOf('toggle-mod') === -1, 'Mod button removed from header');
     assert.ok(h.indexOf('Kill Player') === -1, 'moderator controls are not in the day body');
     APP.toggleMod();
     h = html('panel-root');
@@ -744,6 +747,68 @@ describe('moderator toolbox', () => {
     assert.ok(h.indexOf('data-card="abilities" aria-expanded="false"') !== -1, 'collapsed state survives save/load');
     assert.ok(h.indexOf('data-card="trial" aria-expanded="false"') !== -1);
     assert.ok(cardRegion('abilities').indexOf('collapsed') !== -1, 'abilities body hidden after resume');
+  });
+
+  test('prep phase renders the night order card after dealing', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    const h = html('seats-body');
+    assert.ok(h.indexOf('Night Order') !== -1);
+    assert.ok(h.indexOf('Jailor') !== -1);
+    assert.ok(h.indexOf('night-order-step') !== -1);
+  });
+
+  test('toggle-mode swaps the game screen to the helper and back', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    assert.ok(html('game-body').indexOf('helper-card') === -1);
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    let h = html('game-body');
+    assert.ok(h.indexOf('helper-card') !== -1);
+    assert.ok(h.indexOf('Night Order') !== -1);
+    assert.ok(html('sidebar-body').indexOf('Switch to App') !== -1);
+    APP.toggleMode();
+    assert.ok(html('game-body').indexOf('helper-card') === -1);
+    assert.ok(html('sidebar-body').indexOf('Switch to Helper') !== -1);
+  });
+
+  test('helper status sheet opens and toggles a manual status', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    const pid = String(APP.state.players[0].id);
+    APP.app.helperSheetPid = pid;
+    APP.renderScreen('game');
+    let h = html('game-body');
+    assert.ok(h.indexOf('helper-sheet') !== -1);
+    assert.ok(h.indexOf('helper-sheet open') !== -1);
+    assert.ok(h.indexOf('helper-sheet-backdrop open') !== -1);
+    assert.ok(h.indexOf(APP.state.players[0].name) !== -1);
+    APP.toggleHelperStatus(pid, 'drunk');
+    assert.strictEqual(APP.app.statuses[pid].drunk, true);
+    APP.renderScreen('game');
+    h = html('game-body');
+    assert.ok(h.indexOf('helper-chip') !== -1);
+    assert.ok(h.indexOf('<span class="helper-chip">DRUNK</span>') !== -1);
+  });
+
+  test('helper mode persists mode flag through save payload', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.app.mode = 'app';
+    APP.toggleMode();
+    assert.strictEqual(APP.app.mode, 'helper');
+    APP.save();
+    const payload = APP.loadSave();
+    assert.ok(payload && payload.ui, 'a save payload exists');
+    assert.strictEqual(payload.ui.mode, 'helper');
+    APP.hydrateUi(payload.ui);
+    assert.strictEqual(APP.app.mode, 'helper');
   });
 
 });

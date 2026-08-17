@@ -26,14 +26,14 @@
     p2: {
       id: 'p2', name: 'The Poisoned Pint',
       tagline: 'Sabotage: the Mafia cripples the town\'s power roles one drink at a time.',
-      town: ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef'],
+      town: ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper'],
       mafia: ['godfather', 'mafioso', 'poisoner', 'consort'],
       neutral: ['drunk', 'witch', 'spy']
     },
     p3: {
       id: 'p3', name: 'The Gunpowder Plot',
       tagline: 'Firepower on both sides: town guns and an unsuppressible night killer.',
-      town: ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef'],
+      town: ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper'],
       mafia: ['godfather', 'mafioso', 'consort', 'forger'],
       neutral: ['serialkiller', 'survivor', 'spy']
     },
@@ -54,13 +54,34 @@
     p6: {
       id: 'p6', name: 'The Clock Strikes Thirteen',
       tagline: 'Chaos at midnight: two night killers and heavy town firepower make every night decisive.',
-      town: ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef'],
+      town: ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper'],
       mafia: ['godfather', 'mafioso', 'consort', 'forger'],
       neutral: ['serialkiller', 'drunk', 'spy']
     }
   };
 
-  E.SEAT_LAYOUTS = ['circle', 'two_rows', 'u_shape', 'rectangular'];
+  E.SEAT_LAYOUTS = ['circle', 'u_shape'];
+
+  E.NIGHT_ZERO_STEPS = [
+    {
+      position: 0,
+      title: 'Night Zero — Washerwoman',
+      roles: ['washerwoman'],
+      prompt: 'Wake the Washerwoman. Relay their starting info.'
+    },
+    {
+      position: 1,
+      title: 'Night Zero — Chef',
+      roles: ['chef'],
+      prompt: 'Wake the Chef. Relay their starting info.'
+    },
+    {
+      position: 2,
+      title: 'Morning',
+      roles: [],
+      prompt: 'Night Zero is complete. Everyone, prepare for Day 1.'
+    }
+  ];
 
   E.NIGHT_STEPS = [
     {
@@ -88,6 +109,10 @@
       prompt: 'Consort, open your eyes. Point to your roleblock target.'
     },
     {
+      position: 4, title: 'Innkeeper', roles: ['innkeeper'],
+      prompt: 'Innkeeper, open your eyes. Point to the player drinking with you tonight.'
+    },
+    {
       position: 5, title: 'Doctor', roles: ['doctor'],
       prompt: 'Doctor, open your eyes. Point to the player you protect.'
     },
@@ -106,6 +131,10 @@
     {
       position: 8, title: 'Blackmailer', roles: ['blackmailer'],
       prompt: 'Blackmailer, open your eyes. Point to the player you blackmail.'
+    },
+    {
+      position: 9, title: 'Demon', roles: ['demon'],
+      prompt: 'Demon, open your eyes. Point to your kill target.'
     },
     {
       position: 9, title: 'Serial Killer', roles: ['serialkiller'],
@@ -148,6 +177,14 @@
       prompt: 'Oracle, open your eyes. Point to the player you read.'
     },
     {
+      position: 11, title: 'Succubus', roles: ['succubus'],
+      prompt: 'Succubus, open your eyes. Point to the player you enchant tonight.'
+    },
+    {
+      position: 12, title: 'Necromant', roles: ['necromant'],
+      prompt: 'Necromant, open your eyes. Point to the corpse whose power you borrow tonight.'
+    },
+    {
       position: 12, title: 'Retributionist', roles: ['retributionist'],
       prompt: 'Retributionist, open your eyes. Point to the corpse you revive.'
     },
@@ -168,5 +205,6 @@
   Object.freeze(E.RATIO_TABLE);
   Object.freeze(E.PRESETS);
   Object.freeze(E.SEAT_LAYOUTS);
+  Object.freeze(E.NIGHT_ZERO_STEPS);
   Object.freeze(E.NIGHT_STEPS);
 })(typeof window !== 'undefined' ? window : globalThis);

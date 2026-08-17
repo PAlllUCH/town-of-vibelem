@@ -93,6 +93,10 @@
       if (sverdict !== 'GUILTY' && sverdict !== 'INNOCENT' && sverdict !== 'ABSTAIN') return false;
       if (!voter.isAlive) return false;
       if (vote.voterId === state.trial.accusedId) return false;
+      var sAccused = E._byId(state, state.trial.accusedId);
+      if (voter.enchanted && sAccused && voter.enchantedBy === sAccused.assignedRole && sverdict === 'GUILTY') {
+        sverdict = 'ABSTAIN';
+      }
       if (!state.trial.sentenceVotes) state.trial.sentenceVotes = [];
       var srec = { voterId: vote.voterId, verdict: sverdict };
       var sidx = state.trial.sentenceVotes.findIndex(function (s) { return s.voterId === vote.voterId; });
@@ -114,7 +118,11 @@
     if (isGhost) {
       if (!E._spendGhostVote(voter, verdict, vote.ghostToken)) return false;
     }
-    var record = { voterId: vote.voterId, verdict: verdict, ghostToken: !!vote.ghostToken };
+    var vAccused = E._byId(state, state.trial.accusedId);
+    if (voter.enchanted && vAccused && voter.enchantedBy === vAccused.assignedRole && verdict === 'GUILTY') {
+      verdict = 'ABSTAIN';
+    }
+    var record = { voterId: vote.voterId, verdict: verdict, ghostToken: isGhost ? !!vote.ghostToken : false };
     var ridx = state.trial.votes.findIndex(function (v) { return v.voterId === vote.voterId; });
     var vChanged = ridx < 0 || state.trial.votes[ridx].verdict !== verdict ||
       state.trial.votes[ridx].ghostToken !== record.ghostToken;
@@ -243,8 +251,11 @@
     state.trial.dayTrialsDone += 1;
     var jesterWin = false;
     var executionerWin = false;
+    var rememberedRole = state.amnesiac && state.amnesiac.rememberedRole;
     var isJesterLike = accused.assignedRole === 'jester' ||
-      (accused.assignedRole === 'executioner' && state.executionerConverted);
+      (accused.assignedRole === 'executioner' && state.executionerConverted) ||
+      (accused.assignedRole === 'amnesiac' &&
+        (rememberedRole === 'jester' || (rememberedRole === 'executioner' && state.executionerConverted)));
     if (isJesterLike) jesterWin = true;
     E._recordDeath(state, accused.id, 'lynched by the town', true, jesterWin);
     state.logs.push(accused.name + ' was lynched by the town.');

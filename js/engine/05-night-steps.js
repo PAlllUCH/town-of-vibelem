@@ -2,13 +2,52 @@
 (function (root) {
   var E = root.VillageEngine;
 
+  E.getNightZeroSteps = function (state) {
+    var P = state.players || [];
+    var hasLivingRole = function (roleId) {
+      return P.some(function (p) {
+        return p.isAlive && p.assignedRole === roleId;
+      });
+    };
+    var steps = [];
+    var hasAny = false;
+    E.NIGHT_ZERO_STEPS.forEach(function (tpl) {
+      if (!tpl.roles.length) return;
+      if (tpl.roles.some(hasLivingRole)) {
+        hasAny = true;
+        steps.push({
+          position: tpl.position,
+          title: tpl.title,
+          roles: tpl.roles.slice(),
+          prompt: tpl.prompt
+        });
+      }
+    });
+    if (hasAny) {
+      var morning = E.NIGHT_ZERO_STEPS[E.NIGHT_ZERO_STEPS.length - 1];
+      steps.push({
+        position: morning.position,
+        title: morning.title,
+        roles: [],
+        prompt: morning.prompt
+      });
+    }
+    return steps;
+  };
+
   E.getNightSteps = function (state) {
     var steps = [];
     var nightNum = state.night.number;
     var isNightOne = nightNum === 1;
     var P = state.players;
+    var amn = state.amnesiac || {};
     var hasLivingRole = function (roleId) {
-      return P.some(function (p) { return p.isAlive && p.assignedRole === roleId; });
+      return P.some(function (p) {
+        return p.isAlive && (
+          p.assignedRole === roleId ||
+          (p.assignedRole === 'amnesiac' && amn.used && amn.rememberedRole === roleId)
+        );
+      });
     };
     var hauntPending = state.jester.haunted && state.jester.hauntTarget === null;
 
@@ -16,8 +55,12 @@
       var tpl = E.NIGHT_STEPS[i];
       var step = null;
       if (tpl.position === 0) {
-        var vet = P.find(function (p) { return p.assignedRole === 'veteran'; });
-        var vetAvailable = !!vet && vet.isAlive && vet.alertsUsed < 3;
+        var vetAvailable = P.some(function (p) {
+          return p.isAlive &&
+            (p.assignedRole === 'veteran' ||
+              (p.assignedRole === 'amnesiac' && amn.used && amn.rememberedRole === 'veteran')) &&
+            p.alertsUsed < 3;
+        });
         var roles0 = [];
         var prompt0 = tpl.prompt;
         if (vetAvailable) roles0.push('veteran');
@@ -32,7 +75,7 @@
         if (isNightOne) prompt3 += ' (Night 1: the Jailor cannot execute.)';
         step = { position: 3, title: tpl.title, roles: tpl.roles.slice(), prompt: prompt3 };
       } else if (tpl.position === 11 && tpl.title === 'Sheriff') {
-        var livingSheriff = P.some(function (p) { return p.isAlive && p.assignedRole === 'sheriff'; });
+        var livingSheriff = hasLivingRole('sheriff');
         var inheritedDeputy = P.some(function (p) {
           return p.isAlive && p.assignedRole === 'deputy' && p.inheritedRole === 'sheriff';
         });
@@ -42,17 +85,20 @@
         if (inheritedDeputy) roles11.push('deputy');
         step = { position: 11, title: tpl.title, roles: roles11, prompt: tpl.prompt };
       } else if (tpl.position === 12 && tpl.title === 'Retributionist') {
-        var retAvailable = P.some(function (p) {
-          return p.isAlive && p.assignedRole === 'retributionist' && !p.usedOncePerGame;
+        var retAvailable = hasLivingRole('retributionist') && !P.some(function (p) {
+          return p.isAlive && p.assignedRole === 'retributionist' && p.usedOncePerGame;
         });
         if (!retAvailable) continue;
         step = { position: 12, title: tpl.title, roles: ['retributionist'], prompt: tpl.prompt };
       } else if (tpl.position === 12 && tpl.title === 'Amnesiac') {
-        var amnAvailable = hasLivingRole('amnesiac') && !state.amnesiac.used;
+        var amnAvailable = hasLivingRole('amnesiac') && !amn.used;
         if (!amnAvailable) continue;
         step = { position: 12, title: tpl.title, roles: ['amnesiac'], prompt: tpl.prompt };
       } else if (tpl.position === 13) {
-        var anyMedium = P.some(function (p) { return p.assignedRole === 'medium'; });
+        var anyMedium = P.some(function (p) {
+          return p.assignedRole === 'medium' ||
+            (p.assignedRole === 'amnesiac' && amn.used && amn.rememberedRole === 'medium');
+        });
         if (!anyMedium) continue;
         step = { position: 13, title: tpl.title, roles: tpl.roles.slice(), prompt: tpl.prompt };
       } else if (tpl.roles.length === 0) {
@@ -60,7 +106,6 @@
         if (tpl.timerSeconds) step.timerSeconds = tpl.timerSeconds;
       } else {
         var rolesHere = tpl.roles.slice();
-        if (rolesHere.length === 0) continue;
         var present = rolesHere.some(function (r) { return hasLivingRole(r); });
         if (!present) continue;
         step = { position: tpl.position, title: tpl.title, roles: rolesHere, prompt: tpl.prompt };
@@ -74,14 +119,26 @@
     input = input || {};
     var p = E._byId(state, input.playerId);
     if (!p) return false;
+    var amn = state.amnesiac || {};
+    var rememberedRoleAllowed = p.assignedRole === 'amnesiac' &&
+      amn.used && input.roleId === amn.rememberedRole;
     var ghostAllowed = (input.position === 0 && input.roleId === 'jester') ||
       (input.position === 13 && input.roleId === 'medium');
     if (!p.isAlive && !ghostAllowed) return false;
-    if (input.roleId && input.roleId !== p.assignedRole) return false;
+    if (input.roleId && input.roleId !== p.assignedRole && !rememberedRoleAllowed) return false;
+    if (input.position === 6 && input.targetId != null) {
+      var killLeader = state.players.find(function (player) {
+        return player.assignedRole === 'godfather' && player.isAlive;
+      });
+      if (!killLeader) {
+        killLeader = state.players.find(function (player) {
+          return player.assignedRole === 'mafioso' && player.isAlive;
+        });
+      }
+      if (killLeader && String(input.targetId) === String(killLeader.id)) return false;
+    }
     if (input.targetId != null && String(input.targetId) === String(input.playerId)) {
-      var selfAllowed = input.roleId === 'doctor' ||
-        (input.position === 6 && (input.roleId === 'godfather' || input.roleId === 'mafioso'));
-      if (!selfAllowed) return false;
+      if (input.roleId !== 'doctor') return false;
     }
     var secondTarget = input.extra && input.extra.secondTarget;
     if (secondTarget != null && String(secondTarget) === String(input.playerId)) return false;

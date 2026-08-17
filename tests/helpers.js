@@ -43,7 +43,7 @@ function assignRoles(roles, opts) {
   });
   state.graveyard = [];
   state.deathLog = [];
-  state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 };
+  state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], sentenceVotes: [], dayTrialsDone: 0 };
   state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
   state.dayNumber = 0;
   state.winner = null;

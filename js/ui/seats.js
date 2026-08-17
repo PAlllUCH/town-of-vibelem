@@ -71,8 +71,7 @@
       if (!currentRole(state, app, seat)) left++;
     }
     var html = '<div class="card">';
-    html += '<div class="card-head"><h2>Name the Seats</h2>' +
-      '<button class="btn btn-sm" data-action="goto-setup">Setup</button></div>';
+    html += '<div class="card-head"><h2>Name the Seats</h2></div>';
     html += '<div class="hint" data-role-remaining>' + left + ' seat' + (left === 1 ? '' : 's') +
       ' left to assign</div>';
     html += UI.seatLayoutOpen(cfg, n);
@@ -128,6 +127,7 @@
         '<div class="seat-tags">' + UI.statusTags(p) + '</div></div></div>';
     });
     html += UI.seatLayoutClose();
+    html += UI.nightOrderPrep(state, cfg, app);
     html += '<div class="btn-row">' +
       '<button class="btn" data-action="edit-names">Edit Names</button>' +
       '<button class="btn" data-action="redeal">Redeal</button></div>';
@@ -151,8 +151,38 @@
 
     html += nightZeroCard(state, app);
 
-    html += '<button class="btn btn-primary btn-block btn-big" data-action="begin-night">Begin Day 1</button>';
+    var nzSteps = (E.getNightZeroSteps && E.getNightZeroSteps(state)) || [];
+    var hasNZ = nzSteps.length > 1;
+    var nightZeroDone = !!(state.night && state.night.nightZeroDone);
+    var btnAction = (hasNZ && !nightZeroDone) ? 'begin-night-zero' : 'begin-night';
+    var btnLabel = (hasNZ && !nightZeroDone) ? 'Begin Night 0' : 'Begin Day 1';
+    html += '<button class="btn btn-primary btn-block btn-big" data-action="' + btnAction + '">' + btnLabel + '</button>';
     return html;
+  };
+
+  UI.nightOrderPrep = function (state, cfg, app) {
+    var dealt = {};
+    (state.players || []).forEach(function (p) {
+      if (p.assignedRole) dealt[p.assignedRole] = true;
+    });
+    var body = '<div class="night-order-list">';
+    E.NIGHT_STEPS.forEach(function (step) {
+      var hit = false;
+      step.roles.forEach(function (rid) { if (dealt[rid]) hit = true; });
+      if (!hit) return;
+      var holders = [];
+      (state.players || []).forEach(function (p) {
+        if (p.assignedRole && step.roles.indexOf(p.assignedRole) !== -1) {
+          holders.push(UI.esc(p.name || ('Player ' + p.seat)));
+        }
+      });
+      body += '<div class="night-order-step">' +
+        '<span class="night-order-pos">' + step.position + '</span>' +
+        '<strong class="night-order-title">' + UI.esc(step.title) + '</strong>' +
+        '<span class="night-order-players">' + holders.join(', ') + '</span></div>';
+    });
+    body += '</div>';
+    return UI.card('Night Order', body, 'night-order', app);
   };
 
   function nightZeroCard(state, app) {

@@ -13,7 +13,7 @@
   function updateReferencePanel() {
     var panel = document.getElementById('reference-panel');
     if (!panel) return;
-    var rb = document.querySelector('.app-header [data-action="toggle-reference"]');
+    var rb = document.querySelector('[data-action="toggle-reference"]');
     if (APP.app.referenceOpen) {
       panel.innerHTML = UI.renderRoleReference(APP.state, APP.app);
       panel.classList.add('open');

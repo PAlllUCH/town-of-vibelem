@@ -233,8 +233,53 @@
     return ['sheriff', 'deputy', 'tracker', 'lookout', 'undertaker', 'consigliere', 'witness', 'spy', 'oracle', 'witch'];
   }
 
+  function nightZeroWizard(state, cfg, app) {
+    var w = app.wizard;
+    var steps = w.steps || [];
+    var idx = Math.min(w.idx, Math.max(0, steps.length - 1));
+    var html = '<div class="card night-card night-zero-card">';
+    if (!steps.length) {
+      html += '<h2>Night Zero</h2><p class="muted">Tap Complete Night Zero to continue.</p>';
+      html += '</div>';
+      return html;
+    }
+    var step = steps[idx];
+    var isFinal = !step.roles || step.roles.length === 0;
+    html += '<div class="wizard-progress">Step ' + (idx + 1) + ' of ' + steps.length + '</div>';
+    html += '<h2 class="wizard-title">' + UI.esc(step.title) + '</h2>';
+    html += '<p class="wizard-prompt">' + UI.esc(step.prompt) + '</p>';
+    if (isFinal) {
+      html += '<p class="muted">All start-knowing roles have been informed. Complete Night Zero to advance to Day 1.</p>';
+      html += '<button class="btn btn-primary btn-block" data-action="resolve-night-zero">Complete Night Zero</button>';
+    } else {
+      var roleId = step.roles[0];
+      var actor = state.players.find(function (p) { return p.assignedRole === roleId; });
+      if (actor) {
+        html += '<p class="wizard-label">Wake <strong>' + UI.esc(actor.name) + '</strong> (' + UI.roleName(actor.assignedRole) + ').</p>';
+        var log = (state.playerLog && state.playerLog[String(actor.id)]) || [];
+        var infos = log.filter(function (e) { return e.kind === 'info' && e.at === 'SETUP'; });
+        if (infos.length) {
+          html += '<div class="whisper-group"><div class="whisper-actor">Starting info</div>';
+          infos.forEach(function (e) {
+            html += '<div class="whisper-entry"><span class="tag tag-accent">' + UI.esc(e.at) + '</span>' +
+              '<span class="whisper-text">' + UI.esc(e.text) + '</span></div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<p class="muted small">No start-knowing info recorded.</p>';
+        }
+      }
+      html += '<button class="btn btn-primary btn-block" data-action="wizard-next">Next Step</button>';
+    }
+    html += '<button class="btn btn-sm wizard-nav"' + (idx === 0 ? ' disabled' : '') +
+      ' data-action="wizard-back">Previous step</button>';
+    html += '</div>';
+    return html;
+  }
+
   function nightWizard(state, cfg, app) {
     var w = app.wizard;
+    if (w && w.nightZero) return nightZeroWizard(state, cfg, app);
     var steps = w.steps || [];
     var idx = Math.min(w.idx, Math.max(0, steps.length - 1));
     var html = '<div class="card night-card">';

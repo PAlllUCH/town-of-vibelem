@@ -21,18 +21,33 @@
       (player.assignedRole === 'amnesiac' && state.amnesiac.used && state.amnesiac.rememberedRole === 'godfather');
   }
 
+  function isDemonLike(state, player) {
+    if (!player) return false;
+    if (player.assignedRole === 'demon') return true;
+    if (player.assignedRole === 'imp' && player.inheritedRole === 'demon') return true;
+    if (player.assignedRole === 'amnesiac' && state.amnesiac.used && state.amnesiac.rememberedRole === 'demon') return true;
+    return false;
+  }
+
   E._isSerialKiller = function (state, player) {
     return player.assignedRole === 'serialkiller' ||
       (player.assignedRole === 'amnesiac' && state.amnesiac.used && state.amnesiac.rememberedRole === 'serialkiller');
   };
 
+  E._isDemon = function (state, player) {
+    return isDemonLike(state, player);
+  };
+
   E._hasBasicDefense = function (state, player) {
-    return isGodfatherLike(state, player) || E._isSerialKiller(state, player);
+    return isGodfatherLike(state, player) || E._isSerialKiller(state, player) || isDemonLike(state, player);
   };
 
   E._sheriffSuspicious = function (state, player) {
     if (isGodfatherLike(state, player)) return false;
+    if (isDemonLike(state, player)) return false;
     if (E._isSerialKiller(state, player)) return true;
+    var id = player.assignedRole;
+    if (id === 'imp' || id === 'possessed' || id === 'succubus' || id === 'necromant' || id === 'outcast') return true;
     return E._alignmentOf(state, player) === 'MAFIA';
   }
 
@@ -51,6 +66,24 @@
       ' died (' + cause + '); the Executioner becomes a Jester.');
     var exe = state.players.find(function (pl) { return pl.assignedRole === 'executioner'; });
     if (exe) E._logPlayer(state, exe.id, E._logAt(state), 'converted', 'Became a Jester: the target died (' + cause + ').');
+  }
+
+  function promoteMafioso(state) {
+    var mafioso = state.players.find(function (pl) {
+      return pl.assignedRole === 'mafioso' && pl.isAlive;
+    });
+    if (!mafioso || mafioso.inheritedRole === 'godfather') return;
+    mafioso.inheritedRole = 'godfather';
+    state.pendingGodfatherPromotion = mafioso.id;
+  }
+
+  function isGodfather(state, player) {
+    return player && (
+      player.assignedRole === 'godfather' ||
+      player.inheritedRole === 'godfather' ||
+      (player.assignedRole === 'amnesiac' && state.amnesiac.used &&
+        state.amnesiac.rememberedRole === 'godfather')
+    );
   }
 
   E._recordDeath = function (state, pid, cause, byLynch, skipToken) {
@@ -80,6 +113,7 @@
     });
     E._logPlayer(state, pid, E._logAt(state), 'death', p.name + ' died: ' + cause + '.');
     if (!byLynch && state.executionerTarget === pid) convertExecutioner(state, cause);
+    if (isGodfather(state, p)) promoteMafioso(state);
     return entry;
   };
 
@@ -100,13 +134,33 @@
       state.logs.push('The Deputy has inherited the Sheriff\'s badge.');
       E._logPlayer(state, deputy.id, E._logAt(state), 'inherited', 'Inherited the Sheriff\'s badge.');
     }
-    var gf = state.players.find(function (p) { return p.assignedRole === 'godfather'; });
+    var gf = state.players.find(function (p) { return isGodfather(state, p); });
     var mafioso = state.players.find(function (p) { return p.assignedRole === 'mafioso'; });
-    if (gf && !gf.isAlive && mafioso && mafioso.isAlive && mafioso.inheritedRole !== 'godfather') {
-      mafioso.inheritedRole = 'godfather';
-      state.logs.push('The Mafioso has become the new Godfather.');
-      E._logPlayer(state, mafioso.id, E._logAt(state), 'promoted', 'Became the new Godfather.');
+    if (gf && !gf.isAlive && mafioso && mafioso.isAlive) {
+      if (mafioso.inheritedRole !== 'godfather') {
+        mafioso.inheritedRole = 'godfather';
+        state.pendingGodfatherPromotion = mafioso.id;
+      }
+      if (state.pendingGodfatherPromotion === mafioso.id) {
+        state.logs.push('The Mafioso has become the new Godfather.');
+        E._logPlayer(state, mafioso.id, E._logAt(state), 'promoted', 'Became the new Godfather.');
+        state.pendingGodfatherPromotion = null;
+      }
+    }
+    var demon = state.players.find(function (p) {
+      return p.assignedRole === 'demon' && !p.isAlive;
+    });
+    if (demon) {
+      var imp = state.players.find(function (p) {
+        return p.assignedRole === 'imp' && p.isAlive && p.inheritedRole !== 'demon';
+      });
+      if (imp) {
+        imp.inheritedRole = 'demon';
+        state.pendingDemonSuccession = imp.id;
+        state.logs.push('The Imp has become the new Demon.');
+        E._logPlayer(state, imp.id, E._logAt(state), 'promoted', 'The Demon has fallen; the Imp becomes the new Demon.');
+      }
     }
   };
 
-})(typeof window !== 'undefined' ? window : globalThis);
+})(globalThis);

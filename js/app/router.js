@@ -12,10 +12,26 @@
   }
 
   function renderGame() {
-    var out = UI.renderGame(APP.state, APP.cfg, APP.app);
+    var body;
+    var bar;
+    if (APP.app.mode === 'helper') {
+      body = UI.renderHelper(APP.state, APP.cfg, APP.app);
+      if (APP.app.helperSheetPid != null) {
+        body += UI.renderHelperSheet(APP.state, APP.app.helperSheetPid, APP.app);
+      }
+      bar = '';
+    } else {
+      var out = UI.renderGame(APP.state, APP.cfg, APP.app);
+      body = out.body;
+      bar = out.bar;
+    }
     el('game-header').innerHTML = UI.renderGameHeader(APP.state, APP.cfg, APP.app);
-    el('game-body').innerHTML = out.body;
-    el('game-bar').innerHTML = out.bar;
+    el('game-body').innerHTML = body;
+    el('game-bar').innerHTML = bar;
+    var sb = document.getElementById('sidebar-body');
+    if (sb) sb.innerHTML = UI.renderSidebar(APP.state, APP.app);
+    var sl = document.getElementById('sidebar-event-log');
+    if (sl) sl.innerHTML = UI.renderSidebarLog(APP.state);
     startTimers();
   }
 

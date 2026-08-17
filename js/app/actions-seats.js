@@ -6,16 +6,16 @@
   var APP = window.APP;
 
   function playerBySeat(seat) {
-    return (APP.state.players || []).find(function (p) { return String(p.seat) === String(seat); }) || null;
+    return (APP.state.players || []).find(function (p) {
+      return String(p.seat) === String(seat);
+    }) || null;
   }
 
   function autoFill() {
     var leftovers = UI.leftoverRoles(APP.state, APP.app.pendingRoles);
     leftovers = E._shuffle(leftovers);
     for (var s = 1; s <= APP.state.playerCount; s++) {
-      if (!APP.app.pendingRoles[s] && leftovers.length) {
-        APP.app.pendingRoles[s] = leftovers.pop();
-      }
+      if (!APP.app.pendingRoles[s] && leftovers.length) APP.app.pendingRoles[s] = leftovers.pop();
     }
     APP.afterMutation();
   }
@@ -74,6 +74,22 @@
     APP.renderScreen('seats');
   }
 
+  function beginNightZero() {
+    var steps = E.getNightZeroSteps(APP.state);
+    APP.app.wizard = { steps: steps, idx: 0, nightZero: true };
+    APP.state.phase = 'NIGHT';
+    APP.save();
+    APP.goto('game');
+  }
+
+  function resolveNightZero() {
+    E.resolveNightZero(APP.state);
+    APP.app.nightZeroDone = true;
+    APP.app.wizard = null;
+    APP.save();
+    APP.renderScreen('seats');
+  }
+
   function beginDay1() {
     var v = E.beginDay(APP.state);
     if (v) {
@@ -91,6 +107,8 @@
   APP.lockRoles = lockRoles;
   APP.swapSelect = swapSelect;
   APP.editNames = editNames;
+  APP.beginNightZero = beginNightZero;
+  APP.resolveNightZero = resolveNightZero;
   APP.beginDay1 = beginDay1;
   APP.beginNight = beginDay1;
 })();

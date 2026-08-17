@@ -11,7 +11,7 @@
     state.deathLog = [];
     state.ghosts = { ledgerEnabled: true };
     state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], sentenceVotes: [], dayTrialsDone: 0 };
-    state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
+    state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null, nightZeroDone: false };
     state.dayNumber = 0;
     state.winner = null;
     state.logs = [];
@@ -132,8 +132,8 @@
       graveyard: [],
       deathLog: [],
       ghosts: { ledgerEnabled: true },
-      trial: { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], dayTrialsDone: 0 },
-      night: { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null },
+      trial: { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], sentenceVotes: [], dayTrialsDone: 0 },
+      night: { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null, nightZeroDone: false },
       phase: 'SETUP',
       dayNumber: 0,
       logs: [],
@@ -292,15 +292,21 @@
       }
       if (typeof p.name !== 'string') throw new Error('Invalid save data: player name');
       if (typeof p.isAlive !== 'boolean') throw new Error('Invalid save data: player isAlive');
-      if (typeof p.assignedRole !== 'string' || !E.ROLES[p.assignedRole]) {
-        p.assignedRole = 'civilian';
-      }
-      if (!Number.isInteger(p.seat) || p.seat < 1 || p.seat > data.playerCount) {
-        p.seat = p.id;
-      }
+      if (typeof p.assignedRole !== 'string' || !E.ROLES[p.assignedRole]) p.assignedRole = 'civilian';
+      if (!Number.isInteger(p.seat) || p.seat < 1 || p.seat > data.playerCount) p.seat = p.id;
       ['jailed', 'poisoned', 'alerted', 'cleaned'].forEach(function (flag) {
         if (typeof p[flag] !== 'boolean') p[flag] = false;
       });
+      ['hasGhostVote', 'ghostVoteSpent', 'revealed', 'usedOncePerGame', 'guiltPending',
+        'isRoleblocked', 'isProtected', 'framed', 'blackmailed', 'isDrunk'].forEach(function (flag) {
+        if (typeof p[flag] !== 'boolean') p[flag] = false;
+      });
+      ['shotsFired', 'executionsUsed', 'alertsUsed'].forEach(function (field) {
+        if (!Number.isInteger(p[field])) p[field] = 0;
+      });
+      if (p.inheritedRole == null) p.inheritedRole = null;
+      if (p.nightTarget == null) p.nightTarget = null;
+      if (p.jailorDecision == null) p.jailorDecision = null;
     }
     if (!data.houseRules || typeof data.houseRules !== 'object') data.houseRules = {};
     if (!Array.isArray(data.graveyard)) data.graveyard = [];
@@ -317,9 +323,13 @@
     if (!Array.isArray(data.trial.seconds)) data.trial.seconds = [];
     if (!Array.isArray(data.trial.votes)) data.trial.votes = [];
     if (!Array.isArray(data.trial.sentenceVotes)) data.trial.sentenceVotes = [];
-    if (!data.night || typeof data.night !== 'object') {
-      data.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
-    }
+    if (!Number.isInteger(data.trial.dayTrialsDone)) data.trial.dayTrialsDone = 0;
+    if (!data.ghosts || typeof data.ghosts !== 'object' || Array.isArray(data.ghosts)) data.ghosts = { ledgerEnabled: false };
+    else if (typeof data.ghosts.ledgerEnabled !== 'boolean') data.ghosts.ledgerEnabled = false;
+    if (!data.night || typeof data.night !== 'object') data.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null, nightZeroDone: false };
+    if (!Array.isArray(data.night.actions)) data.night.actions = [];
+    if (data.night.number == null) data.night.number = 1;
+    if (data.night.nightZeroDone == null) data.night.nightZeroDone = false;
     if (data.night.lastJailTarget == null) data.night.lastJailTarget = null;
     if (data.night.lastBlackmailTarget == null) data.night.lastBlackmailTarget = null;
     if (!data.jester || typeof data.jester !== 'object') data.jester = { haunted: false, hauntTarget: null };
@@ -327,11 +337,10 @@
     if (!data.amnesiac || typeof data.amnesiac !== 'object') data.amnesiac = { used: false, rememberedRole: null };
     if (!Array.isArray(data.logs)) data.logs = [];
     if (!data.playerLog || typeof data.playerLog !== 'object' || Array.isArray(data.playerLog)) data.playerLog = {};
-    if (!data.morning || typeof data.morning !== 'object') {
-      data.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] };
-    }
+    if (!data.morning || typeof data.morning !== 'object') data.morning = { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] };
     if (!Array.isArray(data.morning.deaths)) data.morning.deaths = [];
     if (!Array.isArray(data.morning.revivals)) data.morning.revivals = [];
+    if (data.morning.blackmailTarget == null) data.morning.blackmailTarget = null;
     if (!Array.isArray(data.morning.forgedWills)) data.morning.forgedWills = [];
     if (typeof data.executionerConverted !== 'boolean') data.executionerConverted = false;
     if (data.pendingInheritanceNote == null) data.pendingInheritanceNote = '';

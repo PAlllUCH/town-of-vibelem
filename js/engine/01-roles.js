@@ -5,178 +5,218 @@
   E.ROLES = Object.create(null);
   var roleDefs = {
     jailor: {
-      id: 'jailor', name: 'Jailor', team: 'TOWN', category: 'Town Killing',
+      id: 'jailor', name: 'Jailor', namePl: 'Klawisz', team: 'TOWN', category: 'Town Killing',
       blurb: 'Jails a player each night, then EXECUTES (Unstoppable) or SPARES. Cannot execute on Night 1, cannot jail the same player two nights in a row.',
-      nightAction: true, dayAction: false, oncePerGame: false, maxUses: 3
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     undertaker: {
-      id: 'undertaker', name: 'Undertaker', team: 'TOWN', category: 'Town Investigative',
+      id: 'undertaker', name: 'Undertaker', namePl: 'Grabarz', team: 'TOWN', category: 'Town Investigative',
       blurb: 'Each night, privately learns the true role of one corpse. Cannot inspect a corpse cleaned by the Janitor, or the same corpse twice.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     medium: {
-      id: 'medium', name: 'Medium', team: 'TOWN', category: 'Town Support',
+      id: 'medium', name: 'Medium', namePl: 'Medium', team: 'TOWN', category: 'Town Support',
       blurb: 'Alive: reads the Ghost Ledger each night. Dead: whispers with one living player each night.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     doctor: {
-      id: 'doctor', name: 'Doctor', team: 'TOWN', category: 'Town Protective',
+      id: 'doctor', name: 'Doctor', namePl: 'Lekarz', team: 'TOWN', category: 'Town Protective',
       blurb: 'Each night, protects one player from all Basic attacks against them that night. Fails if Drunk or roleblocked.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     sheriff: {
-      id: 'sheriff', name: 'Sheriff', team: 'TOWN', category: 'Town Investigative',
-      blurb: 'Each night, checks one player: SUSPICIOUS for Mafia (except the Godfather) and the Serial Killer. Result inverts if Drunk.',
+      id: 'sheriff', name: 'Sheriff', namePl: 'Szeryf', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, checks one player: SUSPICIOUS for Mafia (except the Godfather), Serial Killer, Demon, Imp, and Possessed. INNOCENT otherwise. Result inverts if Drunk.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     deputy: {
-      id: 'deputy', name: 'Deputy', team: 'TOWN', category: 'Town Killing',
+      id: 'deputy', name: 'Deputy', namePl: 'Zastępca', team: 'TOWN', category: 'Town Killing',
       blurb: 'Once per game, publicly shoots a player. Dies of guilt at the following night if the victim was Town. Inherits the Sheriff badge when the Sheriff dies.',
       nightAction: false, dayAction: true, oncePerGame: true, maxUses: 1
     },
     tracker: {
-      id: 'tracker', name: 'Tracker', team: 'TOWN', category: 'Town Investigative',
+      id: 'tracker', name: 'Tracker', namePl: 'Tropiciel', team: 'TOWN', category: 'Town Investigative',
       blurb: 'Each night, learns which player, if any, the chosen player targeted with a night action.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     lookout: {
-      id: 'lookout', name: 'Lookout', team: 'TOWN', category: 'Town Investigative',
+      id: 'lookout', name: 'Lookout', namePl: 'Wypatrywacz', team: 'TOWN', category: 'Town Investigative',
       blurb: 'Each night, learns which players targeted the chosen player with a night action.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     witness: {
-      id: 'witness', name: 'Witness', team: 'TOWN', category: 'Town Investigative',
-      blurb: 'Each night, chooses two living players and learns whether they share an alignment: Both Town, Both Mafia, Both Neutral, or Different alignments. Inverts if Drunk.',
+      id: 'witness', name: 'Witness', namePl: 'Świadek', team: 'TOWN', category: 'Town Investigative',
+      blurb: 'Each night, chooses two living players and learns whether they share an alignment. Inverts if Drunk.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     oracle: {
-      id: 'oracle', name: 'Oracle', team: 'TOWN', category: 'Town Investigative',
+      id: 'oracle', name: 'Oracle', namePl: 'Wyrocznia', team: 'TOWN', category: 'Town Investigative',
       blurb: 'Each night, learns whether a player is TOWN or NOT TOWN. Inverts if Drunk.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     washerwoman: {
-      id: 'washerwoman', name: 'Washerwoman', team: 'TOWN', category: 'Town Support',
+      id: 'washerwoman', name: 'Washerwoman', namePl: 'Praczka', team: 'TOWN', category: 'Town Support',
       blurb: 'Starts knowing that one of two specified players is a particular Townsfolk role. No night action.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null, startKnowing: true
     },
     chef: {
-      id: 'chef', name: 'Chef', team: 'TOWN', category: 'Town Support',
+      id: 'chef', name: 'Chef', namePl: 'Kucharz', team: 'TOWN', category: 'Town Support',
       blurb: 'Starts knowing how many pairs of adjacent evil players sit in the seat circle. No night action.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null, startKnowing: true
     },
     escort: {
-      id: 'escort', name: 'Escort', team: 'TOWN', category: 'Town Support',
+      id: 'escort', name: 'Escort', namePl: 'Kurtyzana', team: 'TOWN', category: 'Town Support',
       blurb: 'Each night, roleblocks one player: their night action fails that night.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     retributionist: {
-      id: 'retributionist', name: 'Retributionist', team: 'TOWN', category: 'Town Support',
+      id: 'retributionist', name: 'Retributionist', namePl: 'Pokutnik', team: 'TOWN', category: 'Town Support',
       blurb: 'Once per game, revives one dead player at the next morning.',
       nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1
     },
     veteran: {
-      id: 'veteran', name: 'Veteran', team: 'TOWN', category: 'Town Killing',
+      id: 'veteran', name: 'Veteran', namePl: 'Weteran', team: 'TOWN', category: 'Town Killing',
       blurb: 'Up to three times, declares ALERT at night: visitors die (Unstoppable) and the Veteran cannot be killed.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: 3
     },
     vigilante: {
-      id: 'vigilante', name: 'Vigilante', team: 'TOWN', category: 'Town Killing',
+      id: 'vigilante', name: 'Vigilante', namePl: 'Mściciel', team: 'TOWN', category: 'Town Killing',
       blurb: 'Up to three times during the day, secretly shoots a player. Dies of guilt at the following night if the victim was Town.',
       nightAction: false, dayAction: true, oncePerGame: false, maxUses: 3
     },
     mayor: {
-      id: 'mayor', name: 'Mayor', team: 'TOWN', category: 'Town Support',
+      id: 'mayor', name: 'Mayor', namePl: 'Burmistrz', team: 'TOWN', category: 'Town Support',
       blurb: 'Once per game, publicly reveals: each of the Mayor\'s votes then counts as 3.',
       nightAction: false, dayAction: true, oncePerGame: true, maxUses: 1
     },
     civilian: {
-      id: 'civilian', name: 'Civilian', team: 'TOWN', category: 'Town Support',
+      id: 'civilian', name: 'Civilian', namePl: 'Cywil', team: 'TOWN', category: 'Town Support',
       blurb: 'No ability. Votes and speaks normally.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
     },
     godfather: {
-      id: 'godfather', name: 'Godfather', team: 'MAFIA', category: 'Mafia Killing',
+      id: 'godfather', name: 'Godfather', namePl: 'Ojciec Chrzestny', team: 'MAFIA', category: 'Mafia Killing',
       blurb: 'Leads the Mafia kill. Night immune, reads INNOCENT to the Sheriff. Given three Town bluff roles not in the deck at setup.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     mafioso: {
-      id: 'mafioso', name: 'Mafioso', team: 'MAFIA', category: 'Mafia Killing',
+      id: 'mafioso', name: 'Mafioso', namePl: 'Cyngiel', team: 'MAFIA', category: 'Mafia Killing',
       blurb: 'Carries out the Mafia kill. Performs it alone if the Godfather is dead or roleblocked. Becomes the new Godfather when the Godfather dies.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     janitor: {
-      id: 'janitor', name: 'Janitor', team: 'MAFIA', category: 'Mafia Deception',
+      id: 'janitor', name: 'Janitor', namePl: 'Woźny', team: 'MAFIA', category: 'Mafia Deception',
       blurb: 'Each night, cleans one corpse: its true role can never be learned. Fails if Drunk or roleblocked.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     consigliere: {
-      id: 'consigliere', name: 'Consigliere', team: 'MAFIA', category: 'Mafia Support',
+      id: 'consigliere', name: 'Consigliere', namePl: 'Doradca', team: 'MAFIA', category: 'Mafia Support',
       blurb: 'Each night, learns the exact role of one player. If Drunk, learns a random role of a different alignment.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     consort: {
-      id: 'consort', name: 'Consort', team: 'MAFIA', category: 'Mafia Support',
+      id: 'consort', name: 'Consort', namePl: 'Dama', team: 'MAFIA', category: 'Mafia Support',
       blurb: 'Each night, roleblocks one player: their night action fails that night.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     poisoner: {
-      id: 'poisoner', name: 'Poisoner', team: 'MAFIA', category: 'Mafia Deception',
+      id: 'poisoner', name: 'Poisoner', namePl: 'Truciciel', team: 'MAFIA', category: 'Mafia Deception',
       blurb: 'Each night, poisons one player: they are Drunk for one cycle.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     blackmailer: {
-      id: 'blackmailer', name: 'Blackmailer', team: 'MAFIA', category: 'Mafia Deception',
+      id: 'blackmailer', name: 'Blackmailer', namePl: 'Osiłek', team: 'MAFIA', category: 'Mafia Deception',
       blurb: 'Each night, blackmails one player: they cannot speak during the next day. No consecutive-night blackmail.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     framer: {
-      id: 'framer', name: 'Framer', team: 'MAFIA', category: 'Mafia Deception',
+      id: 'framer', name: 'Framer', namePl: 'Pozorant', team: 'MAFIA', category: 'Mafia Deception',
       blurb: 'Each night, frames one player: they read SUSPICIOUS to the Sheriff for that night.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     forger: {
-      id: 'forger', name: 'Forger', team: 'MAFIA', category: 'Mafia Deception',
+      id: 'forger', name: 'Forger', namePl: 'Fałszerz', team: 'MAFIA', category: 'Mafia Deception',
       blurb: 'Each night, forges a false last will for one player. If that player dies before the next morning, the moderator reads the forged will from the player\'s card.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     serialkiller: {
-      id: 'serialkiller', name: 'Serial Killer', team: 'NEUTRAL', category: 'Neutral Killing',
+      id: 'serialkiller', name: 'Serial Killer', namePl: 'Morderca', team: 'NEUTRAL', category: 'Neutral Killing',
       blurb: 'Each night, kills one player (Basic attack). Night immune. Reads SUSPICIOUS to the Sheriff. Wins when last standing or holding majority.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     survivor: {
-      id: 'survivor', name: 'Survivor', team: 'NEUTRAL', category: 'Neutral Benign',
+      id: 'survivor', name: 'Survivor', namePl: 'Ocalały', team: 'NEUTRAL', category: 'Neutral Benign',
       blurb: 'No ability. Wins if alive at game end.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
     },
     spy: {
-      id: 'spy', name: 'Spy', team: 'NEUTRAL', category: 'Neutral Benign',
+      id: 'spy', name: 'Spy', namePl: 'Szpieg', team: 'NEUTRAL', category: 'Neutral Benign',
       blurb: 'Each night, watches one player: learns the team of every player who visited them. Random teams if Drunk. Wins if alive at game end.',
-      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null, n1Only: false
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     jester: {
-      id: 'jester', name: 'Jester', team: 'NEUTRAL', category: 'Neutral Evil',
+      id: 'jester', name: 'Jester', namePl: 'Błazen', team: 'NEUTRAL', category: 'Neutral Evil',
       blurb: 'No ability. Wins when lynched, becoming a taunting ghost that may haunt one Guilty voter the following night.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
     },
     witch: {
-      id: 'witch', name: 'Witch', team: 'NEUTRAL', category: 'Neutral Evil',
+      id: 'witch', name: 'Witch', namePl: 'Wiedźma', team: 'NEUTRAL', category: 'Neutral Evil',
       blurb: 'Each night, controls one player (except a jailed player) and redirects their action; learns their role. Sides with Mafia by default, Town if declared.',
       nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
     },
     drunk: {
-      id: 'drunk', name: 'The Drunk', team: 'NEUTRAL', category: 'Neutral Benign',
+      id: 'drunk', name: 'The Drunk', namePl: 'Pijak', team: 'NEUTRAL', category: 'Neutral Benign',
       blurb: 'Permanently Drunk: all abilities disabled. No night or day action. Wins if alive at game end.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
     },
     amnesiac: {
-      id: 'amnesiac', name: 'Amnesiac', team: 'NEUTRAL', category: 'Neutral Benign',
+      id: 'amnesiac', name: 'Amnesiac', namePl: 'Amnestyk', team: 'NEUTRAL', category: 'Neutral Benign',
       blurb: 'Once per game, remembers the role of one dead player and permanently becomes it. Wins with that role\'s team.',
       nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1
     },
     executioner: {
-      id: 'executioner', name: 'Executioner', team: 'NEUTRAL', category: 'Neutral Evil',
+      id: 'executioner', name: 'Executioner', namePl: 'Kat', team: 'NEUTRAL', category: 'Neutral Evil',
       blurb: 'Wins when the assigned Town target is lynched. If the target dies by any other means, becomes a Jester.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    innkeeper: {
+      id: 'innkeeper', name: 'Innkeeper', namePl: 'Karczmarz', team: 'TOWN', category: 'Town Protective',
+      blurb: 'Each night, share a drink with a living player. Both of you gain Basic defense for the night; the guest is also roleblocked. Fails entirely if the Innkeeper is Drunk or roleblocked.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    leper: {
+      id: 'leper', name: 'Leper', namePl: 'Trędowaty', team: 'NEUTRAL', category: 'Neutral Benign',
+      blurb: 'No ability. Any player who visits you with a night action becomes Drunk for the following night. Wins if alive at game end.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    outcast: {
+      id: 'outcast', name: 'Outcast', namePl: 'Wyrzutek', team: 'NEUTRAL', category: 'Neutral Benign',
+      blurb: 'No ability. Reads as Evil to all investigative checks (Sheriff = SUSPICIOUS, Oracle = NOT TOWN, Witness = Evil alignment, Consigliere = a random Evil role). Wins if alive at game end.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    succubus: {
+      id: 'succubus', name: 'Succubus', namePl: 'Sukkub', team: 'EVIL', category: 'Evil Support',
+      blurb: 'Each night, choose a living player to enchant: that player cannot vote Guilty against you during any trial the following day.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    necromant: {
+      id: 'necromant', name: 'Necromant', namePl: 'Nekromanta', team: 'EVIL', category: 'Evil Support',
+      blurb: 'Once per game, at night, choose a dead player and use that player\'s night ability on a living target of your choice (any alignment\'s role works).',
+      nightAction: true, dayAction: false, oncePerGame: true, maxUses: 1
+    },
+    demon: {
+      id: 'demon', name: 'Demon', namePl: 'Demon', team: 'EVIL', category: 'Evil Killing',
+      blurb: 'Each night, kills one player (Basic attack). Night immune. Reads INNOCENT to the Sheriff. Wins when last standing or holding majority.',
+      nightAction: true, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    imp: {
+      id: 'imp', name: 'Imp', namePl: 'Imp', team: 'EVIL', category: 'Evil Support',
+      blurb: 'Successor only: no night action while a Demon is alive. When the Demon dies, the Imp becomes the new Demon and gains Basic defense + INNOCENT reads.',
+      nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
+    },
+    possessed: {
+      id: 'possessed', name: 'Possessed', namePl: 'Opętany', team: 'EVIL', category: 'Evil Support',
+      blurb: 'Townsfolk disguise: no wake at night, no ability. Reads as Evil to all checks (Sheriff = SUSPICIOUS, Oracle = NOT TOWN, Witness = Evil); role name stays hidden until end-of-game.',
       nightAction: false, dayAction: false, oncePerGame: false, maxUses: null
     }
   };
@@ -184,4 +224,35 @@
 
   Object.freeze(E.ROLES);
   Object.keys(E.ROLES).forEach(function (k) { Object.freeze(E.ROLES[k]); });
+
+  var currentLocale = 'pl';
+  try {
+    if (root.localStorage && (root.localStorage.getItem('tov.locale') === 'pl' || root.localStorage.getItem('tov.locale') === 'en')) {
+      currentLocale = root.localStorage.getItem('tov.locale');
+    }
+  } catch (e) {}
+
+  Object.defineProperty(E, 'locale', {
+    enumerable: true,
+    get: function () { return currentLocale; }
+  });
+
+  E.setLocale = function (loc) {
+    currentLocale = loc === 'en' ? 'en' : 'pl';
+    try {
+      if (root.localStorage) root.localStorage.setItem('tov.locale', currentLocale);
+    } catch (e) {}
+    return currentLocale;
+  };
+
+  E.roleName = function (id, locale) {
+    var role = E.ROLES[id];
+    if (!role) return id;
+    return (locale || currentLocale) === 'pl' ? role.namePl : role.name;
+  };
+
+  E.roleBlurb = function (id, locale) {
+    var role = E.ROLES[id];
+    return role ? role.blurb : id;
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

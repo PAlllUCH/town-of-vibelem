@@ -4,6 +4,21 @@
   var latestEntry = E._latestEntry;
   var sheriffSuspicious = E._sheriffSuspicious;
 
+  E.resolveNightZero = function (state) {
+    state.night.actions = [];
+    state.night.nightZeroDone = true;
+    state.morning = {
+      deaths: [],
+      revivals: [],
+      inheritanceNote: '',
+      blackmailTarget: null,
+      forgedWills: []
+    };
+    state.phase = 'MORNING';
+    state.logs.push('Night Zero complete.');
+    return { deaths: [], revived: [], logs: ['Night Zero complete.'] };
+  };
+
   E.resolveNight = function (state) {
     var logs = [];
     var deaths = [];
@@ -91,6 +106,7 @@
       P[pi].blackmailed = false;
     }
     state.night.lastBlackmailTarget = null;
+    state.night.lastJailTarget = null;
 
     var rbActions = actions.filter(function (a) {
       return a.position === 4 && (a.roleId === 'escort' || a.roleId === 'consort');
@@ -249,6 +265,8 @@
       rp.hasGhostVote = false;
       rp.ghostVoteSpent = false;
       state.graveyard = state.graveyard.filter(function (e) { return e.playerId !== rp.id; });
+      state.deathLog = (state.deathLog || []).filter(function (e) { return e.playerId !== rp.id; });
+      deaths = deaths.filter(function (d) { return d.playerId !== rp.id; });
       revivals.push(ctx.reviveTarget);
       log(rp.name + ' has been revived.');
       E._logPlayer(state, rp.id, E._logAt(state), 'revive', rp.name + ' was revived.');
@@ -276,6 +294,9 @@
       blackmailTarget: state.night.lastBlackmailTarget,
       forgedWills: forgedReminder
     };
+    state.morning.deaths = state.morning.deaths.filter(function (d) {
+      return revivals.indexOf(d.playerId) === -1;
+    });
     state.pendingInheritanceNote = '';
 
     state.night.actions = [];

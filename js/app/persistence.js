@@ -8,6 +8,9 @@
   function save() {
     var app = APP.app;
     var ui = {
+      mode: app.mode || 'app',
+      statuses: app.statuses || {},
+      helperSheetPid: app.helperSheetPid || null,
       rolesHidden: app.rolesHidden,
       namingMode: app.namingMode,
       wizardIdx: app.wizard ? app.wizard.idx : 0,
@@ -60,9 +63,16 @@
     try { localStorage.removeItem(APP.SAVE_KEY); } catch (e) { }
   }
 
+  function hydrateUi(ui) {
+    APP.app.mode = (ui && ui.mode) || 'app';
+    APP.app.statuses = (ui && ui.statuses) || {};
+    APP.app.helperSheetPid = (ui && ui.helperSheetPid) || null;
+  }
+
   APP.save = save;
   APP.renderResumeBanner = renderResumeBanner;
   APP.afterMutation = afterMutation;
   APP.loadSave = loadSave;
   APP.clearSave = clearSave;
+  APP.hydrateUi = hydrateUi;
 })();

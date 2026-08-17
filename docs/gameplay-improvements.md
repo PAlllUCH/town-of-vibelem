@@ -1,4 +1,4 @@
-# Town of Vibelm — Gameplay Improvement Proposals
+# Town of VibeLem — Gameplay Improvement Proposals
 
 **Date:** 8/13/2026
 **Status:** PROPOSAL — requires discussion before implementation

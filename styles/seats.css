@@ -15,8 +15,6 @@
 
 /* Seat grids */
 .seat-grid { display: grid; gap: 8px; margin: 12px 0; }
-.seat-grid.layout-two_rows { grid-template-columns: repeat(2, 1fr); }
-.seat-grid.layout-rectangular { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .seat-grid.layout-u_shape { grid-template-columns: repeat(3, 1fr); }
 .seat-grid.layout-u_shape .seat-input-wrap:nth-child(3n + 1):not(:last-child) { border-top: 2px solid var(--line); }
 .seat-input-wrap { display: flex; flex-direction: column; gap: 4px; }

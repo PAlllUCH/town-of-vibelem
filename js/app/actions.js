@@ -131,6 +131,12 @@
       case 'begin-night':
         APP.beginNight();
         break;
+      case 'begin-night-zero':
+        APP.beginNightZero();
+        break;
+      case 'resolve-night-zero':
+        APP.resolveNightZero();
+        break;
       case 'goto-setup':
         APP.goto('setup');
         break;
@@ -283,6 +289,21 @@
         APP.updateReferenceList();
         break;
       }
+      case 'toggle-mode':
+        APP.toggleMode();
+        break;
+      case 'open-helper-sheet':
+        app.helperSheetPid = btn.getAttribute('data-helper-pid');
+        APP.afterMutation();
+        break;
+      case 'close-helper-sheet':
+        app.helperSheetPid = null;
+        APP.afterMutation();
+        break;
+      case 'set-helper-status':
+        APP.toggleHelperStatus(btn.getAttribute('data-helper-pid'), btn.getAttribute('data-helper-status'));
+        APP.afterMutation();
+        break;
       default:
         break;
     }
@@ -296,7 +317,11 @@
 
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
-    if (APP.app.claimPicker != null) APP.claimClose();
+    if (APP.app.helperSheetPid != null) {
+      APP.app.helperSheetPid = null;
+      APP.afterMutation();
+    }
+    else if (APP.app.claimPicker != null) APP.claimClose();
     else if (APP.app.claimsOpen) APP.toggleClaims();
     else if (APP.app.tokensOpen) APP.toggleTokens();
     else if (APP.app.modOpen) APP.toggleMod();

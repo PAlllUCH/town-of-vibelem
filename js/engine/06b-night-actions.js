@@ -9,6 +9,14 @@
     oracle: 'Oracle read', witness: 'Witness check'
   };
 
+  function hasRole(state, player, roleId) {
+    return player && (
+      player.assignedRole === roleId ||
+      (player.assignedRole === 'amnesiac' && state.amnesiac && state.amnesiac.used &&
+        state.amnesiac.rememberedRole === roleId)
+    );
+  }
+
   E._witnessTeam = function (state, player) {
     if (!player) return 'NEUTRAL';
     var role = E.ROLES[player.assignedRole];
@@ -39,8 +47,8 @@
         continue;
       }
       if (!tgt) continue;
-      var isSheriffActor = actor.assignedRole === 'sheriff' ||
-        (actor.assignedRole === 'deputy' && actor.inheritedRole === 'sheriff');
+      var isSheriffActor = hasRole(ctx.state, actor, 'sheriff') ||
+        (hasRole(ctx.state, actor, 'deputy') && actor.inheritedRole === 'sheriff');
       if ((ia.roleId === 'sheriff' || ia.roleId === 'deputy') && isSheriffActor) {
         if (!ctx.alive(tgt)) continue;
         ctx.setEff(actor.id, tgt);
@@ -71,6 +79,7 @@
         var witnessB = E._byId(ctx.state, w2);
         if (!witnessA || !witnessB) continue;
         ctx.setEff(actor.id, w1);
+        ctx.setEff(actor.id, w2);
         var wtA = E._witnessTeam(ctx.state, witnessA);
         var wtB = E._witnessTeam(ctx.state, witnessB);
         var wResult;
@@ -105,7 +114,7 @@
         E._logPlayer(ctx.state, actor.id, E._logAt(ctx.state), 'info',
           'Consigliere inspection on ' + cTarget.name + ': ' + lName + '.');
       } else if (ia.roleId === 'undertaker') {
-        if (actor.assignedRole !== 'undertaker') continue;
+        if (!hasRole(ctx.state, actor, 'undertaker')) continue;
         var uEntry = ctx.latestEntry(ctx.state, tgt);
         if (!uEntry || uEntry.wasCleaned) continue;
         if (uEntry.inspectedByUndertaker) continue;
@@ -169,6 +178,46 @@
         ctx.log(ret.name + ' will revive ' + E._byId(ctx.state, retAction.targetId).name + '.');
       }
     }
+
+    var necAction = ctx.actions.find(function (a) { return a.position === 12 && a.roleId === 'necromant'; });
+    if (necAction && !ctx.isVoided(necAction)) {
+      var nec = E._byId(ctx.state, necAction.playerId);
+      var corpseId = necAction.targetId;
+      var corpseEntry = corpseId && ctx.latestEntry(ctx.state, corpseId);
+      if (nec && nec.isAlive && !ctx.isBlocked(nec.id) && !nec.usedOncePerGame &&
+          corpseId && !ctx.alive(corpseId) && corpseEntry) {
+        var borrowedRoleId = corpseEntry.trueRole;
+        var borrowedRole = E.ROLES[borrowedRoleId];
+        var borrowedStep = E.NIGHT_STEPS && E.NIGHT_STEPS.find(function (step) {
+          return step.roles && step.roles.indexOf(borrowedRoleId) >= 0;
+        });
+        nec.usedOncePerGame = true;
+        if (!ctx.state.necromant) ctx.state.necromant = {};
+        ctx.state.necromant.used = true;
+        ctx.state.necromant.rememberedRole = borrowedRoleId;
+        if (!borrowedRole || borrowedRoleId === 'civilian' || borrowedRoleId === 'jester' ||
+            borrowedRoleId === 'executioner' || borrowedRoleId === 'leper' ||
+            borrowedRoleId === 'outcast' || borrowedRoleId === 'possessed' ||
+            borrowedRoleId === 'survivor' || borrowedRoleId === 'imp' ||
+            borrowedRole.nightAction === false || !borrowedStep) {
+          ctx.log(nec.name + ' (Necromant) cannot borrow the role of the corpse.');
+        } else {
+          var borrowedAction = {
+            roleId: borrowedRoleId,
+            playerId: nec.id,
+            targetId: necAction.extra && necAction.extra.livingTarget,
+            position: borrowedStep.position
+          };
+          if (necAction.extra && necAction.extra.secondTarget !== undefined) {
+            borrowedAction.extra = borrowedAction.extra || {};
+            borrowedAction.extra.secondTarget = necAction.extra.secondTarget;
+          }
+          ctx.actions.push(borrowedAction);
+          ctx.log(nec.name + ' (Necromant) borrowed the night ability of the corpse\'s role.');
+        }
+      }
+    }
+
     var amnAction = ctx.actions.find(function (a) { return a.position === 12 && a.roleId === 'amnesiac'; });
     if (amnAction) {
       var amn = E._byId(ctx.state, amnAction.playerId);
@@ -230,6 +279,20 @@
           'Lookout watch on ' + dTarget.name + ': ' + vText + '.');
       }
     }
+
+    ctx.state.players.forEach(function (leper) {
+      if (leper.assignedRole !== 'leper' || !leper.isAlive) return;
+      ctx.effectiveTargets.forEach(function (entry) {
+        if (entry.targetId !== leper.id || entry.playerId === leper.id) return;
+        var visitor = E._byId(ctx.state, entry.playerId);
+        if (!visitor || !visitor.isAlive || visitor.poisoned) return;
+        visitor.isDrunk = true;
+        visitor.poisoned = true;
+        E._logPlayer(ctx.state, visitor.id, E._logAt(ctx.state), 'poisoned',
+          visitor.name + ' was poisoned by the Leper and is Drunk for one cycle.');
+        ctx.log(leper.name + ' poisoned ' + visitor.name + '.');
+      });
+    });
   }
 
   E._nightActions = Object.assign({}, E._nightActions, {
