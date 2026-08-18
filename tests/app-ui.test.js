@@ -10,6 +10,12 @@ require('../js/ui/helper.js');
 const E = engine;
 E.setLocale('en');
 
+function cardRegion(h, marker, key) {
+  const idx = h.indexOf('data-card="' + key + '"');
+  assert.ok(idx !== -1, key + ' card renders a collapse button');
+  return h.slice(h.lastIndexOf(marker, idx), h.indexOf('id="card-body-' + key + '"'));
+}
+
 describe('app UI layer', () => {
 
   test('naming grid renders tappable seat buttons and no inline inputs', () => {
@@ -747,6 +753,143 @@ describe('moderator toolbox', () => {
     assert.ok(h.indexOf('data-card="abilities" aria-expanded="false"') !== -1, 'collapsed state survives save/load');
     assert.ok(h.indexOf('data-card="trial" aria-expanded="false"') !== -1);
     assert.ok(cardRegion('abilities').indexOf('collapsed') !== -1, 'abilities body hidden after resume');
+  });
+
+  test('helper panels collapse via toggle-card, switch to plus, and hide their bodies', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    const region = function (key) {
+      return cardRegion(html('game-body'), '<div class="helper-card card-collapsible', key);
+    };
+    let h = html('game-body');
+    ['helper-night-order', 'helper-players', 'helper-statuses'].forEach(function (key) {
+      assert.ok(h.indexOf('data-card="' + key + '" aria-expanded="true" aria-controls="card-body-' + key + '">-</button>') !== -1,
+        key + ' helper card starts expanded with a minus label');
+    });
+    assert.ok(h.indexOf('card-collapsible collapsed') === -1, 'helper cards start expanded');
+    APP.toggleCard('helper-players');
+    h = html('game-body');
+    assert.ok(h.indexOf('data-card="helper-players" aria-expanded="false" aria-controls="card-body-helper-players">+</button>') !== -1,
+      'collapsed Players button shows +');
+    assert.ok(region('helper-players').indexOf('collapsed') !== -1, 'Players card has class collapsed');
+    assert.ok(region('helper-night-order').indexOf('collapsed') === -1, 'other helper cards stay expanded');
+    assert.ok(h.indexOf('data-card="helper-statuses" aria-expanded="true"') !== -1, 'Statuses card stays expanded');
+  });
+
+  test('night wizard collapses via toggle-card during the NIGHT phase', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    assert.strictEqual(APP.state.phase, 'NIGHT');
+    const region = function (key) {
+      return cardRegion(html('game-body'), '<div class="card night-card card-collapsible', key);
+    };
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-card="night-wizard"') !== -1, 'night wizard card renders a collapse button');
+    assert.ok(region('night-wizard').indexOf('collapsed') === -1, 'night card starts expanded');
+    APP.toggleCard('night-wizard');
+    h = html('game-body');
+    assert.ok(h.indexOf('data-card="night-wizard" aria-expanded="false"') !== -1, 'collapsed night button reports aria-expanded false');
+    assert.ok(region('night-wizard').indexOf('collapsed') !== -1, 'night card has class collapsed');
+    APP.toggleCard('night-wizard');
+    h = html('game-body');
+    assert.ok(h.indexOf('data-card="night-wizard" aria-expanded="true"') !== -1, 'night card expands again');
+  });
+
+  test('seat overlay renders the seat-grid collapse button, keeps Close, and collapses on toggle', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.app.seatOverlay = true;
+    APP.renderScreen('game');
+    const region = function (key) {
+      return cardRegion(html('game-body'), '<div class="card card-collapsible', key);
+    };
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-card="seat-grid"') !== -1, 'seat overlay renders the seat-grid collapse button');
+    assert.ok(h.indexOf('data-action="toggle-seat-overlay"') !== -1, 'overlay card has a Close button');
+    APP.toggleCard('seat-grid');
+    h = html('game-body');
+    assert.ok(h.indexOf('data-card="seat-grid" aria-expanded="false"') !== -1);
+    assert.ok(region('seat-grid').indexOf('collapsed') !== -1, 'seat-grid body is hidden after toggle');
+    assert.ok(h.indexOf('data-action="toggle-seat-overlay"') !== -1, 'overlay card keeps its Close button when collapsed');
+  });
+
+  test('day ability picker renders the picker collapse button and collapses on toggle', () => {
+    const roles = ['civilian', 'civilian', 'vigilante', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.openDayAbility('vigilante');
+    const region = function (key) {
+      return cardRegion(html('game-body'), '<div class="card picker-card card-collapsible', key);
+    };
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-card="picker"') !== -1, 'picker card renders a collapse button');
+    assert.ok(h.indexOf('picker-card card-collapsible') !== -1);
+    APP.toggleCard('picker');
+    h = html('game-body');
+    assert.ok(h.indexOf('data-card="picker" aria-expanded="false"') !== -1);
+    assert.ok(region('picker').indexOf('collapsed') !== -1, 'picker body is hidden after toggle');
+  });
+
+  test('morning whisper card renders only when results exist and collapses via toggle-card', () => {
+    const roles = ['civilian', 'civilian', 'sheriff', 'civilian', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    driveNight();
+    APP.resolveNight();
+    assert.strictEqual(APP.state.phase, 'MORNING');
+    const region = function (key) {
+      return cardRegion(html('game-body'), '<div class="card whisper-results card-collapsible', key);
+    };
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-card="whisper"') !== -1, 'whisper card renders when morning results exist');
+    assert.ok(h.indexOf('data-card="whisper" aria-expanded="true" aria-controls="card-body-whisper">-</button>') !== -1,
+      'whisper button starts expanded with a minus label');
+    APP.toggleCard('whisper');
+    h = html('game-body');
+    assert.ok(h.indexOf('data-card="whisper" aria-expanded="false"') !== -1);
+    assert.ok(region('whisper').indexOf('collapsed') !== -1, 'whisper body is hidden after toggle');
+  });
+
+  test('morning without info results renders no whisper collapse button', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'civilian', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    driveNight();
+    APP.resolveNight();
+    assert.strictEqual(APP.state.phase, 'MORNING');
+    assert.ok(html('game-body').indexOf('data-card="whisper"') === -1, 'no whisper card without morning results');
+  });
+
+  test('collapsible panel keys survive a save/load round trip', () => {
+    const roles = ['civilian', 'civilian', 'vigilante', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.openDayAbility('vigilante');
+    APP.toggleCard('picker');
+    APP.app.seatOverlay = true;
+    APP.renderScreen('game');
+    APP.toggleCard('seat-grid');
+    APP.endDay();
+    driveNight();
+    APP.resolveNight();
+    APP.toggleCard('whisper');
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    APP.toggleCard('helper-players');
+    APP.toggleCard('night-wizard');
+    APP.save();
+    APP.resumeGame();
+    ['picker', 'seat-grid', 'whisper', 'helper-players', 'night-wizard'].forEach(function (key) {
+      assert.strictEqual(APP.app.collapsed[key], true, key + ' collapsed state restored');
+    });
   });
 
   test('prep phase renders the night order card after dealing', () => {

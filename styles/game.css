@@ -22,7 +22,6 @@
 .wizard-prompt { font-size: 1.3rem; line-height: 1.6; background: var(--bg2); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 14px; }
 .wizard-label { color: var(--text); font-size: .95rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 6px; }
 .actor-done { opacity: .45; }
-.night-card { padding: 14px; margin: 10px 0; }
 .timer {
   display: inline-block;
   background: var(--accent-mid);
@@ -174,11 +173,11 @@
 }
 
 .wizard-nav { margin-top: 10px; }
-.wizard-summary { margin-top: 12px; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.wizard-summary { margin-top: 12px; padding: var(--space-4); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
 .summary-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: .85rem; }
 
 /* Picker */
-.picker-card { border: 2px solid var(--accent); }
+.picker-card { border: 1px solid var(--accent); }
 
 /* Logs */
 .logs { display: none; }

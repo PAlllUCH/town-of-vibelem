@@ -61,8 +61,14 @@
       return !filterPids || filterPids.some(function (pid) { return String(pid) === String(r.player.id); });
     });
     if (!rows.length) return '';
-    var html = '<div class="card whisper-results"><div class="card-head"><h2>Info to Show</h2>' +
-      '<span class="muted small">Night ' + (nightNum || 1) + '</span></div>';
+    var collapsed = !!(app && app.collapsed && app.collapsed['whisper']);
+    var html = '<div class="card whisper-results card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="card-head"><h2>Info to Show</h2>' +
+      '<span class="muted small">Night ' + (nightNum || 1) + '</span>' +
+      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="whisper"' +
+      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-whisper">' +
+      (collapsed ? '+' : '-') + '</button></div>';
+    html += '<div class="card-body" id="card-body-whisper">';
     rows.forEach(function (r) {
       r.entries.forEach(function (e) {
         var done = !!relayed['N' + nightNum + ':' + r.player.id];
@@ -77,7 +83,7 @@
           '</div>';
       });
     });
-    html += '</div>';
+    html += '</div></div>';
     return html;
   };
 })();

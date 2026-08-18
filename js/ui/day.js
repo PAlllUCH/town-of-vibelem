@@ -35,9 +35,15 @@
     var body = '';
     var bar = '';
     if (app.seatOverlay) {
-      body += '<div class="card"><div class="card-head"><h2>Seat Grid</h2>' +
-        '<button class="btn btn-sm" data-action="toggle-seat-overlay">Close</button></div>' +
-        UI.seatTiles(state, app.rolesHidden, cfg, undefined, app.claims) + '</div>';
+      var sgCollapsed = !!(app.collapsed && app.collapsed['seat-grid']);
+      body += '<div class="card card-collapsible' + (sgCollapsed ? ' collapsed' : '') + '">' +
+        '<div class="card-head"><h2>Seat Grid</h2>' +
+        '<button class="btn btn-sm" data-action="toggle-seat-overlay">Close</button>' +
+        '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="seat-grid"' +
+        ' aria-expanded="' + (sgCollapsed ? 'false' : 'true') + '" aria-controls="card-body-seat-grid">' +
+        (sgCollapsed ? '+' : '-') + '</button></div>' +
+        '<div class="card-body" id="card-body-seat-grid">' +
+        UI.seatTiles(state, app.rolesHidden, cfg, undefined, app.claims) + '</div></div>';
     }
     if (state.phase === 'NIGHT') {
       body += UI.nightWizard(state, cfg, app);
@@ -58,10 +64,16 @@
           if (pl.isAlive && pl.assignedRole === app.picker.ability) holder = pl;
         });
       }
-      body += '<div class="card picker-card"><h2>' + UI.esc(app.picker.title) + '</h2>' +
+      var pkCollapsed = !!(app.collapsed && app.collapsed['picker']);
+      body += '<div class="card picker-card card-collapsible' + (pkCollapsed ? ' collapsed' : '') + '">' +
+        '<div class="card-head"><h2>' + UI.esc(app.picker.title) + '</h2>' +
+        '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="picker"' +
+        ' aria-expanded="' + (pkCollapsed ? 'false' : 'true') + '" aria-controls="card-body-picker">' +
+        (pkCollapsed ? '+' : '-') + '</button></div>' +
+        '<div class="card-body" id="card-body-picker">' +
         '<p class="muted small">' + UI.esc(app.picker.sub || '') + '</p>' +
         livingBtns(state, 'pick-day-target', holder ? holder.id : null, app.picker.ability) +
-        '<button class="btn btn-block" data-action="picker-cancel">Cancel</button></div>';
+        '<button class="btn btn-block" data-action="picker-cancel">Cancel</button></div></div>';
     }
     body += logsCard(state, app);
     return { body: body, bar: bar };

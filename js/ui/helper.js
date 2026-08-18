@@ -5,8 +5,6 @@
   var UI = window.UI;
 
   var SHEET_FLAGS = ['drunk', 'poisoned', 'jailed', 'protected', 'alert', 'revealed', 'blackmailed', 'enchanted', 'cleaned', 'necro_used', 'succubus_target', 'ghost'];
-  var TEAM_ORDER = ['TOWN', 'MAFIA', 'NEUTRAL', 'EVIL'];
-  var TEAM_LABELS = { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral', EVIL: 'Evil' };
   var LEGEND = [
     ['DRUNK', 'Role actions fail, results invert, protection fails'],
     ['POISONED', 'Will be drunk for one full cycle starting next night'],
@@ -22,12 +20,18 @@
     ['GHOST', 'Dead, haunts or votes from the grave']
   ];
 
-  function nightOrderCard(state) {
+  function nightOrderCard(state, app) {
     var dealt = {};
     (state.players || []).forEach(function (p) {
       if (p.assignedRole) dealt[p.assignedRole] = true;
     });
-    var html = '<div class="helper-card"><div class="helper-card-head"><h2>Night Order</h2></div>';
+    var collapsed = !!(app && app.collapsed && app.collapsed['helper-night-order']);
+    var html = '<div class="helper-card card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="helper-card-head"><h2>Night Order</h2>' +
+      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="helper-night-order"' +
+      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-helper-night-order">' +
+      (collapsed ? '+' : '-') + '</button></div>';
+    html += '<div class="helper-card-body" id="card-body-helper-night-order">';
     html += '<div class="helper-list">';
     (E.NIGHT_STEPS || []).forEach(function (step) {
       if (!step.roles || !step.roles.length) return;
@@ -39,7 +43,7 @@
         '<strong class="helper-step-title">' + UI.esc(step.title) + '</strong>' +
         '<p class="helper-step-prompt">' + UI.esc(step.prompt) + '</p></div>';
     });
-    html += '</div></div>';
+    html += '</div></div></div>';
     return html;
   }
 
@@ -57,7 +61,13 @@
   }
 
   function rosterCard(state, app) {
-    var html = '<div class="helper-card"><div class="helper-card-head"><h2>Players</h2></div>';
+    var collapsed = !!(app && app.collapsed && app.collapsed['helper-players']);
+    var html = '<div class="helper-card card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="helper-card-head"><h2>Players</h2>' +
+      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="helper-players"' +
+      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-helper-players">' +
+      (collapsed ? '+' : '-') + '</button></div>';
+    html += '<div class="helper-card-body" id="card-body-helper-players">';
     (state.players || []).forEach(function (p) {
       var flags = statusFlags(app, p.id);
       var name = p.name != null ? p.name : ('Player ' + (p.seat != null ? p.seat : ''));
@@ -73,50 +83,29 @@
       }).sort().forEach(function (k) { html += chip(k, flags); });
       html += '</div>';
     });
-    html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
-  function legendCard() {
-    var html = '<div class="helper-card"><div class="helper-card-head"><h2>Statuses</h2></div>';
+  function legendCard(app) {
+    var collapsed = !!(app && app.collapsed && app.collapsed['helper-statuses']);
+    var html = '<div class="helper-card card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="helper-card-head"><h2>Statuses</h2>' +
+      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="helper-statuses"' +
+      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-helper-statuses">' +
+      (collapsed ? '+' : '-') + '</button></div>';
+    html += '<div class="helper-card-body" id="card-body-helper-statuses">';
     LEGEND.forEach(function (it) {
       html += '<div class="helper-status-legend">' +
         '<strong>' + UI.esc(it[0]) + '</strong>' +
         '<small>' + UI.esc(it[1]) + '</small></div>';
     });
-    html += '</div>';
-    return html;
-  }
-
-  function referenceCard() {
-    var html = '<div class="helper-card"><div class="helper-card-head"><h2>All Roles</h2></div>';
-    TEAM_ORDER.forEach(function (team) {
-      var roles = Object.keys(E.ROLES || {}).filter(function (id) {
-        return E.ROLES[id] && E.ROLES[id].team === team;
-      }).sort(function (a, b) {
-        var ra = E.ROLES[a] || {};
-        var rb = E.ROLES[b] || {};
-        if ((ra.category || '') < (rb.category || '')) return -1;
-        if ((ra.category || '') > (rb.category || '')) return 1;
-        var na = String(a).toLowerCase();
-        var nb = String(b).toLowerCase();
-        return na < nb ? -1 : na > nb ? 1 : 0;
-      });
-      if (!roles.length) return;
-      html += '<div class="helper-team"><h3>' + (TEAM_LABELS[team] || team) + '</h3>';
-      roles.forEach(function (id) {
-        var blurb = (E.ROLES[id] && E.ROLES[id].blurb) || '';
-        html += '<div class="helper-role"><strong>' + UI.roleNameInline(id) + '</strong>' +
-          '<p>' + UI.esc(blurb) + '</p></div>';
-      });
-      html += '</div>';
-    });
-    html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
   UI.renderHelper = function (state, cfg, app) {
-    return nightOrderCard(state) + rosterCard(state, app) + legendCard() + referenceCard();
+    return nightOrderCard(state, app) + rosterCard(state, app) + legendCard(app);
   };
 
   UI.renderHelperSheet = function (state, pid, app) {

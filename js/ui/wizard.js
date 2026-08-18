@@ -237,10 +237,16 @@
     var w = app.wizard;
     var steps = w.steps || [];
     var idx = Math.min(w.idx, Math.max(0, steps.length - 1));
-    var html = '<div class="card night-card night-zero-card">';
+    var collapsed = !!(app && app.collapsed && app.collapsed['night-wizard']);
+    var html = '<div class="card night-card card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="card-head"><h2>Night</h2>' +
+      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="night-wizard"' +
+      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-night-wizard">' +
+      (collapsed ? '+' : '-') + '</button></div>';
+    html += '<div class="card-body" id="card-body-night-wizard">';
     if (!steps.length) {
       html += '<h2>Night Zero</h2><p class="muted">Tap Complete Night Zero to continue.</p>';
-      html += '</div>';
+      html += '</div></div>';
       return html;
     }
     var step = steps[idx];
@@ -273,7 +279,7 @@
     }
     html += '<button class="btn btn-sm wizard-nav"' + (idx === 0 ? ' disabled' : '') +
       ' data-action="wizard-back">Previous step</button>';
-    html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
@@ -282,10 +288,16 @@
     if (w && w.nightZero) return nightZeroWizard(state, cfg, app);
     var steps = w.steps || [];
     var idx = Math.min(w.idx, Math.max(0, steps.length - 1));
-    var html = '<div class="card night-card">';
+    var collapsed = !!(app.collapsed && app.collapsed['night-wizard']);
+    var html = '<div class="card night-card card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="card-head"><h2>Night</h2>' +
+      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="night-wizard"' +
+      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-night-wizard">' +
+      (collapsed ? '+' : '-') + '</button></div>';
+    html += '<div class="card-body" id="card-body-night-wizard">';
     if (!steps.length) {
       html += '<h2>No night steps</h2><p class="muted">Tap Resolve Night to continue.</p>';
-      html += '</div>';
+      html += '</div></div>';
       return html;
     }
     var step = steps[idx];
@@ -362,7 +374,7 @@
     }
     html += '<button class="btn btn-sm wizard-nav"' + (idx === 0 ? ' disabled' : '') +
       ' data-action="wizard-back">Previous step</button>';
-    html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
