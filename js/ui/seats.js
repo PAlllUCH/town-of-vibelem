@@ -22,6 +22,14 @@
   };
   var LOG_BOLD = { death: true, lynched: true, shot: true, haunted: true };
 
+  function nightTitleHtml(title) {
+    var ids = Object.keys(E.ROLES || {});
+    for (var i = 0; i < ids.length; i++) {
+      if (E.ROLES[ids[i]] && E.ROLES[ids[i]].name === title) return UI.roleNameInline(ids[i]);
+    }
+    return UI.esc(title);
+  }
+
   function currentRole(state, app, seat) {
     var pr = app.pendingRoles && app.pendingRoles[seat];
     if (pr != null && pr !== '') return pr;
@@ -70,48 +78,45 @@
     for (var seat = 1; seat <= n; seat++) {
       if (!currentRole(state, app, seat)) left++;
     }
-    var html = '<div class="card">';
-    html += '<div class="card-head"><h2>Name the Seats</h2></div>';
-    html += '<div class="hint" data-role-remaining>' + left + ' seat' + (left === 1 ? '' : 's') +
-      ' left to assign</div>';
-    html += UI.seatLayoutOpen(cfg, n);
+    var body = '';
+    body += '<div class="hint" data-role-remaining>' + UI.str('seatsLeftHint', left) + '</div>';
+    body += UI.seatLayoutOpen(cfg, n);
     for (var s = 1; s <= n; s++) {
       var role = currentRole(state, app, s);
-      html += '<div class="seat-input-wrap"' + UI.seatPosAttr(cfg, s, n) + '>' +
+      body += '<div class="seat-input-wrap"' + UI.seatPosAttr(cfg, s, n) + '>' +
         '<span class="seat-label">' + s + '</span>' +
         '<button class="seat-btn" data-action="open-naming-sheet" data-seat="' + s +
-        '" aria-label="Edit seat ' + s + '">' +
-        '<span class="seat-btn-name">' + UI.esc(app.names[s] || ('Player ' + s)) +
+        '" aria-label="' + UI.str('editSeatAria', s) + '">' +
+        '<span class="seat-btn-name">' + UI.esc(app.names[s] || UI.str('seatPlaceholder', s)) +
         '</span>' +
         '<span class="seat-btn-role' + (role ? ' team-' + UI.teamOf(role) + '-text' : '') + '">' +
-        (role ? UI.roleName(role) : '&ndash;') + '</span></button></div>';
+        (role ? UI.roleNameInline(role) : '&ndash;') + '</span></button></div>';
     }
-    html += UI.seatLayoutClose();
-    html += '<div class="btn-row">' +
-      '<button class="btn" data-action="auto-fill">Auto-fill rest</button>' +
-      '<button class="btn btn-primary" data-action="lock-roles">Lock Roles</button></div>' +
-      '</div>';
-    html += '<div class="hint">Deal one role per player in private. The app is moderator-only: keep the screen to yourself.</div>';
+    body += UI.seatLayoutClose();
+    body += '<div class="btn-row">' +
+      '<button class="btn" data-action="auto-fill">' + UI.str('autoFillRest') + '</button>' +
+      '<button class="btn btn-primary" data-action="lock-roles">' + UI.str('lockRoles') + '</button></div>';
+    var html = UI.card(UI.str('seatsNamingTitle'), body, 'naming-seats', app);
+    html += '<div class="hint">' + UI.str('namingHint') + '</div>';
     return html;
   };
 
   UI.renderSeatsDealt = function (state, cfg, app) {
     var n = state.playerCount || cfg.playerCount;
-    var html = '<div class="card">';
-    html += '<div class="card-head"><h2>Seats</h2>' +
+    var body = '<div class="btn-row">' +
       '<button class="btn btn-sm" data-action="toggle-roles">' +
       (app.rolesHidden ? 'Show' : 'Hide') + ' Roles</button>' +
       '<button class="btn btn-sm' + (app.swapMode ? ' on' : '') + '" data-action="swap-mode">' +
       (app.swapMode ? 'Cancel Swap' : 'Swap Roles') + '</button></div>';
-    html += UI.flowStrip(state.phase);
+    body += UI.flowStrip(state.phase);
     if (app.swapMode) {
-      html += '<div class="hint"><strong>Swap mode:</strong> ' +
+      body += '<div class="hint"><strong>Swap mode:</strong> ' +
         (app.swapSel == null
           ? 'Tap a seat to select it, then tap a second seat to swap their roles.'
           : 'Seat ' + app.swapSel + ' selected. Tap a second seat to swap.') +
         '<button class="btn btn-sm btn-block" data-action="swap-cancel">Cancel Swap</button></div>';
     }
-    html += UI.seatLayoutOpen(cfg, n);
+    body += UI.seatLayoutOpen(cfg, n);
     UI.playersBySeat(state.players).forEach(function (p) {
       var team = UI.teamOf(p.assignedRole);
       var sel = app.swapMode && app.swapSel != null && String(app.swapSel) === String(p.seat)
@@ -119,35 +124,35 @@
       var clickable = app.swapMode
         ? ' data-action="swap-select" data-seat="' + UI.esc(p.seat) + '"'
         : ' data-action="open-detail-sheet" data-seat="' + UI.esc(p.seat) + '"';
-      html += '<div class="seat-input-wrap' + sel + '"' + UI.seatPosAttr(cfg, p.seat, n) + '>' +
+      body += '<div class="seat-input-wrap' + sel + '"' + UI.seatPosAttr(cfg, p.seat, n) + '>' +
         '<span class="seat-label">' + UI.esc(p.seat) + '</span>' +
         '<div class="seat-dealt team-' + team + '"' + clickable + '>' +
-        '<div class="seat-dealt-name">' + UI.esc(p.name || ('Player ' + p.seat)) + '</div>' +
-        '<div class="seat-role">' + (app.rolesHidden ? '&#8226;&#8226;&#8226;' : UI.roleName(p.assignedRole)) + '</div>' +
+        '<div class="seat-dealt-name">' + UI.esc(p.name || UI.str('seatPlaceholder', p.seat)) + '</div>' +
+        '<div class="seat-role">' + (app.rolesHidden ? '&#8226;&#8226;&#8226;' : UI.roleNameInline(p.assignedRole)) + '</div>' +
         '<div class="seat-tags">' + UI.statusTags(p) + '</div></div></div>';
     });
-    html += UI.seatLayoutClose();
-    html += UI.nightOrderPrep(state, cfg, app);
-    html += '<div class="btn-row">' +
-      '<button class="btn" data-action="edit-names">Edit Names</button>' +
-      '<button class="btn" data-action="redeal">Redeal</button></div>';
-    html += '</div>';
+    body += UI.seatLayoutClose();
+    body += UI.nightOrderPrep(state, cfg, app);
+    body += '<div class="btn-row">' +
+      '<button class="btn" data-action="edit-names">' + UI.str('editNames') + '</button>' +
+      '<button class="btn" data-action="redeal">' + UI.str('redealLabel') + '</button></div>';
+    var html = UI.card('Seats', body, 'seats', app);
 
-    html += '<div class="card">';
+    var brief = '';
     if (state.gfBluffs && state.gfBluffs.length) {
-      html += '<div class="hint"><strong>Godfather bluffs:</strong> ' + state.gfBluffs.map(UI.roleName).join(', ') + '</div>';
+      brief += '<div class="hint"><strong>Godfather bluffs:</strong> ' + state.gfBluffs.map(UI.roleName).join(', ') + '</div>';
     }
     if (state.executionerTarget) {
-      html += '<div class="hint"><strong>Executioner target:</strong> ' + UI.esc(UI.nameOf(state, state.executionerTarget)) + '</div>';
+      brief += '<div class="hint"><strong>Executioner target:</strong> ' + UI.esc(UI.nameOf(state, state.executionerTarget)) + '</div>';
     }
     if (state.deck && state.deck.indexOf('witch') !== -1) {
-      html += '<div class="hint"><strong>Witch side:</strong> ' +
+      brief += '<div class="hint"><strong>Witch side:</strong> ' +
         '<button class="btn btn-sm' + (state.witchSide !== 'TOWN' ? ' on' : '') + '" data-action="witch-side" data-side="MAFIA">Mafia</button> ' +
         '<button class="btn btn-sm' + (state.witchSide === 'TOWN' ? ' on' : '') + '" data-action="witch-side" data-side="TOWN">Town</button>' +
         ' <span class="muted small">(ask the Witch privately before the game starts)</span></div>';
     }
-    html += '<p class="muted small">Whisper the bluffs and targets above when roles are dealt.</p>';
-    html += '</div>';
+    brief += '<p class="muted small">Whisper the bluffs and targets above when roles are dealt.</p>';
+    html += UI.card('Prep Briefing', brief, 'setup-briefing', app);
 
     html += nightZeroCard(state, app);
 
@@ -156,7 +161,7 @@
     var nightZeroDone = !!(state.night && state.night.nightZeroDone);
     var btnAction = (hasNZ && !nightZeroDone) ? 'begin-night-zero' : 'begin-night';
     var btnLabel = (hasNZ && !nightZeroDone) ? 'Begin Night 0' : 'Begin Day 1';
-    html += '<button class="btn btn-primary btn-block btn-big" data-action="' + btnAction + '">' + btnLabel + '</button>';
+    html += '<button class="btn btn-primary btn-block btn-big btn-night0" data-action="' + btnAction + '">' + btnLabel + '</button>';
     return html;
   };
 
@@ -178,7 +183,7 @@
       });
       body += '<div class="night-order-step">' +
         '<span class="night-order-pos">' + step.position + '</span>' +
-        '<strong class="night-order-title">' + UI.esc(step.title) + '</strong>' +
+        '<strong class="night-order-title">' + nightTitleHtml(step.title) + '</strong>' +
         '<span class="night-order-players">' + holders.join(', ') + '</span></div>';
     });
     body += '</div>';
@@ -213,23 +218,21 @@
     add('deal', 'Deal role cards', 'Deal each player their role card / name tag.');
     var doneCount = 0;
     rows.forEach(function (r) { if (done[r.id]) doneCount += 1; });
-    var html = '<div class="card"><div class="card-head"><h2>Night Zero</h2>' +
-      '<span class="tag tag-accent">' + doneCount + '/' + rows.length + ' done</span></div>';
-    html += '<p class="muted small">Prep ritual: finish every row before the table opens its eyes.</p>';
+    var body = '<p><span class="tag tag-accent">' + doneCount + '/' + rows.length + ' done</span></p>';
+    body += '<p class="muted small">Prep ritual: finish every row before the table opens its eyes.</p>';
     rows.forEach(function (r) {
       var on = !!done[r.id];
-      html += '<button class="toggle-row' + (on ? ' on' : '') + '" data-action="nz-toggle" data-nz="' + r.id + '">' +
+      body += '<button class="toggle-row' + (on ? ' on' : '') + '" data-action="nz-toggle" data-nz="' + r.id + '">' +
         '<span class="toggle-text"><strong>' + UI.esc(r.label) + '</strong>' +
         (r.sub ? '<small>' + r.sub + '</small>' : '') + '</span>' +
         '<span class="toggle' + (on ? ' on' : '') + '"><span class="toggle-knob"></span></span></button>';
     });
-    html += '</div>';
-    return html;
+    return UI.card('Night Zero', body, 'night-zero', app);
   }
 
   function renderNamingSheet(state, cfg, app) {
     var seat = app.sheet.seat;
-    var name = app.sheet.name != null ? app.sheet.name : (app.names[seat] || ('Player ' + seat));
+    var name = app.sheet.name != null ? app.sheet.name : (app.names[seat] || UI.str('seatPlaceholder', seat));
     var cur = app.sheet.role != null ? app.sheet.role : currentRole(state, app, seat);
     var dealt = state.players && state.players[seat - 1] ? state.players[seat - 1].assignedRole : '';
     var sheetSet = app.sheet.role != null && app.sheet.role !== '';
@@ -303,6 +306,16 @@
       (r.category ? '<span class="reference-cat">' + UI.esc(r.category) + '</span>' : '') + '</div>';
     html += '<div class="seat-sheet-tags">' + UI.statusTags(p) + '</div>';
     html += '<p class="seat-sheet-desc muted">' + UI.esc(r.blurb || '') + '</p>';
+    var note = (app.notes && app.notes[String(p.id)]) || '';
+    html += '<h4 class="seat-sheet-log-title">' + UI.str('notesLabel') + '</h4>';
+    if (p.isAlive) {
+      html += '<textarea id="seat-note-input" class="seat-note-input" rows="3"' +
+        ' aria-label="' + UI.esc(UI.str('notesLabel')) + '">' + UI.esc(note) + '</textarea>';
+      html += '<div class="seat-sheet-footer">' +
+        '<button class="btn btn-primary" data-action="save-note">' + UI.str('saveNote') + '</button></div>';
+    } else {
+      html += '<p class="seat-note-readonly muted">' + (note ? UI.esc(note) : UI.str('noNotes')) + '</p>';
+    }
     html += '<h4 class="seat-sheet-log-title">Activity Log</h4>';
     html += '<div class="seat-sheet-log" role="log" aria-label="Player activity log">';
     var log = (state.playerLog && state.playerLog[String(p.id)]) || [];

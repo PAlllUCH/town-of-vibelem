@@ -6,11 +6,44 @@
     result.survivors = E._livingSharers(state);
     state.winner = result;
     state.phase = 'END';
-    state.logs.push(result.winner + ' wins: ' + result.reason);
+    state.logs.push(result.winner === 'DRAW'
+      ? 'Draw: ' + result.reason
+      : result.winner + ' wins: ' + result.reason);
     return result;
   }
 
+  function lynchCount(state) {
+    var g = state.graveyard || [];
+    var n = 0;
+    for (var i = 0; i < g.length; i += 1) {
+      if (g[i] && g[i].deathCause === 'lynched by the town') n += 1;
+    }
+    return n;
+  }
+
+  function updateStaleTracking(state) {
+    if (!Number.isInteger(state.maxStaleDays) || state.maxStaleDays < 1) state.maxStaleDays = 5;
+    if (!Number.isInteger(state.staleDays) || state.staleDays < 0) state.staleDays = 0;
+    var lynches = lynchCount(state);
+    if (!Number.isInteger(state.staleLynchSeen)) state.staleLynchSeen = lynches;
+    if (lynches > state.staleLynchSeen) state.staleDays = 0;
+    state.staleLynchSeen = lynches;
+    var cycleNight = Number.isInteger(state.night.number) ? state.night.number - 1 : 0;
+    if (cycleNight >= 1 && state.phase === 'DAY' && state.morning &&
+        Array.isArray(state.morning.deaths) && state.staleNightSeen !== cycleNight) {
+      var base = Number.isInteger(state.staleCycleLynches) ? state.staleCycleLynches : null;
+      var dayHadLynch = base !== null && lynches > base;
+      var nightHadDeath = state.morning.deaths.length > 0;
+      if (dayHadLynch || nightHadDeath) state.staleDays = 0;
+      else state.staleDays += 1;
+      state.staleCycleLynches = lynches;
+      state.staleNightSeen = cycleNight;
+    }
+  }
+
   E.checkVictory = function (state) {
+    if (state.phase === 'END') return state.winner;
+    updateStaleTracking(state);
     var living = state.players.filter(function (p) { return p.isAlive; });
     if (living.length === 0) {
       return finish(state, { winner: null, reason: 'No living players remain.' });
@@ -42,14 +75,23 @@
       result = { winner: 'SERIAL_KILLER', reason: 'The Serial Killer stands last or holds majority.' };
     } else if (demon && living.length - 1 <= 1) {
       result = { winner: 'DEMON', reason: 'The Demon stands last or holds majority.' };
-    } else if (mafia >= town + evil) {
+    } else if (living.length === 2 && evil === 1 && town === 1 && mafia === 0) {
+      result = { winner: 'EVIL', reason: 'The last Evil-aligned player outlasts the final Town-aligned player.' };
+    } else if (mafia > 0 && mafia >= town) {
       result = { winner: 'MAFIA', reason: 'The Mafia holds majority.' };
     } else if (town === 0 && mafia > 0) {
       result = { winner: 'MAFIA', reason: 'No Town-aligned players remain.' };
-    } else if (mafia === 0 && evil === 0 && !sk && !demon) {
-      result = { winner: 'TOWN', reason: 'All Mafia-aligned and Evil players are dead.' };
+    } else if (mafia === 0 && !sk && !demon && town > 0) {
+      result = { winner: 'TOWN', reason: 'All Mafia-aligned players and the Serial Killer are dead.' };
     }
     if (result) return finish(state, result);
+    if (state.staleDays >= state.maxStaleDays) {
+      return finish(state, {
+        winner: 'DRAW',
+        reason: 'The game ends in a draw after ' + state.staleDays +
+          ' consecutive cycles with no lynch and no night deaths.'
+      });
+    }
     return null;
   };
 

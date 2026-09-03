@@ -85,7 +85,7 @@
   width: 100%;
   gap: 2px;
   background: var(--bg2);
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   color: var(--text);
   min-height: 64px;
@@ -93,7 +93,7 @@
   text-align: left;
   cursor: pointer;
 }
-.preset-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.preset-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: 0 0 0 2px var(--glow); }
 .preset-name { font-weight: 700; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .preset-tag { color: var(--muted); font-size: .82rem; white-space: normal; width: 100%; word-break: break-word; min-width: 0; }
 
@@ -114,6 +114,9 @@
   cursor: pointer;
 }
 .toggle-text { flex: 1; display: flex; flex-direction: column; }
+.toggle-row.on { border-color: var(--accent); background: var(--accent-faint); }
+.toggle-row:active { background: var(--accent-faint); }
+.toggle-row.on .toggle-text strong { color: var(--text-bright); }
 .toggle-text small { color: var(--muted); font-size: .78rem; }
 .toggle {
   flex: none;
@@ -146,7 +149,7 @@
   align-items: center;
   gap: 4px;
   background: var(--bg2);
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   color: var(--text);
   padding: 8px 4px;
@@ -154,7 +157,7 @@
   font-size: .82rem;
   cursor: pointer;
 }
-.layout-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.layout-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: 0 0 0 2px var(--glow); }
 .layout-icon {
   width: 56px;
   height: 38px;
@@ -213,6 +216,7 @@
   padding: 2px 10px;
   font-size: .78rem;
   font-weight: 700;
+  color: var(--accent);
 }
 .deck-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .deck-chip {
@@ -224,7 +228,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: var(--panel2);
   background: color-mix(in srgb, var(--tc, var(--line)) 14%, transparent);
 }
 
@@ -232,7 +235,7 @@
 .resume-banner {
   background: var(--accent-dim);
   border: 1px solid var(--accent);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 14px;
   margin: 12px 0;
   display: flex;

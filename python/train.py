@@ -289,6 +289,8 @@ def fitness(state, memories, jester_win_pids):
             s += 1.0
         elif winner == 'SERIAL_KILLER' and role == 'serialkiller':
             s += 1.0
+        elif winner in ('DEMON', 'EVIL') and team == 'EVIL':
+            s += 1.0
         elif winner == 'EXECUTIONER' and role == 'executioner':
             s += 1.0
         if role in ('survivor', 'drunk') and pid in alive:

@@ -16,7 +16,7 @@
       html += '<button class="claim-row" data-action="claim-open" data-seat="' + UI.esc(p.seat) + '">' +
         '<span class="claim-name">' + UI.esc(p.name) + '</span>' +
         '<span class="claim-chip' + (claimed ? ' on' : '') + '">' +
-        (claimed ? UI.roleName(claimed) : 'No claim') + '</span></button>';
+        (claimed ? UI.roleNameInline(claimed) : 'No claim') + '</span></button>';
     });
     html += '<p class="muted small claims-hint">Players state their claims publicly; the moderator records them here.</p>';
     html += '</div>';
@@ -43,7 +43,7 @@
       }
       html += '<button class="claim-role-btn btn btn-sm' + (claims[String(seat)] === id ? ' on' : '') + '"' +
         ' data-action="' + action + '" data-seat="' + UI.esc(seat) + '" data-role="' + UI.esc(id) + '">' +
-        '<span class="team-dot team-' + t + '"></span>' + UI.roleName(id) + '</button>';
+        '<span class="team-dot team-' + t + '"></span>' + UI.roleNameInline(id) + '</button>';
     });
     return html;
   };

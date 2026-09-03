@@ -1,6 +1,8 @@
 'use strict';
 
-var CACHE_NAME = 'tov-v1';
+// Build stamp: bump BUILD on every deploy so clients pick up new code.
+var BUILD = '2026-09-03-1';
+var CACHE_NAME = 'tov-' + BUILD;
 var CACHE_PREFIX = 'tov-';
 var CORE_ASSETS = [
   './',
@@ -15,8 +17,10 @@ var CORE_ASSETS = [
   './styles/clock.css',
   './styles/end.css',
   './styles/reference.css',
+  './styles/helper.css',
   './js/engine/00-namespace.js',
   './js/engine/01-roles.js',
+  './js/engine/01b-strings.js',
   './js/engine/02-presets.js',
   './js/engine/03-deck.js',
   './js/engine/04-state.js',
@@ -40,6 +44,7 @@ var CORE_ASSETS = [
   './js/ui/day-trial.js',
   './js/ui/end.js',
   './js/ui/reference.js',
+  './js/ui/helper.js',
   './js/app/config.js',
   './js/app/persistence.js',
   './js/app/router.js',
@@ -80,11 +85,33 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('fetch', function (event) {
   var request = event.request;
   if (request.method !== 'GET') { return; }
+  if (request.url.indexOf(self.location.origin) !== 0) { return; }
+  var path = request.url.slice(self.location.origin.length).split('?')[0].split('#')[0];
+  var isCode = request.mode === 'navigate' || /\.(html|js|css)$/.test(path);
+  var isAsset = /\.(svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|otf)$/.test(path) || /manifest\.webmanifest$/.test(path);
+  if (isCode && !isAsset) {
+    event.respondWith(
+      fetch(request).then(function (response) {
+        if (response && response.ok) {
+          var copy = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) { cache.put(request, copy); });
+        }
+        return response;
+      }).catch(function () {
+        return caches.match(request).then(function (cached) {
+          if (cached) { return cached; }
+          if (request.mode === 'navigate') { return caches.match('./index.html'); }
+          throw new Error('offline');
+        });
+      })
+    );
+    return;
+  }
   event.respondWith(
     caches.match(request).then(function (cached) {
       if (cached) { return cached; }
       return fetch(request).then(function (response) {
-        if (response && response.ok && request.url.indexOf(self.location.origin) === 0) {
+        if (response && response.ok) {
           var copy = response.clone();
           caches.open(CACHE_NAME).then(function (cache) { cache.put(request, copy); });
         }

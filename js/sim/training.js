@@ -247,7 +247,7 @@ function sheriffReport(state, memories) {
   });
 }
 
-function runGame(population, preset, playerCount) {
+function runGame(agent, preset, playerCount) {
   const state = engine.createGame({ playerCount: playerCount, presetId: preset });
   const names = [];
   for (let s = 1; s <= playerCount; s += 1) names.push({ seat: s, name: 'P' + s });
@@ -258,11 +258,13 @@ function runGame(population, preset, playerCount) {
   const agents = {};
   
   state.players.forEach(function (p) {
-    agents[p.id] = new Agent(playerCount, p.assignedRole);
+    agents[p.id] = agent;
   });
   
   let days = 0;
+  const roundsAlive = {};
   while (state.phase !== 'END' && days < MAX_DAYS) {
+    living(state).forEach(function (p) { roundsAlive[p.id] = (roundsAlive[p.id] || 0) + 1; });
     if (state.phase !== 'NIGHT') state.phase = 'NIGHT';
     const recorded = [], notes = [];
     
@@ -382,6 +384,22 @@ function runGame(population, preset, playerCount) {
     
     engine.resolveNight(state);
     
+    const attackedIds = {};
+    recorded.forEach(function (a) {
+      if ((a.position === 6 || a.position === 9) && a.targetId != null) attackedIds[a.targetId] = true;
+    });
+    const deadTonight = {};
+    ((state.morning && state.morning.deaths) || []).forEach(function (d) { deadTonight[d.playerId] = true; });
+    recorded.forEach(function (a) {
+      if ((a.position === 6 || a.position === 9) && a.targetId != null && !deadTonight[a.targetId]) {
+        const t = byId(state, a.targetId);
+        if (t && teamOfRole(t.assignedRole) === 'TOWN') agent.fitness += 1;
+      }
+      if (a.position === 5 && a.roleId === 'doctor' && a.targetId != null && attackedIds[a.targetId] && !deadTonight[a.targetId]) {
+        agent.fitness += 2;
+      }
+    });
+    
     state.players.forEach(function (p) {
       const m = memories[p.id];
       if (m.roleId === 'jailor') m.lastJailed = state.night.lastJailTarget;
@@ -481,38 +499,34 @@ function runGame(population, preset, playerCount) {
   
   if (state.phase !== 'END') engine.endGame(state);
   
-  const winner = state.winner ? state.winner.winner : 'nobody';
+  const winner = state.winner ? state.winner.winner : null;
   
   state.players.forEach(function (p) {
-    const agent = agents[p.id];
     const mem = memories[p.id];
-    
-    if (winner === 'TOWN' && mem.team === 'TOWN') {
+
+    if (winner === 'TOWN' && mem.side === 'TOWN') {
       agent.fitness += 10;
-    } else if (winner === 'MAFIA' && mem.team === 'MAFIA') {
+    } else if (winner === 'MAFIA' && mem.side === 'MAFIA') {
       agent.fitness += 10;
     } else if (winner === 'SERIAL_KILLER' && mem.roleId === 'serialkiller') {
       agent.fitness += 10;
+    } else if ((winner === 'DEMON' || winner === 'EVIL') && mem.side === 'EVIL') {
+      agent.fitness += 10;
+    } else if (winner === 'EXECUTIONER' && mem.roleId === 'executioner') {
+      agent.fitness += 10;
     }
+
+    agent.fitness += Math.min(roundsAlive[p.id] || 0, MAX_DAYS) * 0.25;
     
     if (mem.roleId === 'sheriff' || mem.inheritedSheriff) {
       let correctChecks = 0;
       Object.keys(mem.ownSheriffResults).forEach(function (k) {
-        const p = byId(state, Number(k));
-        if (p && mem.ownSheriffResults[k] === 'SUSPICIOUS' && checkSuspicious(state, p)) {
+        const p2 = byId(state, Number(k));
+        if (p2 && mem.ownSheriffResults[k] === 'SUSPICIOUS' && checkSuspicious(state, p2)) {
           correctChecks++;
         }
       });
       agent.fitness += correctChecks * 2;
-    }
-    
-    if (mem.roleId === 'doctor') {
-      const protectedCount = living(state).filter(function (p) {
-        return p.isAlive && !state.graveyard.some(function (e) {
-          return e.playerId === p.id && e.cause.includes('killed');
-        });
-      });
-      agent.fitness += protectedCount.length;
     }
     
     agent.gamesPlayed++;
@@ -534,7 +548,7 @@ function train() {
       agent.resetFitness();
       
       for (let g = 0; g < GAMES_PER_EVAL; g++) {
-        runGame(population, PRESET, PLAYER_COUNT);
+        runGame(agent, PRESET, PLAYER_COUNT);
       }
     });
     

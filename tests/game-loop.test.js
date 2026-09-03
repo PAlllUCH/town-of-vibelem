@@ -14,6 +14,7 @@ describe('house rule defaults', () => {
     assert.strictEqual(APP.cfg.houseRules.noLynchD1, true);
     assert.strictEqual(APP.cfg.houseRules.noKillN1, true);
     assert.strictEqual(APP.cfg.houseRules.classicReveal, false);
+    assert.strictEqual(APP.cfg.houseRules.jailorNoExecN1, false);
   });
 });
 
@@ -39,7 +40,7 @@ describe('full-app game loop driver', () => {
     APP.resolveTrial();
     assert.strictEqual(APP.state.trial.stage, 'VOTE');
     assert.ok(APP.state.trial.active);
-    assert.ok(html('game-bar').indexOf('Resolve Trial') !== -1);
+    assert.ok(html('game-bar').indexOf('Verdict') !== -1);
     castAll('GUILTY');
     assert.strictEqual(APP.state.trial.votes.length, 9); // the accused cannot vote
     APP.resolveTrial();
@@ -381,7 +382,7 @@ describe('full-app game loop driver', () => {
 
   test('prep flow: Begin Day 1 before Night 1, Day-1 save resumes, N1 rules in effect (noKillN1, Jailor SPARE-only)', () => {
     const roles = ['jailor', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'civilian', 'survivor'];
-    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles, null, { jailorNoExecN1: true });
     assert.strictEqual(APP.state.phase, 'SEATS');
     assert.ok(html('seats-body').indexOf('Begin Day 1') !== -1);
     APP.beginDay1();

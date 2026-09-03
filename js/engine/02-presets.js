@@ -16,44 +16,58 @@
   };
 
   E.PRESETS = {
+    blank: {
+      id: 'blank',
+      name: { en: 'Blank Slate', pl: 'Czysta Tablica' },
+      tagline: { en: 'A lean core: Jailor, Doctor, Sheriff vs Godfather and Mafioso, plus a Jester. Everything else is Civilians until you add roles.', pl: 'Szczupły rdzeń: Więziennik, Lekarz i Szeryf przeciw Ojcu Chrzestnemu z Mafioso, plus Błazen. Reszta to Mieszkańcy, dopóki nie dodasz własnych ról.' },
+      town: ['jailor', 'doctor', 'sheriff'],
+      mafia: ['godfather', 'mafioso'],
+      neutral: ['jester']
+    },
     p1: {
-      id: 'p1', name: 'Whispers from the Morgue',
-      tagline: 'The town gathers its information from the dead; the Mafia buries the truth.',
+      id: 'p1',
+      name: { en: 'Whispers from the Morgue', pl: 'Szepty z Kostnicy' },
+      tagline: { en: 'The town gathers its information from the dead; the Mafia buries the truth.', pl: 'Miasto czerpie wiedzę od zmarłych; Mafia grzebie prawdę.' },
       town: ['jailor', 'undertaker', 'medium', 'doctor', 'sheriff', 'tracker', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'janitor', 'consigliere'],
       neutral: ['amnesiac', 'jester', 'spy']
     },
     p2: {
-      id: 'p2', name: 'The Poisoned Pint',
-      tagline: 'Sabotage: the Mafia cripples the town\'s power roles one drink at a time.',
+      id: 'p2',
+      name: { en: 'The Poisoned Pint', pl: 'Zatruta Pinta' },
+      tagline: { en: 'Sabotage: the Mafia cripples the town\'s power roles one drink at a time.', pl: 'Sabotaż: Mafia wyłącza potężne role miasta po kolei, przy każdym drinku.' },
       town: ['jailor', 'doctor', 'sheriff', 'lookout', 'escort', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper'],
       mafia: ['godfather', 'mafioso', 'poisoner', 'consort'],
       neutral: ['drunk', 'witch', 'spy']
     },
     p3: {
-      id: 'p3', name: 'The Gunpowder Plot',
-      tagline: 'Firepower on both sides: town guns and an unsuppressible night killer.',
+      id: 'p3',
+      name: { en: 'The Gunpowder Plot', pl: 'Spisek Prochowy' },
+      tagline: { en: 'Firepower on both sides: town guns and an unsuppressible night killer.', pl: 'Ognista siła obu stron: miejskie strzelby i nie do powstrzymania zabójca w nocy.' },
       town: ['jailor', 'deputy', 'veteran', 'vigilante', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper'],
       mafia: ['godfather', 'mafioso', 'consort', 'forger'],
       neutral: ['serialkiller', 'survivor', 'spy']
     },
     p4: {
-      id: 'p4', name: 'The Imposter at the Altar',
-      tagline: 'A wedding party where the guest of honor (the Mayor) is a target for both the knife and the noose. The Executioner schemes to hang the guest of honor; the town must shield them.',
+      id: 'p4',
+      name: { en: 'The Imposter at the Altar', pl: 'Upiór przy Ołtarzu' },
+      tagline: { en: 'A wedding party where the guest of honor (the Mayor) is a target for both the knife and the noose. The Executioner schemes to hang the guest of honor; the town must shield them.', pl: 'Weselny wiwat, gdzie gość honorowy (Burmistrz) jest celem noża i stryczka. Egzekutor knuje jego powieszenie, a miasto musi go osłonić.' },
       town: ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'framer', 'consigliere'],
       neutral: ['jester', 'executioner', 'spy']
     },
     p5: {
-      id: 'p5', name: 'The Widow\'s Vigil',
-      tagline: 'Mourning and espionage: the Witch and the Poisoner turn knowledge against the town while the dead keep watching.',
+      id: 'p5',
+      name: { en: 'The Widow\'s Vigil', pl: 'Warta Wdowy' },
+      tagline: { en: 'Mourning and espionage: the Witch and the Poisoner turn knowledge against the town while the dead keep watching.', pl: 'Żałoba i szpiegostwo: Wiedźma i Truciciel obracają wiedzę przeciw miastu, a zmarli wciąż obserwują.' },
       town: ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef'],
       mafia: ['godfather', 'mafioso', 'poisoner', 'blackmailer'],
       neutral: ['witch', 'survivor', 'spy']
     },
     p6: {
-      id: 'p6', name: 'The Clock Strikes Thirteen',
-      tagline: 'Chaos at midnight: two night killers and heavy town firepower make every night decisive.',
+      id: 'p6',
+      name: { en: 'The Clock Strikes Thirteen', pl: 'Zegar Wybija Trzynastą' },
+      tagline: { en: 'Chaos at midnight: two night killers and heavy town firepower make every night decisive.', pl: 'Chaos o północy: dwóch nocnych zabójców i potężna broń miasta czyni każdą noc rozstrzygającą.' },
       town: ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper'],
       mafia: ['godfather', 'mafioso', 'consort', 'forger'],
       neutral: ['serialkiller', 'drunk', 'spy']

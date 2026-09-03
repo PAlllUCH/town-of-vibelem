@@ -160,6 +160,9 @@
       case 'wizard-back':
         APP.wizBack();
         break;
+      case 'wizard-jump':
+        APP.wizJump(btn.getAttribute('data-index'));
+        break;
       case 'wizard-skip':
         APP.wizNext();
         break;
@@ -260,8 +263,7 @@
         APP.afterMutation();
         break;
       case 'toggle-logs':
-        app.logsOpen = !app.logsOpen;
-        APP.afterMutation();
+        APP.toggleCard('log');
         break;
       case 'toggle-card':
         APP.toggleCard(btn.getAttribute('data-card'));
@@ -304,6 +306,18 @@
         APP.toggleHelperStatus(btn.getAttribute('data-helper-pid'), btn.getAttribute('data-helper-status'));
         APP.afterMutation();
         break;
+      case 'helper-step-prev':
+        APP.helperStepPrev();
+        break;
+      case 'helper-step-next':
+        APP.helperStepNext();
+        break;
+      case 'helper-kill-player':
+        APP.doDayAbility('moderator-kill', btn.getAttribute('data-helper-pid'));
+        break;
+      case 'helper-undo-kill':
+        APP.undoKill();
+        break;
       default:
         break;
     }
@@ -336,6 +350,16 @@
   }
   APP.toggleCard = toggleCard;
 
+  function helperStepShift(delta) {
+    var steps = UI.helperNightSteps && APP.state ? UI.helperNightSteps(APP.state) : [];
+    var maxIdx = Math.max(0, steps.length - 1);
+    var cur = Math.max(0, Math.min(Number(APP.app.helperStepIdx) || 0, maxIdx));
+    APP.app.helperStepIdx = Math.max(0, Math.min(cur + delta, maxIdx));
+    APP.afterMutation();
+  }
+  APP.helperStepPrev = function () { helperStepShift(-1); };
+  APP.helperStepNext = function () { helperStepShift(1); };
+
   function adjustDayTimer(delta) {
     var app = APP.app;
     if (!app.dayTimerEnds) return;
@@ -352,4 +376,6 @@
     APP.afterMutation();
   }
   APP.adjustDayTimer = adjustDayTimer;
+
+  APP.dispatch = dispatch;
 })();

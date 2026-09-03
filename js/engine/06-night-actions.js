@@ -67,7 +67,7 @@
         E._logPlayer(ctx.state, jailTarget, E._logAt(ctx.state), 'jailed', jailed.name + ' was jailed by the Jailor.');
         ctx.log(ctx.jailor.name + ' jailed ' + jailed.name + '.');
         var decision = (ctx.jailAction.extra && ctx.jailAction.extra.jailorDecision) || 'SPARE';
-        if (decision === 'EXECUTE' && ctx.nightNum !== 1 && !ctx.noKillN1) {
+        if (decision === 'EXECUTE' && !(ctx.nightNum === 1 && ctx.state.houseRules.jailorNoExecN1) && !ctx.noKillN1) {
           ctx.jailor.executionsUsed += 1;
           ctx.applyAttack(jailTarget, 'unstoppable', 'executed by the Jailor');
         }
@@ -155,10 +155,14 @@
     var action = ctx.actions.find(function (a) { return a.position === 9 && a.roleId === 'demon'; });
     if (!action || ctx.isVoided(action)) return;
     var demon = E._byId(ctx.state, action.playerId);
-    if (demon && demon.isAlive && !ctx.isBlocked(demon.id) && action.targetId && ctx.alive(action.targetId)) {
-      ctx.setEff(demon.id, action.targetId);
-      if (!ctx.noKillN1) ctx.applyAttack(action.targetId, 'basic', 'killed by the Demon');
-      ctx.log(demon.name + ' attacked ' + E._byId(ctx.state, action.targetId).name + '.');
+    var demonTarget = action.targetId;
+    if (ctx.control && ctx.control.valid && ctx.control.controlledId === demon.id && ctx.control.redirect) {
+      demonTarget = ctx.control.redirect;
+    }
+    if (demon && demon.isAlive && !ctx.isBlocked(demon.id) && demonTarget && ctx.alive(demonTarget)) {
+      ctx.setEff(demon.id, demonTarget);
+      if (!ctx.noKillN1) ctx.applyAttack(demonTarget, 'basic', 'killed by the Demon');
+      ctx.log(demon.name + ' attacked ' + E._byId(ctx.state, demonTarget).name + '.');
     }
   }
 
@@ -169,6 +173,7 @@
     if (succubus && succubus.isAlive && !ctx.isBlocked(succubus.id) && action.targetId && ctx.alive(action.targetId)) {
       var target = E._byId(ctx.state, action.targetId);
       target.enchanted = true;
+      target.enchantedBy = succubus.assignedRole;
       ctx.setEff(succubus.id, target.id);
       ctx.log(succubus.name + ' enchanted ' + target.name + '.');
     }

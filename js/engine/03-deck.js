@@ -35,6 +35,9 @@
       var rid = candidates[i];
       if (E.ROLES[rid] && E.ROLES[rid].team === team && out.indexOf(rid) === -1) out.push(rid);
     }
+    if (out.length < slots) {
+      throw new Error('Deck requires ' + slots + ' unique ' + team + ' roles but only ' + out.length + ' exist');
+    }
     return out;
   }
 
@@ -47,6 +50,7 @@
     var neutralSlots = tc.neutral;
     var townList = cleanList((opts && opts.town) || preset.town);
     var mafiaList = cleanList((opts && opts.mafia) || preset.mafia);
+    var evilList = cleanList(opts && opts.evil);
     var neutralList = cleanList((opts && opts.neutral) || preset.neutral);
     var civMin = (opts && opts.civilians != null)
       ? Math.max(0, Math.min(townSlots, Number(opts.civilians)))
@@ -58,17 +62,19 @@
     var town = townNamed.slice();
     for (var c = 0; c < civCount; c += 1) town.push('civilian');
     var mafia = padTeam(mafiaList, mafiaSlots, preset.mafia, 'MAFIA');
-    var neutral = padTeam(neutralList, neutralSlots, preset.neutral, 'NEUTRAL');
+    var neutral = padTeam(evilList.concat(neutralList), neutralSlots, preset.neutral, 'NEUTRAL');
     return E._shuffle(town.concat(mafia, neutral));
   };
 
   E.getDeckPreview = function (state) {
-    var out = { town: [], mafia: [], neutral: [] };
+    var out = { town: [], mafia: [], neutral: [], evil: [] };
     for (var i = 0; i < state.deck.length; i += 1) {
       var id = state.deck[i];
       var role = E.ROLES[id];
       if (!role) continue;
-      out[role.team.toLowerCase()].push(id);
+      var key = role.team ? String(role.team).toLowerCase() : 'neutral';
+      if (!out[key]) out[key] = [];
+      out[key].push(id);
     }
     return out;
   };

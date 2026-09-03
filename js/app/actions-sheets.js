@@ -22,6 +22,9 @@
       case 'save-seat':
         APP.saveSeat();
         break;
+      case 'save-note':
+        APP.saveNote();
+        break;
       case 'close-sheet':
         APP.closeSheet();
         break;
@@ -113,6 +116,19 @@
     }
   }
 
+  function saveNote() {
+    var app = APP.app;
+    var sh = app.sheet;
+    if (!sh || sh.kind !== 'detail') return;
+    var input = document.getElementById('seat-note-input');
+    if (!input) return;
+    if (!app.notes) app.notes = {};
+    app.notes[String(sh.id)] = input.value != null ? String(input.value).trim() : '';
+    sh.focusFirst = false;
+    updateSheetDom();
+    APP.afterMutation();
+  }
+
   function closeSheet() {
     var app = APP.app;
     if (!app.sheet) return;
@@ -169,5 +185,6 @@
   APP.pickRole = pickRole;
   APP.clearRole = clearRole;
   APP.saveSeat = saveSeat;
+  APP.saveNote = saveNote;
   APP.closeSheet = closeSheet;
 })();

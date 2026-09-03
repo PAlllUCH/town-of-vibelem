@@ -12,6 +12,7 @@
       mode: 'app',
       statuses: {},
       helperSheetPid: null,
+      helperStepIdx: 0,
       wizard: null,
       rolesHidden: false,
       namingMode: false,
@@ -21,11 +22,11 @@
       lastVictory: null,
       picker: null,
       seatOverlay: false,
-      logsOpen: false,
       swapMode: false,
       swapSel: null,
       names: {},
       pendingRoles: {},
+      notes: {},
       nightZeroDone: {},
       claims: {},
       relayedWhispers: {},
@@ -45,13 +46,13 @@
   };
 
   function defaultCfg() {
-    var keys = E.PRESETS ? Object.keys(E.PRESETS) : ['p1'];
-    var preset = E.PRESETS[keys[0]] || { town: [], mafia: [], neutral: [] };
+    var def = (E.PRESETS && E.PRESETS.blank) ? 'blank' : (E.PRESETS ? Object.keys(E.PRESETS)[0] : 'p1');
+    var preset = E.PRESETS[def] || { town: [], mafia: [], neutral: [] };
     var ratio = (E.RATIO_TABLE && E.RATIO_TABLE[8]) || { town: 5, mafia: 2, neutral: 1 };
     return {
       playerCount: 8,
-      presetId: keys[0],
-      houseRules: { noKillN1: true, noLynchD1: true, classicReveal: false },
+      presetId: def,
+      houseRules: { noKillN1: true, noLynchD1: true, classicReveal: false, jailorNoExecN1: false },
       layout: (E.SEAT_LAYOUTS && E.SEAT_LAYOUTS[0]) || 'circle',
       teamCounts: { town: ratio.town, mafia: ratio.mafia, neutral: ratio.neutral },
       civilians: null,
@@ -131,11 +132,11 @@
     APP.app.lastVictory = null;
     APP.app.picker = null;
     APP.app.seatOverlay = false;
-    APP.app.logsOpen = false;
     APP.app.swapMode = false;
     APP.app.swapSel = null;
     APP.app.names = {};
     APP.app.pendingRoles = {};
+    APP.app.notes = {};
     APP.app.nightZeroDone = {};
     APP.app.claims = {};
     APP.app.relayedWhispers = {};
@@ -152,6 +153,7 @@
     APP.app.referenceDetail = null;
     APP.app.collapsed = {};
     APP.app.helperSheetPid = null;
+    APP.app.helperStepIdx = 0;
     APP.app.statuses = {};
     APP.app.mode = 'app';
   }

@@ -4,8 +4,8 @@
   var E = window.VillageEngine || {};
   var UI = window.UI;
 
-  var TEAM_ORDER = ['TOWN', 'MAFIA', 'NEUTRAL'];
-  var TEAM_LABELS = { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral' };
+  var TEAM_ORDER = ['TOWN', 'MAFIA', 'NEUTRAL', 'EVIL'];
+  var TEAM_LABELS = { TOWN: 'Town', MAFIA: 'Mafia', NEUTRAL: 'Neutral', EVIL: 'Evil' };
 
   function teamRoles(team, query) {
     var q = String(query || '').trim().toLowerCase();
@@ -21,7 +21,9 @@
     if (!q) return roles;
     var label = TEAM_LABELS[team] || team;
     return roles.filter(function (r) {
+      var pl = typeof E.roleName === 'function' ? String(E.roleName(r.id, 'pl') || '') : String(r.namePl || '');
       return r.name.toLowerCase().indexOf(q) !== -1 ||
+        pl.toLowerCase().indexOf(q) !== -1 ||
         r.category.toLowerCase().indexOf(q) !== -1 ||
         label.toLowerCase().indexOf(q) !== -1 ||
         String(r.blurb || '').toLowerCase().indexOf(q) !== -1;
@@ -31,7 +33,7 @@
   function roleRow(r, open) {
     var html = '<button type="button" class="reference-row" data-action="reference-detail" data-role="' + UI.esc(r.id) + '">' +
       '<span class="reference-row-top">' +
-      '<span class="reference-row-name">' + UI.esc(r.name) + '</span>' +
+      '<span class="reference-row-name">' + UI.roleNameInline(r.id) + '</span>' +
       '<span class="reference-cat">' + UI.esc(r.category) + '</span>' +
       '</span>' +
       '<span class="reference-blurb">' + UI.esc(r.blurb || '') + '</span>';

@@ -40,8 +40,8 @@
             p.assignedRole !== 'civilian';
         });
         pairA = townPlayers.length > 0
-          ? townPlayers[E._randInt(townPlayers.length)]
-          : state.players[E._randInt(state.players.length)];
+          ? townPlayers[0]
+          : state.players[0];
         var rest2 = state.players.filter(function (p) { return p.id !== pairA.id; });
         pairB = rest2[E._randInt(rest2.length)];
         var namedTown = Object.keys(E.ROLES).filter(function (id) {

@@ -9,6 +9,17 @@
     oracle: 'Oracle read', witness: 'Witness check'
   };
 
+  var borrowedResolverByRole = {
+    poisoner: 'poisoner', escort: 'roleblockers', consort: 'roleblockers',
+    innkeeper: 'innkeeper', doctor: 'doctor', godfather: 'mafia', mafioso: 'mafia',
+    janitor: 'janitor', forger: 'forger', blackmailer: 'blackmailer',
+    demon: 'demon', serialkiller: 'serialkiller', framer: 'framer',
+    sheriff: 'investigators', deputy: 'investigators', tracker: 'investigators',
+    lookout: 'investigators', witness: 'investigators', consigliere: 'investigators',
+    undertaker: 'investigators', spy: 'investigators', oracle: 'investigators',
+    medium: 'medium'
+  };
+
   function hasRole(state, player, roleId) {
     return player && (
       player.assignedRole === roleId ||
@@ -48,7 +59,8 @@
       }
       if (!tgt) continue;
       var isSheriffActor = hasRole(ctx.state, actor, 'sheriff') ||
-        (hasRole(ctx.state, actor, 'deputy') && actor.inheritedRole === 'sheriff');
+        (hasRole(ctx.state, actor, 'deputy') && actor.inheritedRole === 'sheriff') ||
+        (actor.assignedRole === 'necromant' && (ia.roleId === 'sheriff' || ia.roleId === 'deputy'));
       if ((ia.roleId === 'sheriff' || ia.roleId === 'deputy') && isSheriffActor) {
         if (!ctx.alive(tgt)) continue;
         ctx.setEff(actor.id, tgt);
@@ -114,7 +126,8 @@
         E._logPlayer(ctx.state, actor.id, E._logAt(ctx.state), 'info',
           'Consigliere inspection on ' + cTarget.name + ': ' + lName + '.');
       } else if (ia.roleId === 'undertaker') {
-        if (!hasRole(ctx.state, actor, 'undertaker')) continue;
+        if (!hasRole(ctx.state, actor, 'undertaker') &&
+            !(actor.assignedRole === 'necromant' && ia.roleId === 'undertaker')) continue;
         var uEntry = ctx.latestEntry(ctx.state, tgt);
         if (!uEntry || uEntry.wasCleaned) continue;
         if (uEntry.inspectedByUndertaker) continue;
@@ -191,15 +204,16 @@
         var borrowedStep = E.NIGHT_STEPS && E.NIGHT_STEPS.find(function (step) {
           return step.roles && step.roles.indexOf(borrowedRoleId) >= 0;
         });
-        nec.usedOncePerGame = true;
-        if (!ctx.state.necromant) ctx.state.necromant = {};
-        ctx.state.necromant.used = true;
-        ctx.state.necromant.rememberedRole = borrowedRoleId;
-        if (!borrowedRole || borrowedRoleId === 'civilian' || borrowedRoleId === 'jester' ||
+        var borrowRefused = !borrowedRole || borrowedRoleId === 'civilian' || borrowedRoleId === 'jester' ||
             borrowedRoleId === 'executioner' || borrowedRoleId === 'leper' ||
             borrowedRoleId === 'outcast' || borrowedRoleId === 'possessed' ||
             borrowedRoleId === 'survivor' || borrowedRoleId === 'imp' ||
-            borrowedRole.nightAction === false || !borrowedStep) {
+            borrowedRole.nightAction === false || !borrowedStep;
+        if (borrowRefused) {
+          nec.usedOncePerGame = true;
+          if (!ctx.state.necromant) ctx.state.necromant = {};
+          ctx.state.necromant.used = true;
+          ctx.state.necromant.rememberedRole = borrowedRoleId;
           ctx.log(nec.name + ' (Necromant) cannot borrow the role of the corpse.');
         } else {
           var borrowedAction = {
@@ -212,8 +226,20 @@
             borrowedAction.extra = borrowedAction.extra || {};
             borrowedAction.extra.secondTarget = necAction.extra.secondTarget;
           }
-          ctx.actions.push(borrowedAction);
-          ctx.log(nec.name + ' (Necromant) borrowed the night ability of the corpse\'s role.');
+          var resolverName = borrowedResolverByRole[borrowedRoleId];
+          if (resolverName && E._nightActions[resolverName]) {
+            var borrowedCtx = Object.create(ctx);
+            borrowedCtx.actions = [borrowedAction];
+            if (resolverName === 'roleblockers') borrowedCtx.rbActions = [borrowedAction];
+            E._nightActions[resolverName](borrowedCtx);
+            ctx.log(nec.name + ' (Necromant) borrowed the night ability of the corpse\'s role.');
+            nec.usedOncePerGame = true;
+            if (!ctx.state.necromant) ctx.state.necromant = {};
+            ctx.state.necromant.used = true;
+            ctx.state.necromant.rememberedRole = borrowedRoleId;
+          } else {
+            ctx.log(nec.name + ' (Necromant) cannot borrow the role of the corpse.');
+          }
         }
       }
     }
@@ -288,6 +314,7 @@
         if (!visitor || !visitor.isAlive || visitor.poisoned) return;
         visitor.isDrunk = true;
         visitor.poisoned = true;
+        visitor.leperDrunkUntil = ctx.nightNum + 1;
         E._logPlayer(ctx.state, visitor.id, E._logAt(ctx.state), 'poisoned',
           visitor.name + ' was poisoned by the Leper and is Drunk for one cycle.');
         ctx.log(leper.name + ' poisoned ' + visitor.name + '.');

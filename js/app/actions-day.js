@@ -146,6 +146,8 @@
         APP.state.trial.stage = null;
       }
     }
+    APP.app.helperStepIdx = 0;
+    APP.app.nightSkips = {};
     APP.app.wizard = { steps: E.getNightSteps(APP.state), idx: 0, actor: null, pending: null };
     APP.afterMutation();
     APP.goto('game');

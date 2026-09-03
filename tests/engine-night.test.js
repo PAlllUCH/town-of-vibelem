@@ -170,15 +170,19 @@ describe('night resolution order and the attack/defense model', () => {
 // ---------------------------------------------------------------------------
 
 describe('night wizard steps', () => {
-  test('steps are filtered to living roles and note the night-1 jailor rule', () => {
+  test('steps are filtered to living roles and note the night-1 jailor rule only when the house rule is on', () => {
     const state = assignRoles(['jailor', 'veteran', 'godfather', 'mafioso', 'serialkiller', 'civilian']);
     const steps = engine.getNightSteps(state);
     assert.deepStrictEqual(steps.map((s) => s.position), [0, 3, 6, 9, 14]);
     assert.deepStrictEqual(steps.find((s) => s.position === 0).roles, ['veteran']);
-    assert.ok(steps.find((s) => s.position === 3).prompt.includes('cannot execute'));
+    assert.ok(!steps.find((s) => s.position === 3).prompt.includes('cannot execute'));
     night(state);
     const steps2 = engine.getNightSteps(state);
     assert.ok(!steps2.find((s) => s.position === 3).prompt.includes('cannot execute'));
+    const state2 = assignRoles(['jailor', 'veteran', 'godfather', 'mafioso', 'serialkiller', 'civilian'],
+      { houseRules: { jailorNoExecN1: true } });
+    const steps3 = engine.getNightSteps(state2);
+    assert.ok(steps3.find((s) => s.position === 3).prompt.includes('cannot execute'));
   });
 
   test('split investigator steps: sheriff, tracker, and undertaker get separate steps', () => {
@@ -384,6 +388,53 @@ describe('review fixes', () => {
     engine.undoKill(state, 3);
     assert.ok(!state.morning.deaths.some((d) => d.playerId === 3), 'undoKill clears P3 from the morning deaths');
     assert.strictEqual(pid(state, 3).isAlive, true);
+  });
+});
+
+describe('night action dispatcher guard', () => {
+  test('every resolver registered in _nightActions fires during a fully scripted night', () => {
+    const state = assignRoles([
+      'poisoner', 'witch', 'jailor', 'escort', 'doctor', 'godfather', 'janitor',
+      'forger', 'blackmailer', 'demon', 'serialkiller', 'framer', 'sheriff',
+      'tracker', 'medium'
+    ]);
+    act(state, 1, 'poisoner', 1, 2);
+    act(state, 2, 'witch', 2, 7);
+    act(state, 3, 'jailor', 3, 2, { jailorDecision: 'SPARE' });
+    act(state, 4, 'escort', 4, 10);
+    act(state, 5, 'doctor', 5, 4);
+    act(state, 6, 'godfather', 6, 15);
+    act(state, 7, 'janitor', 7, 15);
+    act(state, 7, 'forger', 8, 3);
+    act(state, 8, 'blackmailer', 9, 12);
+    act(state, 9, 'demon', 10, 4);
+    act(state, 9, 'serialkiller', 11, 5);
+    act(state, 10, 'framer', 12, 3);
+    act(state, 11, 'sheriff', 13, 9);
+    act(state, 11, 'tracker', 14, 2);
+    act(state, 13, 'medium', 15, null);
+    const resolvers = engine._nightActions;
+    const originals = {};
+    const fired = {};
+    Object.keys(resolvers).forEach((key) => {
+      originals[key] = resolvers[key];
+      fired[key] = false;
+    });
+    Object.keys(resolvers).forEach((key) => {
+      resolvers[key] = function (ctx) {
+        fired[key] = true;
+        return originals[key](ctx);
+      };
+    });
+    try {
+      night(state);
+    } finally {
+      Object.keys(originals).forEach((key) => {
+        resolvers[key] = originals[key];
+      });
+    }
+    const neverFired = Object.keys(originals).filter((key) => !fired[key]);
+    assert.deepStrictEqual(neverFired, []);
   });
 });
 

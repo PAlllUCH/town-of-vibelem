@@ -149,6 +149,7 @@
         town: APP.cfg.deckConfig.town,
         mafia: APP.cfg.deckConfig.mafia,
         neutral: APP.cfg.deckConfig.neutral,
+        evil: APP.cfg.deckConfig.evil,
         teamCounts: tc || undefined,
         civilians: APP.cfg.civilians == null ? undefined : APP.cfg.civilians
       });
@@ -171,16 +172,17 @@
   function resumeGame() {
     var data = APP.loadSave();
     if (!data || !data.game) { UI.toast('No saved game found.'); return; }
-    APP.hydrateUi(data && data.ui);
     try {
       APP.state = E.deserialize(data.game);
       if (data.cfg) APP.cfg = APP.mergeCfg(APP.cfg, data.cfg);
       APP.app.rolesHidden = !!(data.ui && data.ui.rolesHidden);
+      APP.hydrateUi(data && data.ui);
       APP.app.namingMode = false;
       APP.app.pendingRoles = (data.ui && data.ui.pendingRoles) || {};
       APP.app.names = (data.ui && data.ui.names) || {};
       APP.app.nightZeroDone = (data.ui && data.ui.nightZeroDone) || {};
       APP.app.claims = (data.ui && data.ui.claims) || {};
+      APP.app.notes = (data.ui && data.ui.notes) || {};
       APP.app.relayedWhispers = (data.ui && data.ui.relayedWhispers) || {};
       APP.app.dayTimerEnds = (data.ui && data.ui.dayTimerEnds) || null;
       if (APP.app.dayTimerEnds && APP.app.dayTimerEnds <= Date.now()) APP.app.dayTimerEnds = null;
@@ -209,6 +211,11 @@
       UI.toast('Game restored.', 'success');
     } catch (e) {
       UI.toast('Could not restore save.', 'error');
+      APP.clearSave();
+      APP.state = null;
+      APP.resetAppFlags();
+      if (APP.el('resume-banner')) APP.renderResumeBanner();
+      APP.goto('setup');
     }
   }
 

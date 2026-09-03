@@ -121,7 +121,8 @@
     return state.players.filter(function (p) {
       if (!p.isAlive) return false;
       var r = p.assignedRole;
-      return r === 'survivor' || r === 'drunk' || r === 'spy' || (r === 'amnesiac' && !state.amnesiac.used);
+      return r === 'survivor' || r === 'drunk' || r === 'spy' || r === 'leper' ||
+        r === 'outcast' || (r === 'amnesiac' && !state.amnesiac.used);
     }).map(function (p) { return p.id; });
   };
 

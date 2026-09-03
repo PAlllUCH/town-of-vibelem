@@ -2,6 +2,7 @@
 
 const engine = require('../../js/engine.js');
 const { NeuralNetwork, createInputEncoder } = require('./neural-net.js');
+const AgentLoader = require('./agent-loader.js');
 const fs = require('fs');
 
 const AGENT_FILE = process.argv[2] || 'best-agent.json';
@@ -16,6 +17,12 @@ function pick(arr) { return arr.length ? arr[randInt(arr.length)] : null; }
 function living(state) { return state.players.filter(function (p) { return p.isAlive; }); }
 function byId(state, id) { return state.players[id - 1] || null; }
 function teamOfRole(roleId) { const r = engine.ROLES[roleId]; return r ? r.team : 'NEUTRAL'; }
+
+function pickSpec(data, key) {
+  if (data.trained_weights && data.trained_weights[key]) return data.trained_weights[key];
+  if (data[key]) return data[key];
+  throw new Error('evaluate: missing trained_weights.' + key);
+}
 
 function createMemory() {
   return {
@@ -256,8 +263,8 @@ function runGameWithAgent(agentData, preset, playerCount) {
   const memories = makeMemories(state);
   const encoder = createInputEncoder(playerCount);
   
-  const voteNet = NeuralNetwork.deserialize(agentData.voteNet);
-  const nightNet = NeuralNetwork.deserialize(agentData.nightNet);
+  const voteNet = NeuralNetwork.deserialize(pickSpec(agentData, 'vote_net'));
+  const nightNet = NeuralNetwork.deserialize(pickSpec(agentData, 'night_net'));
   
   let days = 0;
   while (state.phase !== 'END' && days < MAX_DAYS) {
@@ -282,7 +289,7 @@ function runGameWithAgent(agentData, preset, playerCount) {
             cands.forEach(function (p) {
               const input = encoder.getNightInput(state, memories, leader.id, p.id);
               const output = nightNet.predict(input);
-              const score = output[0] + output[1] + output[2] + output[3] + output[4];
+              const score = output[0] - output[2];
               if (score > bestScore) {
                 bestScore = score;
                 bestTarget = p.id;
@@ -338,7 +345,7 @@ function runGameWithAgent(agentData, preset, playerCount) {
               cands.forEach(function (p) {
                 const input = encoder.getNightInput(state, memories, actor.id, p.id);
                 const output = nightNet.predict(input);
-                const score = output[0] + output[1] + output[2] + output[3] + output[4];
+                const score = output[0] - output[2];
                 if (score > bestScore) {
                   bestScore = score;
                   bestTarget = p.id;
@@ -366,7 +373,7 @@ function runGameWithAgent(agentData, preset, playerCount) {
             cands.concat([actor]).forEach(function (p) {
               const input = encoder.getNightInput(state, memories, actor.id, p.id);
               const output = nightNet.predict(input);
-              const score = output[0] + output[1] + output[2] + output[3] + output[4];
+              const score = output[0] - output[2];
               if (score > bestScore) {
                 bestScore = score;
                 bestTarget = p.id;
@@ -383,7 +390,7 @@ function runGameWithAgent(agentData, preset, playerCount) {
               cands.forEach(function (p) {
                 const input = encoder.getNightInput(state, memories, actor.id, p.id);
                 const output = nightNet.predict(input);
-                const score = output[0] + output[1] + output[2] + output[3] + output[4];
+                const score = output[0] - output[2];
                 if (score > bestScore) {
                   bestScore = score;
                   bestTarget = p.id;
@@ -408,7 +415,7 @@ function runGameWithAgent(agentData, preset, playerCount) {
                 cands.forEach(function (p) {
                   const input = encoder.getNightInput(state, memories, actor.id, p.id);
                   const output = nightNet.predict(input);
-                  const score = output[0] + output[1] + output[2] + output[3] + output[4];
+                  const score = output[0] - output[2];
                   if (score > bestScore) {
                     bestScore = score;
                     bestTarget = p.id;
@@ -494,7 +501,7 @@ function runGameWithAgent(agentData, preset, playerCount) {
               const input = encoder.getVoteInput(state, memories, p.id, accused.id);
               const output = voteNet.predict(input);
               const maxIdx = output.indexOf(Math.max(...output));
-              const verdict = ['GUILTY', 'ABSTAIN', 'INNOCENT'][maxIdx];
+              const verdict = ['GUILTY', 'INNOCENT', 'ABSTAIN'][maxIdx];
               engine.castVote(state, { voterId: p.id, verdict: verdict, ghostToken: false });
             } else if (p.hasGhostVote && !p.ghostVoteSpent) {
               const mem = memories[p.id];
@@ -533,16 +540,28 @@ function runGameWithAgent(agentData, preset, playerCount) {
   };
 }
 
+function unwrapAgent(raw) {
+  if (raw && raw.bestAgent && typeof raw.bestAgent === 'object') return raw.bestAgent;
+  return raw;
+}
+
 function evaluate() {
   let agentData;
   try {
-    agentData = JSON.parse(fs.readFileSync(AGENT_FILE, 'utf8'));
+    agentData = unwrapAgent(JSON.parse(fs.readFileSync(AGENT_FILE, 'utf8')));
   } catch (e) {
     console.error('Could not load agent file: ' + AGENT_FILE);
     process.exit(1);
   }
+
+  try {
+    AgentLoader.validate_weights(agentData, { playerCount: PLAYER_COUNT });
+  } catch (e) {
+    console.error('Invalid agent file: ' + e.message);
+    process.exit(1);
+  }
   
-  const results = { wins: { TOWN: 0, MAFIA: 0, NEUTRAL: 0, nobody: 0 }, details: [] };
+  const results = { wins: { TOWN: 0, MAFIA: 0, EVIL: 0, NEUTRAL: 0, DRAW: 0, nobody: 0 }, details: [] };
   
   console.log('Evaluating agent over ' + NUM_GAMES + ' games...');
   
@@ -551,7 +570,9 @@ function evaluate() {
     
     if (result.winner === 'TOWN') results.wins.TOWN++;
     else if (result.winner === 'MAFIA') results.wins.MAFIA++;
+    else if (result.winner === 'DEMON' || result.winner === 'EVIL') results.wins.EVIL++;
     else if (result.winner === 'SERIAL_KILLER' || result.winner === 'EXECUTIONER' || result.winner === 'JESTER') results.wins.NEUTRAL++;
+    else if (result.winner === 'DRAW') results.wins.DRAW++;
     else results.wins.nobody++;
     
     results.details.push(result);

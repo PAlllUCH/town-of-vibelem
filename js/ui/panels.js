@@ -7,7 +7,7 @@
   UI.renderTokens = function (state, app) {
     var html = '<div class="panel-backdrop" data-action="toggle-tokens"></div>';
     html += '<div class="whispers-panel panel-overlay" id="whispers-panel" role="dialog" aria-label="Info tokens to relay">';
-    html += '<div class="panel-head"><h2>Info Tokens</h2>' +
+    html += '<div class="panel-head"><h2>' + UI.str('infoTokensTitle') + '</h2>' +
       '<button class="btn btn-icon" data-action="toggle-tokens" aria-label="Close">&times;</button></div>';
     html += '<p class="muted small">Show the token to the player before they wake. Info never shows in-game otherwise.</p>';
     var found = false;
@@ -23,7 +23,7 @@
       }
       html += '</div>';
     });
-    if (!found) html += '<p class="muted">No night info yet.</p>';
+    if (!found) html += '<p class="muted">' + UI.str('noInfoYet') + '</p>';
     html += '</div>';
     return html;
   };
@@ -33,12 +33,13 @@
     var last = gy.length ? gy[gy.length - 1] : null;
     var html = '<div class="panel-backdrop" data-action="toggle-mod"></div>';
     html += '<div class="panel-overlay" role="dialog" aria-label="Moderator">';
-    html += '<div class="panel-head"><h2>Moderator</h2>' +
+    html += '<div class="panel-head"><h2>' + UI.str('modPanelTitle') + '</h2>' +
       '<button class="btn btn-icon" data-action="toggle-mod" aria-label="Close">&times;</button></div>';
     html += '<div class="btn-col">' +
-      '<button class="btn" data-action="kill-player">Kill Player</button>' +
-      '<button class="btn" data-action="undo-kill"' + (last ? '' : ' disabled') + '>Undo Last Kill' +
-      (last ? ' (' + UI.esc(last.name) + ')' : '') + '</button></div>';
+      '<button class="btn" data-action="kill-player">' + UI.str('killPlayerLabel') + '</button>' +
+      '<button class="btn" data-action="undo-kill"' + (last ? '' : ' disabled') + '>' + UI.str('undoLastKill') +
+      (last ? ' (' + UI.esc(last.name) + ')' : '') + '</button>' +
+      '<button class="btn" data-action="goto-setup">' + UI.str('setupLabel') + '</button></div>';
     html += '<p class="muted small">Kills and undos are moderator overrides for when the app does not predict something.</p>';
     html += '</div>';
     return html;
@@ -63,7 +64,7 @@
     if (!rows.length) return '';
     var collapsed = !!(app && app.collapsed && app.collapsed['whisper']);
     var html = '<div class="card whisper-results card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
-      '<div class="card-head"><h2>Info to Show</h2>' +
+      '<div class="card-head"><h2>' + UI.str('infoToShowTitle') + '</h2>' +
       '<span class="muted small">Night ' + (nightNum || 1) + '</span>' +
       '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="whisper"' +
       ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-whisper">' +
@@ -79,7 +80,7 @@
           (done
             ? '<span class="tag tag-ok">RELAYED</span>'
             : '<button class="btn btn-sm" data-action="token-shown" data-player="' + UI.esc(r.player.id) +
-              '" data-night="' + (nightNum || 1) + '">Token shown</button>') +
+              '" data-night="' + (nightNum || 1) + '">' + UI.str('tokenShownBtn') + '</button>') +
           '</div>';
       });
     });

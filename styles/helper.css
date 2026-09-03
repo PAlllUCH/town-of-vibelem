@@ -73,11 +73,11 @@
   align-items: center;
   gap: var(--space-3);
   min-height: 48px;
-  padding: var(--space-2) var(--space-3);
+  padding: 10px var(--space-3);
   background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  margin: var(--space-1) 0;
+  margin: var(--space-2) 0;
   cursor: pointer;
   touch-action: manipulation;
   color: var(--text);
@@ -86,6 +86,8 @@
 .helper-player:last-child {
   margin-bottom: 0;
 }
+
+.helper-step-counter { align-self: center; }
 
 .helper-player:active {
   border-color: var(--accent);
@@ -138,7 +140,7 @@
   border-color: var(--bad);
 }
 
-.helper-chip-bad {
+.helper-chip-warn {
   background: var(--accent-faint);
   color: var(--warn);
   border-color: var(--warn);
@@ -155,6 +157,15 @@
 .helper-status-legend:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+.helper-recap-death {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-dim);
+}
+
+.helper-recap-death:last-child {
+  border-bottom: none;
 }
 
 .helper-card-body {
@@ -191,7 +202,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
   max-height: 85vh;
   overflow-y: auto;

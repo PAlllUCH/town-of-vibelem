@@ -45,6 +45,7 @@
       return P.some(function (p) {
         return p.isAlive && (
           p.assignedRole === roleId ||
+          (roleId === 'demon' && p.inheritedRole === 'demon') ||
           (p.assignedRole === 'amnesiac' && amn.used && amn.rememberedRole === roleId)
         );
       });
@@ -72,7 +73,7 @@
       } else if (tpl.position === 3) {
         if (!hasLivingRole('jailor')) continue;
         var prompt3 = tpl.prompt;
-        if (isNightOne) prompt3 += ' (Night 1: the Jailor cannot execute.)';
+        if (isNightOne && state.houseRules.jailorNoExecN1) prompt3 += ' (Night 1: the Jailor cannot execute.)';
         step = { position: 3, title: tpl.title, roles: tpl.roles.slice(), prompt: prompt3 };
       } else if (tpl.position === 11 && tpl.title === 'Sheriff') {
         var livingSheriff = hasLivingRole('sheriff');
@@ -84,6 +85,12 @@
         if (livingSheriff) roles11.push('sheriff');
         if (inheritedDeputy) roles11.push('deputy');
         step = { position: 11, title: tpl.title, roles: roles11, prompt: tpl.prompt };
+      } else if (tpl.position === 12 && tpl.title === 'Necromant') {
+        var necAvailable = hasLivingRole('necromant') && !P.some(function (p) {
+          return p.isAlive && p.assignedRole === 'necromant' && p.usedOncePerGame;
+        });
+        if (!necAvailable) continue;
+        step = { position: 12, title: tpl.title, roles: ['necromant'], prompt: tpl.prompt };
       } else if (tpl.position === 12 && tpl.title === 'Retributionist') {
         var retAvailable = hasLivingRole('retributionist') && !P.some(function (p) {
           return p.isAlive && p.assignedRole === 'retributionist' && p.usedOncePerGame;
@@ -122,10 +129,11 @@
     var amn = state.amnesiac || {};
     var rememberedRoleAllowed = p.assignedRole === 'amnesiac' &&
       amn.used && input.roleId === amn.rememberedRole;
+    var inheritedDemonAllowed = p.inheritedRole === 'demon' && input.roleId === 'demon';
     var ghostAllowed = (input.position === 0 && input.roleId === 'jester') ||
       (input.position === 13 && input.roleId === 'medium');
     if (!p.isAlive && !ghostAllowed) return false;
-    if (input.roleId && input.roleId !== p.assignedRole && !rememberedRoleAllowed) return false;
+    if (input.roleId && input.roleId !== p.assignedRole && !rememberedRoleAllowed && !inheritedDemonAllowed) return false;
     if (input.position === 6 && input.targetId != null) {
       var killLeader = state.players.find(function (player) {
         return player.assignedRole === 'godfather' && player.isAlive;

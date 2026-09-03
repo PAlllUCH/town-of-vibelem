@@ -641,7 +641,7 @@ function main() {
   engine.dealRoles(state);
   const models = makeModels(state);
   const dayInfo = {};
-  console.log('=== Town of Vibelm: ' + PLAYER_COUNT + ' players, preset ' + PRESET + ' (' + engine.PRESETS[PRESET].name + ') ===');
+  console.log('=== Town of Vibelm: ' + PLAYER_COUNT + ' players, preset ' + PRESET + ' (' + engine.localized(engine.PRESETS[PRESET].name, 'en') + ') ===');
   let days = 0;
   while (state.phase !== 'END' && days < MAX_DAYS) {
     if (state.phase !== 'NIGHT') state.phase = 'NIGHT';

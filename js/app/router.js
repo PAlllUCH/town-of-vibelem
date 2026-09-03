@@ -7,8 +7,15 @@
   function el(id) { return document.getElementById(id); }
 
   function renderSetupOnly() {
-    el('setup-body').innerHTML = UI.renderSetup(APP.cfg);
+    el('setup-body').innerHTML = UI.renderSetup(APP.cfg, APP.app);
     APP.renderResumeBanner();
+  }
+
+  function renderSidebarHost() {
+    var sb = document.getElementById('sidebar-body');
+    if (sb) sb.innerHTML = UI.renderSidebar(APP.state, APP.app);
+    var sl = document.getElementById('sidebar-event-log');
+    if (sl) sl.innerHTML = UI.renderSidebarLog(APP.state);
   }
 
   function renderGame() {
@@ -19,7 +26,7 @@
       if (APP.app.helperSheetPid != null) {
         body += UI.renderHelperSheet(APP.state, APP.app.helperSheetPid, APP.app);
       }
-      bar = '';
+      bar = UI.renderHelperBar(APP.state, APP.app);
     } else {
       var out = UI.renderGame(APP.state, APP.cfg, APP.app);
       body = out.body;
@@ -28,14 +35,14 @@
     el('game-header').innerHTML = UI.renderGameHeader(APP.state, APP.cfg, APP.app);
     el('game-body').innerHTML = body;
     el('game-bar').innerHTML = bar;
-    var sb = document.getElementById('sidebar-body');
-    if (sb) sb.innerHTML = UI.renderSidebar(APP.state, APP.app);
-    var sl = document.getElementById('sidebar-event-log');
-    if (sl) sl.innerHTML = UI.renderSidebarLog(APP.state);
     startTimers();
   }
 
   function renderScreen(name) {
+    updateWakeLock();
+    var slot = el('locale-slot');
+    if (slot) slot.innerHTML = '';
+    renderSidebarHost();
     if (!APP.state) {
       renderSetupOnly();
       return;
@@ -61,6 +68,36 @@
   }
 
   var timerId = null;
+  var wakeLock = null;
+
+  function releaseWakeLock() {
+    var lock = wakeLock;
+    wakeLock = null;
+    if (lock && typeof lock.release === 'function') {
+      try { lock.release(); } catch (e) { }
+    }
+  }
+
+  function updateWakeLock() {
+    var wanted = !!(APP.state && APP.state.phase === 'NIGHT');
+    if (!wanted) { releaseWakeLock(); return; }
+    if (wakeLock) return;
+    var nav = typeof navigator !== 'undefined' ? navigator : (typeof global !== 'undefined' ? global.navigator : null);
+    if (!nav || !nav.wakeLock || typeof nav.wakeLock.request !== 'function') return;
+    try {
+      nav.wakeLock.request('screen').then(function (lock) {
+        if (!APP.state || APP.state.phase !== 'NIGHT') { releaseWakeLock(); return; }
+        wakeLock = lock;
+      }).catch(function () { wakeLock = null; });
+    } catch (e) { wakeLock = null; }
+  }
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', function () {
+      if (typeof document.visibilityState !== 'undefined' && document.visibilityState !== 'visible') return;
+      updateWakeLock();
+    });
+  }
 
   function clearTimer() {
     if (timerId) { clearInterval(timerId); timerId = null; }
@@ -144,4 +181,10 @@
   APP.startTimers = startTimers;
   APP.clearTimer = clearTimer;
   APP.onTimerDone = onTimerDone;
+  APP.updateWakeLock = updateWakeLock;
+  APP.releaseWakeLock = releaseWakeLock;
+  Object.defineProperty(APP, 'wakeLock', {
+    get: function () { return wakeLock; },
+    configurable: true
+  });
 })();

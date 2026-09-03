@@ -72,11 +72,32 @@ describe('locale helpers', () => {
       assert.ok(engine.ROLES[id].namePl.length > 0, id);
     }
   });
-});
 
-// ---------------------------------------------------------------------------
-// Preset deck composition
-// ---------------------------------------------------------------------------
+  test('every role has non-empty Polish name and blurb', () => {
+    for (const id of Object.keys(engine.ROLES)) {
+      const role = engine.ROLES[id];
+      assert.strictEqual(typeof role.namePl, 'string', id);
+      assert.ok(role.namePl.length > 0, id);
+      assert.strictEqual(typeof role.blurbPl, 'string', id);
+      assert.ok(role.blurbPl.length > 0, id);
+    }
+  });
+
+  test('roleBlurb returns Polish text in pl locale and falls back to English when blurbPl is missing', () => {
+    engine.setLocale('pl');
+    assert.strictEqual(engine.roleBlurb('sheriff', 'pl'), engine.ROLES.sheriff.blurbPl);
+    const original = engine.ROLES;
+    engine.ROLES = { sheriff: { name: original.sheriff.name, blurb: original.sheriff.blurb } };
+    try {
+      assert.strictEqual(engine.roleBlurb('sheriff', 'pl'), original.sheriff.blurb);
+      assert.strictEqual(engine.roleBlurb('unknown-role', 'pl'), 'unknown-role');
+    } finally {
+      engine.ROLES = original;
+    }
+    assert.strictEqual(engine.roleBlurb('sheriff', 'en'), engine.ROLES.sheriff.blurb);
+    engine.setLocale('en');
+  });
+});
 
 describe('preset deck composition', () => {
   test('10 players, preset p1 matches the GDD worked example', () => {
@@ -137,6 +158,29 @@ describe('preset deck composition', () => {
     assert.deepStrictEqual(engine.PRESETS.p4.town, ['jailor', 'mayor', 'doctor', 'sheriff', 'lookout', 'tracker', 'oracle', 'witness', 'washerwoman', 'chef']);
     assert.deepStrictEqual(engine.PRESETS.p5.town, ['jailor', 'sheriff', 'undertaker', 'medium', 'doctor', 'retributionist', 'oracle', 'witness', 'washerwoman', 'chef']);
     assert.deepStrictEqual(engine.PRESETS.p6.town, ['jailor', 'vigilante', 'veteran', 'deputy', 'doctor', 'escort', 'oracle', 'witness', 'washerwoman', 'chef', 'innkeeper']);
+  });
+
+  test('Blank preset is a lean core that fills leftovers with Civilians', () => {
+    assert.deepStrictEqual(engine.PRESETS.blank.town, ['jailor', 'doctor', 'sheriff']);
+    assert.deepStrictEqual(engine.PRESETS.blank.mafia, ['godfather', 'mafioso']);
+    assert.deepStrictEqual(engine.PRESETS.blank.neutral, ['jester']);
+    const p = preview(engine.createGame({ playerCount: 8, presetId: 'blank' }));
+    assert.ok(p.town.includes('jailor'));
+    assert.ok(p.town.includes('doctor'));
+    assert.ok(p.town.includes('sheriff'));
+    assert.strictEqual(p.town.filter((r) => r === 'civilian').length, 2);
+    assert.deepStrictEqual(sorted(p.mafia), ['godfather', 'mafioso']);
+    assert.deepStrictEqual(sorted(p.neutral), ['jester']);
+  });
+
+  test('Blank preset is valid at every player count and only Civilians repeat', () => {
+    for (let n = 6; n <= 15; n += 1) {
+      const p = preview(engine.createGame({ playerCount: n, presetId: 'blank' }));
+      const all = p.town.concat(p.mafia, p.neutral);
+      assert.strictEqual(all.length, n, 'deck length at ' + n);
+      const nonCiv = all.filter((id) => id !== 'civilian');
+      assert.strictEqual(new Set(nonCiv).size, nonCiv.length, 'no repeats at ' + n);
+    }
   });
 
   test('Framer is preset p4 slot 3 and enters the deck once 3+ Mafia slots exist', () => {
@@ -209,6 +253,83 @@ describe('custom team overrides', () => {
     assert.strictEqual(p.town.length, 5);
     assert.ok(p.town.includes('doctor'));
     assert.strictEqual(p.town.filter((id) => id === 'civilian').length, 4);
+  });
+
+  test('teamCounts demanding more unique Mafia roles than exist throws', () => {
+    assert.throws(
+      () => engine.createGame({ playerCount: 15, presetId: 'p1', teamCounts: { town: 2, mafia: 12, neutral: 1 } }),
+      /unique MAFIA roles/
+    );
+  });
+
+  test('teamCounts demanding more unique Neutral roles than exist throws', () => {
+    const uniqueNeutral = Object.keys(engine.ROLES).filter((id) => engine.ROLES[id].team === 'NEUTRAL').length;
+    assert.throws(
+      () => engine.createGame({
+        playerCount: 15, presetId: 'p1',
+        teamCounts: { town: 2, mafia: 1, neutral: 12 },
+        neutral: []
+      }),
+      /unique NEUTRAL roles/
+    );
+    assert.ok(uniqueNeutral < 12);
+  });
+});
+
+describe('EVIL custom deck overrides', () => {
+  test('a custom neutral override may contain EVIL roles and previews them in the evil bucket', () => {
+    const state = engine.createGame({ playerCount: 8, presetId: 'p1', neutral: ['demon'] });
+    const p = preview(state);
+    assert.deepStrictEqual(p.evil, ['demon']);
+    assert.deepStrictEqual(p.neutral, []);
+    assert.strictEqual(p.town.length, 5);
+    assert.strictEqual(p.mafia.length, 2);
+    assert.strictEqual(p.town.length + p.mafia.length + p.neutral.length + p.evil.length, 8);
+  });
+
+  test('a short neutral override pads with Neutral roles while keeping the EVIL pick', () => {
+    const state = engine.createGame({ playerCount: 12, presetId: 'p1', neutral: ['demon'] });
+    const p = preview(state);
+    assert.deepStrictEqual(p.evil, ['demon']);
+    assert.deepStrictEqual(sorted(p.neutral), ['amnesiac']);
+    assert.strictEqual(p.town.length, 7);
+    assert.strictEqual(p.mafia.length, 3);
+    assert.strictEqual(p.town.length + p.mafia.length + p.neutral.length + p.evil.length, 12);
+  });
+
+  test('an explicit evil override list feeds the evil bucket from the neutral slots', () => {
+    const state = engine.createGame({
+      playerCount: 12, presetId: 'p1',
+      mafia: ['godfather', 'mafioso', 'consort'],
+      neutral: [],
+      evil: ['succubus', 'demon']
+    });
+    const p = preview(state);
+    assert.deepStrictEqual(sorted(p.evil), ['demon', 'succubus']);
+    assert.deepStrictEqual(p.neutral, []);
+    assert.strictEqual(p.town.length + p.mafia.length + p.neutral.length + p.evil.length, 12);
+  });
+
+  test('EVIL picks truncate away when the ratio has no neutral slots', () => {
+    for (const n of [6, 7]) {
+      const state = engine.createGame({ playerCount: n, presetId: 'p1', neutral: ['demon'] });
+      const p = preview(state);
+      assert.deepStrictEqual(p.evil, [], 'count ' + n);
+      assert.strictEqual(p.town.length + p.mafia.length + p.neutral.length + p.evil.length, n, 'count ' + n);
+    }
+  });
+
+  test('decks with EVIL picks hold ratio math and the only-Civilians-repeat rule from 6 to 15 players', () => {
+    for (let n = 6; n <= 15; n += 1) {
+      const state = engine.createGame({ playerCount: n, presetId: 'p1', neutral: ['demon'] });
+      const p = preview(state);
+      const all = p.town.concat(p.mafia, p.neutral, p.evil);
+      assert.strictEqual(all.length, n, 'count ' + n);
+      const nonCivilian = all.filter((id) => id !== 'civilian');
+      assert.strictEqual(new Set(nonCivilian).size, nonCivilian.length, 'count ' + n);
+      assert.strictEqual(p.evil.length, Math.min(1, engine.RATIO_TABLE[n].neutral), 'count ' + n);
+      assert.doesNotThrow(() => engine.dealRoles(state), 'count ' + n);
+    }
   });
 });
 
@@ -354,5 +475,38 @@ describe('deserialize transient defaults (regression)', () => {
       assert.strictEqual(p.jailorDecision, null);
     });
     assert.ok(engine.startTrial(restored, 6, 1));
+  });
+});
+
+describe('localization', () => {
+  test('E.localized resolves strings and maps per locale with en fallback', () => {
+    assert.strictEqual(engine.localized('plain', 'pl'), 'plain');
+    assert.strictEqual(engine.localized({ en: 'A', pl: 'B' }, 'en'), 'A');
+    assert.strictEqual(engine.localized({ en: 'A', pl: 'B' }, 'pl'), 'B');
+    assert.strictEqual(engine.localized({ en: 'A', pl: 'B' }, 'de'), 'A', 'unknown locale falls back to en');
+    assert.strictEqual(engine.localized({ en: 'A', pl: 'B' }), 'A', 'undefined locale falls back to en');
+    assert.strictEqual(engine.localized(null, 'pl'), '');
+  });
+
+  test('E.str is locale-key driven and falls back to en', () => {
+    assert.strictEqual(engine.str('outstandingTitle', 'pl'), 'Zaległe akcje nocy');
+    assert.strictEqual(engine.str('outstandingTitle', 'de'), 'Outstanding Night Actions');
+  });
+
+  test('preset name and tagline are localized maps resolved per locale', () => {
+    const b = engine.PRESETS.blank;
+    assert.deepStrictEqual(Object.keys(b.name).sort(), ['en', 'pl']);
+    assert.strictEqual(engine.localized(b.name, 'pl'), 'Czysta Tablica');
+    assert.strictEqual(engine.localized(b.name, 'en'), 'Blank Slate');
+    assert.notStrictEqual(engine.localized(b.tagline, 'pl'), engine.localized(b.tagline, 'en'));
+    assert.ok(engine.localized(b.tagline, 'pl').includes('Więziennik'));
+    assert.strictEqual(engine.localized(engine.PRESETS.p1.name, 'pl'), 'Szepty z Kostnicy');
+    assert.strictEqual(engine.localized(engine.PRESETS.p1.name, 'en'), 'Whispers from the Morgue');
+  });
+
+  test('E.roleName/E.roleBlurb tolerate unknown locales and fall back to base text', () => {
+    assert.strictEqual(engine.roleName('jailor', 'de'), engine.ROLES.jailor.name);
+    assert.strictEqual(engine.roleName('jailor', 'pl'), engine.ROLES.jailor.namePl);
+    assert.strictEqual(engine.roleBlurb('jailor', 'de'), engine.ROLES.jailor.blurb);
   });
 });

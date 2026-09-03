@@ -846,7 +846,7 @@ async function main() {
   ctx.dayInfo.store = ctx.store;
   seedMemories(ctx);
   console.log('=== Town of Vibelm: ' + opts.players + ' players, preset ' + presetId + ' (' +
-    engine.PRESETS[presetId].name + ') ===');
+    engine.localized(engine.PRESETS[presetId].name, 'en') + ') ===');
   let days = 0;
   while (state.phase !== 'END' && days < MAX_DAYS) {
     if (state.phase !== 'NIGHT') state.phase = 'NIGHT';

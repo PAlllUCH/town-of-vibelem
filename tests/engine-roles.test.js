@@ -112,6 +112,220 @@ describe('Phase E roles', () => {
   });
 });
 
+describe('Innkeeper', () => {
+  test('shields the guest from one basic Mafia kill and is consumed', () => {
+    const state = assignRoles(['innkeeper', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    act(state, 4, 'innkeeper', 1, 4);
+    act(state, 6, 'godfather', 2, 4);
+    night(state);
+    assert.strictEqual(pid(state, 4).isAlive, true);
+    assert.strictEqual(pid(state, 1).protectedByInnkeeper, true);
+    assert.strictEqual(pid(state, 4).protectedByInnkeeper, true);
+    act(state, 6, 'godfather', 2, 4);
+    const result = night(state);
+    assert.strictEqual(pid(state, 4).isAlive, false);
+    assert.strictEqual(deathCauses(result)[4], 'killed by the Mafia');
+  });
+
+  test('a roleblocked guest loses their action but no one is saved from kills', () => {
+    const state = assignRoles(['innkeeper', 'sheriff', 'godfather', 'mafioso', 'civilian', 'civilian']);
+    act(state, 4, 'innkeeper', 1, 2);
+    act(state, 11, 'sheriff', 2, 3);
+    act(state, 6, 'godfather', 3, 5);
+    night(state);
+    assert.ok(state.playerLog['2'].some((e) =>
+      e.kind === 'info' && e.text === 'Sheriff check on P3: no result (roleblocked).'));
+    assert.ok(!logText(state).includes('(Sheriff) checks'));
+    assert.strictEqual(pid(state, 5).isAlive, false);
+  });
+
+  test('a killer guest attacking the protected innkeeper is blocked', () => {
+    const state = assignRoles(['innkeeper', 'godfather', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    act(state, 4, 'innkeeper', 1, 2);
+    act(state, 6, 'godfather', 2, 1);
+    night(state);
+    assert.strictEqual(pid(state, 1).isAlive, true);
+    assert.strictEqual(pid(state, 1).isProtected, true);
+    assert.strictEqual(pid(state, 2).isRoleblocked, true);
+  });
+});
+
+describe('Leper', () => {
+  test('visitors are Drunk the following night and recover the night after', () => {
+    const state = assignRoles(['sheriff', 'leper', 'doctor', 'godfather', 'mafioso', 'civilian']);
+    act(state, 5, 'doctor', 3, 2);
+    act(state, 6, 'godfather', 4, 2);
+    act(state, 11, 'sheriff', 1, 2);
+    night(state);
+    assert.strictEqual(pid(state, 2).isAlive, true);
+    assert.strictEqual(pid(state, 1).isDrunk, true);
+    assert.strictEqual(pid(state, 1).leperDrunkUntil, 2);
+    act(state, 11, 'sheriff', 1, 5);
+    night(state);
+    assert.ok(logText(state).includes('P1 (Sheriff) checks P5: INNOCENT.'));
+    act(state, 11, 'sheriff', 1, 5);
+    night(state);
+    assert.ok(logText(state).includes('P1 (Sheriff) checks P5: SUSPICIOUS.'));
+  });
+});
+
+describe('Succubus', () => {
+  test('enchant flags the target and restricts a Guilty vote at the next day verdict', () => {
+    const state = assignRoles(['succubus', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 11, 'succubus', 1, 2);
+    night(state);
+    assert.strictEqual(pid(state, 2).enchanted, true);
+    assert.strictEqual(pid(state, 2).enchantedBy, 'succubus');
+    assert.strictEqual(engine.startTrial(state, 1, 3), true);
+    [2, 3, 4, 5, 6].forEach((id) => assert.strictEqual(engine.castVote(state, { voterId: id, verdict: 'AGREE' }), true));
+    assert.strictEqual(engine.resolveTrial(state).result, 'ACCEPTED');
+    engine.castVote(state, { voterId: 2, verdict: 'GUILTY' });
+    engine.castVote(state, { voterId: 3, verdict: 'GUILTY' });
+    assert.strictEqual(state.trial.votes.find((v) => v.voterId === 2).verdict, 'ABSTAIN');
+    assert.strictEqual(state.trial.votes.find((v) => v.voterId === 3).verdict, 'GUILTY');
+  });
+
+  test('enchant flags clear on the following night', () => {
+    const state = assignRoles(['succubus', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 11, 'succubus', 1, 2);
+    night(state);
+    assert.strictEqual(pid(state, 2).enchantedBy, 'succubus');
+    night(state);
+    assert.strictEqual(pid(state, 2).enchanted, false);
+    assert.strictEqual(pid(state, 2).enchantedBy, null);
+  });
+});
+
+describe('Necromant', () => {
+  test('borrows a dead Sheriff check once and produces a real result', () => {
+    const state = assignRoles(['necromant', 'sheriff', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    engine._recordDeath(state, 2, 'killed in the night', false, true);
+    act(state, 12, 'necromant', 1, 2, { livingTarget: 3 });
+    night(state);
+    assert.ok(logText(state).includes('P1 (Sheriff) checks P3: SUSPICIOUS.'));
+    assert.ok(logText(state).includes("P1 (Necromant) borrowed the night ability of the corpse's role."));
+    assert.strictEqual(pid(state, 1).usedOncePerGame, true);
+    assert.strictEqual(state.necromant.used, true);
+    assert.strictEqual(state.necromant.rememberedRole, 'sheriff');
+    assert.ok(!engine.getNightSteps(state).some((s) =>
+      s.position === 12 && s.roles.includes('necromant')));
+  });
+
+  test('a second borrow is impossible after the use is spent', () => {
+    const state = assignRoles(['necromant', 'sheriff', 'mafioso', 'civilian', 'civilian', 'civilian']);
+    engine._recordDeath(state, 2, 'killed in the night', false, true);
+    act(state, 12, 'necromant', 1, 2, { livingTarget: 3 });
+    night(state);
+    assert.strictEqual((logText(state).match(/borrowed the night ability/g) || []).length, 1);
+    act(state, 12, 'necromant', 1, 2, { livingTarget: 4 });
+    night(state);
+    assert.strictEqual((logText(state).match(/borrowed the night ability/g) || []).length, 1);
+  });
+
+  test('refuses corpses on the blocklist and burns the once-per-game use', () => {
+    const state = assignRoles(['necromant', 'civilian', 'jester', 'civilian', 'civilian', 'civilian']);
+    engine._recordDeath(state, 2, 'killed in the night', false, true);
+    engine._recordDeath(state, 3, 'killed in the night', false, true);
+    act(state, 12, 'necromant', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes("P1 (Necromant) cannot borrow the role of the corpse."));
+    assert.strictEqual(pid(state, 1).usedOncePerGame, true);
+    assert.strictEqual(state.necromant.used, true);
+    assert.strictEqual(state.necromant.rememberedRole, 'civilian');
+    assert.ok(!logText(state).includes('borrowed the night ability'));
+  });
+});
+
+describe('Demon', () => {
+  test('resolves a basic kill that Doctor protection can block', () => {
+    const state = assignRoles(['demon', 'doctor', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 5, 'doctor', 2, 4);
+    act(state, 9, 'demon', 1, 4);
+    night(state);
+    assert.strictEqual(pid(state, 4).isAlive, true);
+    act(state, 9, 'demon', 1, 5);
+    const result = night(state);
+    assert.strictEqual(deathCauses(result)[5], 'killed by the Demon');
+  });
+
+  test('Witch control redirects the Demon kill', () => {
+    const state = assignRoles(['demon', 'witch', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 2, 'witch', 2, 1, { controlRedirect: 4 });
+    act(state, 9, 'demon', 1, 3);
+    night(state);
+    assert.strictEqual(pid(state, 3).isAlive, true);
+    assert.strictEqual(pid(state, 4).isAlive, false);
+  });
+
+  test('reads INNOCENT to the Sheriff', () => {
+    const state = assignRoles(['sheriff', 'demon', 'civilian', 'civilian', 'civilian', 'civilian']);
+    act(state, 11, 'sheriff', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Sheriff) checks P2: INNOCENT.'));
+  });
+});
+
+describe('Imp succession', () => {
+  test('while the Demon lives the Imp has no kill step', () => {
+    const state = assignRoles(['demon', 'imp', 'civilian', 'civilian', 'veteran', 'civilian']);
+    const steps = engine.getNightSteps(state);
+    assert.ok(steps.some((s) => s.position === 9 && s.roles.includes('demon')));
+    assert.ok(!steps.some((s) => s.roles.includes('imp')));
+  });
+
+  test('after the Demon falls the Imp gains the position 9 step and its kill resolves', () => {
+    const state = assignRoles(['demon', 'imp', 'civilian', 'civilian', 'veteran', 'civilian']);
+    act(state, 0, 'veteran', 5, null, { alert: true });
+    act(state, 9, 'demon', 1, 5);
+    night(state);
+    assert.strictEqual(pid(state, 1).isAlive, false);
+    assert.strictEqual(pid(state, 2).inheritedRole, 'demon');
+    assert.ok(engine.getNightSteps(state).some((s) => s.position === 9 && s.roles.includes('demon')));
+    act(state, 9, 'demon', 2, 3);
+    const result = night(state);
+    assert.strictEqual(deathCauses(result)[3], 'killed by the Demon');
+  });
+
+  test('the inherited Demon kill is a basic attack that protection can block', () => {
+    const state = assignRoles(['demon', 'imp', 'doctor', 'civilian', 'veteran', 'civilian']);
+    act(state, 0, 'veteran', 5, null, { alert: true });
+    act(state, 9, 'demon', 1, 5);
+    night(state);
+    assert.strictEqual(pid(state, 2).inheritedRole, 'demon');
+    act(state, 5, 'doctor', 3, 6);
+    act(state, 9, 'demon', 2, 6);
+    night(state);
+    assert.strictEqual(pid(state, 6).isAlive, true);
+  });
+});
+
+describe('Possessed', () => {
+  test('reads Evil to investigators and has no ability of its own', () => {
+    const state = assignRoles(['sheriff', 'possessed', 'oracle', 'civilian', 'civilian', 'civilian']);
+    act(state, 11, 'sheriff', 1, 2);
+    act(state, 11, 'oracle', 3, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Sheriff) checks P2: SUSPICIOUS.'));
+    assert.ok(logText(state).includes('(Oracle) reads P2: NOT TOWN.'));
+    assert.ok(!engine.getNightSteps(state).some((s) => s.roles.includes('possessed')));
+  });
+});
+
+describe('Outcast', () => {
+  test('reads SUSPICIOUS to the Sheriff and shares a Town victory when surviving', () => {
+    const state = assignRoles(['sheriff', 'outcast', 'civilian', 'godfather', 'mafioso', 'survivor']);
+    act(state, 11, 'sheriff', 1, 2);
+    night(state);
+    assert.ok(logText(state).includes('(Sheriff) checks P2: SUSPICIOUS.'));
+    pid(state, 4).isAlive = false;
+    pid(state, 5).isAlive = false;
+    const victory = engine.checkVictory(state);
+    assert.strictEqual(victory.winner, 'TOWN');
+    assert.ok(victory.survivors.indexOf(2) !== -1);
+    assert.ok(victory.survivors.indexOf(6) !== -1);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Amnesiac
 // ---------------------------------------------------------------------------

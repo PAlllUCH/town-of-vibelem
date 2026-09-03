@@ -4,7 +4,7 @@ const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   APP, engine, els, html, roleButton, startRoles,
-  driveNight, secondAll, castAll
+  driveNight, secondAll, castAll, firstLivingNot
 } = require('./helpers.js');
 require('../js/ui/helper.js');
 const E = engine;
@@ -34,6 +34,12 @@ describe('app UI layer', () => {
 
   test('naming sheet civilian option is gated by deck civilian capacity', () => {
     APP.newGame();
+    APP.cfg.presetId = 'p1';
+    APP.cfg.deckConfig = {
+      town: engine.PRESETS.p1.town.slice(),
+      mafia: engine.PRESETS.p1.mafia.slice(),
+      neutral: engine.PRESETS.p1.neutral.slice()
+    };
     APP.cfg.playerCount = 8;
     APP.startGame();
     assert.strictEqual(APP.state.deck.indexOf('civilian'), -1);
@@ -165,6 +171,28 @@ describe('app UI layer', () => {
     APP.closeSheet();
   });
 
+  test('night actions overview marks an unacted role pending and a recorded one done', () => {
+    const roles = ['sheriff', 'doctor', 'godfather', 'mafioso', 'civilian', 'civilian'];
+    startRoles(6, { town: 4, mafia: 2, neutral: 0 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.app.mode = 'helper';
+    APP.app.collapsed = {};
+    APP.renderScreen('game');
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-card="helper-night-actions"') !== -1);
+    let cardBody = h.slice(h.indexOf('id="card-body-helper-night-actions"'), h.indexOf('data-card="helper-players"'));
+    assert.ok(cardBody.indexOf('PENDING') !== -1, 'unacted role is listed as pending');
+    const sher = APP.state.players.find(function (p) { return p.assignedRole === 'sheriff'; });
+    assert.ok(E.recordNightAction(APP.state, {
+      position: 11, roleId: 'sheriff', playerId: sher.id, targetId: firstLivingNot(sher.id)
+    }));
+    APP.afterMutation();
+    h = html('game-body');
+    cardBody = h.slice(h.indexOf('id="card-body-helper-night-actions"'), h.indexOf('data-card="helper-players"'));
+    assert.ok(cardBody.indexOf('DONE') !== -1, 'recorded role is listed as done');
+  });
+
   test('detail sheet shows the per-player activity log after a resolved night', () => {
     const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
     startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
@@ -186,6 +214,22 @@ describe('app UI layer', () => {
     assert.ok(h.indexOf('log-kind-tag') !== -1);
     assert.ok(h.indexOf('data-kind=') !== -1);
     APP.closeSheet();
+  });
+
+  test('dispatching wizard-jump from a summary row moves back to that actor step', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.wizActor('doctor', 3);
+    APP.wizTarget(1);
+    APP.wizNext();
+    APP.wizMafiaTarget(1);
+    APP.wizNext();
+    assert.strictEqual(APP.app.wizard.idx, 2);
+    APP.dispatch('wizard-jump', { getAttribute: function (k) { return k === 'data-index' ? '0' : null; } });
+    assert.strictEqual(APP.app.wizard.idx, 0);
+    assert.ok(html('game-body').indexOf('Doctor') !== -1, 'rendered step is the jumped-to Doctor step');
   });
 
   test('pick-role updates the open naming sheet in place without remounting', () => {
@@ -312,6 +356,20 @@ describe('app UI layer', () => {
     assert.ok(h.indexOf('E \u00B7 Godfather') === -1, 'the kill leader is excluded from the target list');
   });
 
+  test('recorded wizard action raises a toast offering undo of just that recording', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    const names = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'G', 8: 'H' };
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles, names);
+    APP.beginDay1();
+    APP.endDay();
+    assert.strictEqual(APP.state.phase, 'NIGHT');
+    APP.wizActor('doctor', 3);
+    APP.wizTarget(1);
+    const t = html('toast');
+    assert.ok(t.indexOf('data-toast-action="undo"') !== -1, 'toast should offer a tappable Undo for the recorded action');
+    assert.ok(t.indexOf('Recorded:') !== -1 && t.indexOf('Doctor') !== -1, 'toast summarizes the recorded action');
+  });
+
   test('night wizard corpse buttons show the stored corpse role next to the name', () => {
     const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'undertaker', 'godfather', 'mafioso', 'survivor'];
     const names = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'U', 6: 'E', 7: 'F', 8: 'S' };
@@ -401,7 +459,7 @@ describe('moderator toolbox', () => {
     assert.ok(html('panel-root').indexOf('claim-team-head') !== -1);
     APP.claimPick(1, 'sheriff');
     assert.ok(html('panel-root').indexOf('claim-chip on') !== -1);
-    assert.ok(html('panel-root').indexOf('>Sheriff</span>') !== -1);
+    assert.ok(html('panel-root').indexOf('claim-chip on">Sheriff') !== -1);
     APP.save();
     APP.resumeGame();
     assert.strictEqual(APP.app.claims['1'], 'sheriff');
@@ -467,7 +525,7 @@ describe('moderator toolbox', () => {
     assert.strictEqual(APP.app.claims['3'], 'doctor');
     h = html('panel-root');
     assert.ok(h.indexOf('claim-chip on') !== -1);
-    assert.ok(h.indexOf('>Doctor</span>') !== -1);
+    assert.ok(h.indexOf('claim-chip on">Doctor') !== -1);
     APP.app.seatOverlay = true;
     APP.afterMutation();
     assert.ok(html('game-body').indexOf('seat-claim') !== -1, 'seat overlay renders claim chips');
@@ -952,6 +1010,362 @@ describe('moderator toolbox', () => {
     assert.strictEqual(payload.ui.mode, 'helper');
     APP.hydrateUi(payload.ui);
     assert.strictEqual(APP.app.mode, 'helper');
+  });
+
+  test('helper night bar advances steps, disables at both ends, and clamps past morning', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    let bar = html('game-bar');
+    assert.ok(bar.indexOf('data-action="helper-step-prev"') !== -1, 'Prev button renders in the helper game bar');
+    assert.ok(bar.indexOf('data-action="helper-step-next"') !== -1, 'Next button renders in the helper game bar');
+    assert.ok(bar.indexOf('data-action="helper-step-prev" disabled') !== -1, 'Prev is disabled on the first step');
+    assert.ok(bar.indexOf('1 / 4') !== -1, 'indicator counts only dealt living steps: Jailor, Doctor, Mafia, Morning');
+    APP.helperStepNext();
+    assert.ok(html('game-bar').indexOf('2 / 4') !== -1, 'Next advances to step two');
+    assert.ok(html('game-bar').indexOf('data-action="helper-step-prev" disabled') === -1, 'Prev enables after advancing');
+    APP.helperStepNext();
+    APP.helperStepNext();
+    const lastBar = html('game-bar');
+    assert.ok(lastBar.indexOf('4 / 4') !== -1, 'indicator reaches the last step');
+    assert.ok(lastBar.indexOf('>Done</button>') !== -1, 'last step labels the button Done');
+    assert.ok(lastBar.indexOf('data-action="helper-step-next" disabled') !== -1, 'Done is disabled');
+    APP.helperStepNext();
+    assert.strictEqual(APP.app.helperStepIdx, 3, 'advancing past morning clamps to the last index');
+    APP.helperStepPrev();
+    assert.ok(html('game-bar').indexOf('3 / 4') !== -1, 'Prev steps back one index');
+  });
+
+  test('night step card tracks helperStepIdx and filters jailor and inherited roles', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'deputy', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    const bodyOf = function () {
+      const h = html('game-body');
+      return h.slice(h.indexOf('id="card-body-helper-night-step"'), h.indexOf('data-card="helper-players"'));
+    };
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-card="helper-night-step"') !== -1, 'focused step card renders during NIGHT');
+    assert.ok(h.indexOf('data-card="helper-night-step"') < h.indexOf('data-card="helper-players"'), 'step card sits on top');
+    let body = bodyOf();
+    assert.ok(body.indexOf('Jailor') !== -1, 'first filtered step is the Jailor');
+    assert.ok(body.indexOf(APP.state.players[3].name) !== -1, 'actor hint names the living jailor');
+    assert.ok(body.indexOf('Jailor, open your eyes. Point to your target') !== -1, 'per-step guidance renders');
+    assert.ok(body.indexOf('Target: point to a living player.') !== -1, 'target reminder renders');
+    const dep = APP.state.players.find(function (p) { return p.assignedRole === 'deputy'; });
+    dep.inheritedRole = 'sheriff';
+    APP.state.players[0].jailed = true;
+    APP.renderScreen('game');
+    body = bodyOf();
+    assert.ok(html('game-body').indexOf('Night Step 1 of 5') !== -1,
+      'the inherited sheriff adds its step: Jailor, Doctor, Mafia, Sheriff, Morning');
+    assert.ok(body.indexOf('Jailor') !== -1, 'jailor step appears while a living jailor is in the cast');
+    APP.app.helperStepIdx = 3;
+    APP.renderScreen('game');
+    body = bodyOf();
+    assert.ok(body.indexOf('Sheriff') !== -1, 'inherited sheriff step appears via the deputy');
+    assert.ok(body.indexOf('INHERITED') !== -1, 'actor hint marks the inherited role');
+    E.killPlayer(APP.state, APP.state.players[2].id);
+    APP.app.helperStepIdx = 0;
+    APP.renderScreen('game');
+    body = bodyOf();
+    assert.ok(body.indexOf('Doctor') === -1, 'dead actors drop out of the filter');
+  });
+
+  test('helperStepIdx persists through the save payload and resumeGame', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.app.mode = 'helper';
+    APP.helperStepNext();
+    assert.strictEqual(APP.app.helperStepIdx, 1);
+    APP.save();
+    const payload = APP.loadSave();
+    assert.strictEqual(payload.ui.helperStepIdx, 1, 'save payload carries helperStepIdx');
+    APP.app.helperStepIdx = 0;
+    APP.resumeGame();
+    assert.strictEqual(APP.state.phase, 'NIGHT');
+    assert.strictEqual(APP.app.helperStepIdx, 1, 'resumeGame restores helperStepIdx');
+    assert.strictEqual(APP.app.mode, 'helper', 'resumeGame keeps helper mode');
+  });
+
+  test('helper player sheet offers manual Kill Player and Undo Last Kill controls', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'jailor', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.app.mode = 'helper';
+    const victim = APP.state.players[0];
+    APP.app.helperSheetPid = String(victim.id);
+    APP.renderScreen('game');
+    let h = html('game-body');
+    assert.ok(h.indexOf('data-action="helper-kill-player"') !== -1, 'Kill Player control renders in the sheet');
+    assert.ok(h.indexOf('data-action="helper-undo-kill" disabled') !== -1, 'undo disabled on an empty graveyard');
+    APP.doDayAbility('moderator-kill', victim.id);
+    assert.strictEqual(victim.isAlive, false, 'manual kill lands through the shared moderator path');
+    h = html('game-body');
+    assert.ok(h.indexOf('<span class="helper-chip helper-chip-dead">GHOST</span>') !== -1, 'roster shows the ghost chip');
+    assert.ok(h.indexOf('data-helper-pid="' + victim.id + '" disabled') !== -1, 'kill disabled for a dead player');
+    assert.ok(h.indexOf('data-action="helper-undo-kill">Undo Last Kill (' + victim.name + ')') !== -1,
+      'undo enabled naming the last corpse');
+    APP.undoKill();
+    assert.strictEqual(victim.isAlive, true, 'undo revives through the shared path');
+  });
+
+  test('helper bar shows Begin Day during MORNING and driving it advances the phase', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.endDay();
+    APP.app.mode = 'helper';
+    driveNight();
+    APP.resolveNight();
+    assert.strictEqual(APP.state.phase, 'MORNING');
+    APP.renderScreen('game');
+    let bar = html('game-bar');
+    assert.ok(bar.indexOf('data-action="begin-day"') !== -1, 'helper bar offers Begin Day during MORNING');
+    assert.ok(bar.indexOf('>Begin Day</button>') !== -1, 'helper bar button label reads Begin Day');
+    assert.ok(bar.indexOf('data-action="helper-step-prev"') === -1, 'night step controls are replaced during MORNING');
+    assert.ok(bar.indexOf('data-action="resolve-night"') === -1, 'Resolve Night is replaced during MORNING');
+    APP.beginDay();
+    assert.strictEqual(APP.state.phase, 'DAY', 'driving Begin Day advances the phase');
+    APP.renderScreen('game');
+    bar = html('game-bar');
+    assert.ok(bar.indexOf('data-action="begin-day"') === -1, 'Begin Day leaves the bar after advancing');
+  });
+
+  test('helper bar shows End Day during DAY', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    assert.strictEqual(APP.state.phase, 'DAY');
+    const bar = html('game-bar');
+    assert.ok(bar.indexOf('data-action="end-day"') !== -1, 'helper bar offers End Day during DAY');
+    assert.ok(bar.indexOf('>End Day</button>') !== -1, 'helper bar button label reads End Day');
+    assert.ok(bar.indexOf('data-action="begin-day"') === -1, 'Begin Day is not shown during DAY');
+  });
+
+  test('helper morning recap card lists the night kill, is collapsible, and carries helper-recap', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles, null, { noKillN1: false });
+    APP.beginDay1();
+    APP.endDay();
+    const victim = APP.state.players[0];
+    APP.wizActor('doctor', 3);
+    APP.wizTarget(2);
+    APP.wizNext();
+    APP.wizMafiaTarget(1);
+    APP.wizNext();
+    APP.resolveNight();
+    assert.strictEqual(APP.state.phase, 'MORNING');
+    assert.strictEqual(victim.isAlive, false, 'scripted night kill lands');
+    APP.app.mode = 'helper';
+    APP.renderScreen('game');
+    const h = html('game-body');
+    const idx = h.indexOf('data-card="helper-recap"');
+    assert.ok(idx !== -1, 'recap card carries data-card helper-recap');
+    assert.ok(h.indexOf('aria-expanded="true" aria-controls="card-body-helper-recap">-</button>', idx) !== -1,
+      'recap card follows the standard aria expanded/controls pattern');
+    assert.ok(idx < h.indexOf('data-card="helper-night-order"'), 'recap card sits above the existing cards');
+    const recap = h.slice(h.lastIndexOf('<div class="card card-collapsible', idx), h.indexOf('data-card="helper-night-order"'));
+    assert.ok(recap.indexOf('Morning Recap') !== -1, 'recap card is titled Morning Recap');
+    assert.ok(recap.indexOf(victim.name) !== -1, 'recap lists the killed victim by name');
+    assert.ok(recap.indexOf('DEAD') !== -1, 'recap marks the dead');
+    APP.app.collapsed['helper-recap'] = true;
+    APP.renderScreen('game');
+    assert.ok(html('game-body').indexOf('data-card="helper-recap" aria-expanded="false"') !== -1,
+      'recap collapse state persists through app.collapsed');
+  });
+
+});
+
+
+describe('persistence and prep regressions', () => {
+
+  test('prep toggling works after Night Zero resolves', () => {
+    const roles = ['sheriff', 'jailor', 'doctor', 'civilian', 'civilian', 'civilian', 'civilian',
+      'godfather', 'mafioso', 'consigliere', 'executioner', 'witch'];
+    startRoles(12, { town: 7, mafia: 3, neutral: 2 }, roles);
+    APP.beginNightZero();
+    assert.strictEqual(APP.state.phase, 'NIGHT');
+    APP.resolveNightZero();
+    assert.ok(APP.app.nightZeroDone && typeof APP.app.nightZeroDone === 'object',
+      'nightZeroDone must be an object after Night Zero resolves');
+    APP.nzToggle('bluffs');
+    assert.strictEqual(APP.app.nightZeroDone.bluffs, true);
+    APP.nzToggle('bluffs');
+    assert.strictEqual(APP.app.nightZeroDone.bluffs, false);
+    assert.strictEqual(localStorage.getItem(APP.SAVE_KEY) && true, true);
+  });
+
+  test('corrupted resume payload boots into setup cleanly without looping', () => {
+    APP.newGame();
+    localStorage.setItem(APP.SAVE_KEY, JSON.stringify({
+      cfg: null,
+      ui: { mode: 'helper', statuses: { x: true }, helperSheetPid: 1, helperStepIdx: 99 },
+      game: { players: 'hostile', night: 'hostile' }
+    }));
+    let threw = false;
+    try { APP.resumeGame(); } catch (e) { threw = true; }
+    assert.strictEqual(threw, false);
+    assert.strictEqual(APP.app.screen, 'setup');
+    assert.strictEqual(APP.state, null);
+    assert.strictEqual(localStorage.getItem(APP.SAVE_KEY), null);
+    assert.strictEqual(APP.app.mode, 'app');
+    assert.deepStrictEqual(APP.app.statuses, {});
+    APP.resumeGame();
+    assert.strictEqual(APP.app.screen, 'setup');
+  });
+
+  test('failed save surfaces a persistent dismissible warning banner once', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    const origSetItem = localStorage.setItem;
+    let failures = 0;
+    localStorage.setItem = function () { failures += 1; throw new Error('quota exceeded'); };
+    try {
+      APP.save();
+      APP.save();
+    } finally {
+      localStorage.setItem = origSetItem;
+    }
+    assert.strictEqual(failures, 2);
+    const banner = document.getElementById('save-warning');
+    assert.ok(banner, 'banner should be injected after the first failed save');
+    assert.ok(banner.innerHTML.indexOf('Progress may not be saved.') !== -1);
+    assert.ok(banner.innerHTML.indexOf('data-action="dismiss-save-warning"') !== -1);
+    window.UI.showSaveWarning();
+    window.UI.dismissSaveWarning();
+    window.UI.showSaveWarning();
+    assert.ok(document.getElementById('save-warning'), 'dismiss keeps working without throwing');
+  });
+
+  test('wake lock is requested during NIGHT and released in every other phase', async () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    const prevDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    const setNavigator = function (value) {
+      Object.defineProperty(globalThis, 'navigator', {
+        value, configurable: true, writable: true
+      });
+    };
+    let requested = 0;
+    let released = 0;
+    const lock = {
+      release() { released += 1; return Promise.resolve(); }
+    };
+    setNavigator({
+      wakeLock: {
+        request(kind) { requested += 1; return Promise.resolve(lock); }
+      }
+    });
+    try {
+      APP.state.phase = 'NIGHT';
+      APP.updateWakeLock();
+      await Promise.resolve();
+      await Promise.resolve();
+      assert.strictEqual(requested, 1, 'request fires when entering NIGHT');
+      assert.strictEqual(global.window.APP.wakeLock, lock);
+
+      APP.updateWakeLock();
+      assert.strictEqual(requested, 1, 'no duplicate request while held');
+
+      APP.releaseWakeLock();
+      assert.strictEqual(released, 1);
+      assert.strictEqual(global.window.APP.wakeLock, null);
+
+      APP.state.phase = 'DAY';
+      APP.updateWakeLock();
+      assert.strictEqual(requested, 1, 'no request outside NIGHT');
+
+      setNavigator({});
+      APP.state.phase = 'NIGHT';
+      APP.updateWakeLock();
+      assert.strictEqual(requested, 1, 'unsupported browser is a silent no-op');
+
+      setNavigator({ wakeLock: {} });
+      APP.state.phase = 'NIGHT';
+      APP.updateWakeLock();
+      assert.strictEqual(requested, 1, 'missing request method is a silent no-op');
+    } finally {
+      APP.releaseWakeLock();
+      if (prevDescriptor) Object.defineProperty(globalThis, 'navigator', prevDescriptor);
+    }
+  });
+
+  test('moderator notes save from the detail sheet and survive a resume round trip', () => {
+    const roles = ['civilian', 'civilian', 'doctor', 'sheriff', 'godfather', 'mafioso', 'jester', 'survivor'];
+    startRoles(8, { town: 5, mafia: 2, neutral: 1 }, roles);
+    APP.beginDay1();
+    const doc = APP.state.players.find(function (p) { return p.assignedRole === 'doctor'; });
+    APP.openDetailSheet(String(doc.seat));
+    let h = html('sheet-root');
+    assert.ok(h.indexOf('seat-note-input') !== -1, 'alive player shows an editable note field');
+    assert.ok(h.indexOf('data-action="save-note"') !== -1);
+
+    document.getElementById('seat-note-input').value = 'claims Sheriff night two <img>';
+    APP.saveNote();
+    h = html('sheet-root');
+    assert.strictEqual(APP.app.notes[String(doc.id)], 'claims Sheriff night two <img>');
+    assert.ok(h.indexOf('claims Sheriff night two &lt;img&gt;') !== -1, 'note text renders escaped');
+
+    const payload = JSON.parse(localStorage.getItem(APP.SAVE_KEY));
+    assert.strictEqual(payload.ui.notes[String(doc.id)], 'claims Sheriff night two <img>');
+
+    E.killPlayer(APP.state, doc.id);
+    APP.afterMutation();
+    APP.openDetailSheet(String(doc.seat));
+    h = html('sheet-root');
+    assert.ok(h.indexOf('seat-note-input') === -1, 'dead player view has no editor');
+    assert.ok(h.indexOf('claims Sheriff night two &lt;img&gt;') !== -1, 'dead player note shows read-only');
+
+    localStorage.setItem(APP.SAVE_KEY, JSON.stringify(payload));
+    APP.resumeGame();
+    assert.strictEqual(
+      APP.app.notes[String(doc.id)],
+      'claims Sheriff night two <img>',
+      'note survives serialize/deserialize round trip'
+    );
+    if (APP.app.sheet) APP.closeSheet();
+  });
+
+  test('naming screen strings follow the locale and the seat placeholder interpolates', () => {
+    APP.newGame();
+    APP.cfg.playerCount = 6;
+    APP.cfg.teamCounts = { town: 4, mafia: 2, neutral: 0 };
+    APP.startGame();
+    let h = html('seats-body');
+    assert.ok(h.indexOf('Name the Seats') !== -1, 'card title is English in en');
+    assert.ok(h.indexOf('Auto-fill rest') !== -1, 'auto-fill button is English in en');
+    assert.ok(h.indexOf('Lock Roles') !== -1, 'lock-roles button is English in en');
+    assert.ok(h.indexOf('seat(s) left to assign') !== -1, 'remaining-seats hint is English in en');
+    assert.ok(h.indexOf('Player 3') !== -1, 'seat placeholder interpolates the seat number in en');
+
+    E.setLocale('pl');
+    APP.locale = E.locale;
+    APP.renderScreen('seats');
+    h = html('seats-body');
+    assert.ok(h.indexOf('Nazwij miejsca') !== -1, 'card title switches to Polish');
+    assert.ok(h.indexOf('Uzupełnij resztę') !== -1, 'auto-fill button switches to Polish');
+    assert.ok(h.indexOf('Zatwierdź role') !== -1, 'lock-roles button switches to Polish');
+    assert.ok(h.indexOf('Pozostało miejsc do przypisania:') !== -1, 'remaining-seats hint switches to Polish');
+    assert.ok(h.indexOf('Gracz 3') !== -1, 'seat placeholder interpolates the seat number in pl');
+
+    E.setLocale('en');
+    APP.locale = E.locale;
+    APP.renderScreen('seats');
+    h = html('seats-body');
+    assert.ok(h.indexOf('Name the Seats') !== -1, 'card title returns to English after restoring the locale');
+    if (APP.app.sheet) APP.closeSheet();
   });
 
 });

@@ -89,13 +89,20 @@
 
     P.forEach(function (p) {
       if (p.assignedRole === 'drunk') p.isDrunk = true;
-      else p.isDrunk = false;
+      else if (p.leperDrunkUntil != null && p.leperDrunkUntil >= nightNum) p.isDrunk = true;
+      else {
+        p.isDrunk = false;
+        p.leperDrunkUntil = null;
+      }
       p.isRoleblocked = false;
       p.isProtected = false;
+      p.protectedByInnkeeper = false;
       p.framed = false;
       p.jailed = false;
       p.poisoned = false;
       p.alerted = false;
+      p.enchanted = false;
+      p.enchantedBy = null;
       p.nightTarget = null;
       p.jailorDecision = null;
     });
@@ -247,14 +254,17 @@
     E._nightActions.witchReveal(ctx);
     E._nightActions.jailor(ctx);
     E._nightActions.roleblockers(ctx);
+    E._nightActions.innkeeper(ctx);
     E._nightActions.doctor(ctx);
     E._nightActions.mafia(ctx);
     E._nightActions.janitor(ctx);
     E._nightActions.forger(ctx);
     E._nightActions.blackmailer(ctx);
     E._nightActions.serialkiller(ctx);
+    E._nightActions.demon(ctx);
     E._nightActions.framer(ctx);
     E._nightActions.investigators(ctx);
+    E._nightActions.succubus(ctx);
     E._nightActions.revivers(ctx);
     E._nightActions.medium(ctx);
     E._nightActions.deferred(ctx);

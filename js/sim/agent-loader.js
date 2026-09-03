@@ -193,6 +193,7 @@
     get_vote: get_vote,
     get_night_target: get_night_target,
     get_claim: get_claim,
+    validate_weights: validateWeights,
     Agent: Agent
   };
   if (typeof module !== 'undefined' && module.exports) {

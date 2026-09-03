@@ -2,6 +2,7 @@
 
 (function () {
   var E = window.VillageEngine || {};
+  var UI = window.UI || {};
   var APP = window.APP;
   var saveWarningShown = false;
 
@@ -11,6 +12,7 @@
       mode: app.mode || 'app',
       statuses: app.statuses || {},
       helperSheetPid: app.helperSheetPid || null,
+      helperStepIdx: Number(app.helperStepIdx) || 0,
       rolesHidden: app.rolesHidden,
       namingMode: app.namingMode,
       wizardIdx: app.wizard ? app.wizard.idx : 0,
@@ -18,6 +20,7 @@
       names: app.names || {},
       nightZeroDone: app.nightZeroDone || {},
       claims: app.claims || {},
+      notes: app.notes || {},
       relayedWhispers: app.relayedWhispers || {},
       dayTimerEnds: app.dayTimerEnds || null,
       dayTimerTotal: app.dayTimerTotal || null,
@@ -30,6 +33,7 @@
       if (!saveWarningShown) {
         saveWarningShown = true;
         console.warn('Failed to save game:', e.message);
+        if (typeof UI.showSaveWarning === 'function') UI.showSaveWarning();
       }
     }
   }
@@ -67,6 +71,8 @@
     APP.app.mode = (ui && ui.mode) || 'app';
     APP.app.statuses = (ui && ui.statuses) || {};
     APP.app.helperSheetPid = (ui && ui.helperSheetPid) || null;
+    APP.app.helperStepIdx = Number(ui && ui.helperStepIdx) || 0;
+    APP.app.notes = (ui && ui.notes) || {};
   }
 
   APP.save = save;

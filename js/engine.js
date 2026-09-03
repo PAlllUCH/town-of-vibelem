@@ -2,6 +2,7 @@
 if (typeof module !== 'undefined' && module.exports) {
   require('./engine/00-namespace.js');
   require('./engine/01-roles.js');
+  require('./engine/01b-strings.js');
   require('./engine/02-presets.js');
   require('./engine/03-deck.js');
   require('./engine/04-state.js');

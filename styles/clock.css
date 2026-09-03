@@ -1,11 +1,11 @@
 .cycle-clock {
-  --clock-prep: #8a8274;
-  --clock-morning: #d4a83c;
-  --clock-day: #7a9ab5;
-  --clock-night: #5a4a7a;
-  --clock-end: #5a6a5a;
+  --clock-prep: var(--muted);
+  --clock-morning: var(--warn);
+  --clock-day: var(--town);
+  --clock-night: var(--night-indigo);
+  --clock-night-label: var(--night-indigo-text);
+  --clock-end: var(--end-sage);
   --clock-dim: rgba(255, 255, 255, .06);
-  --clock-glow: 0 0 14px 2px rgba(212, 168, 60, .35);
   --clock-size: 86px;
   position: relative;
   width: var(--clock-size);
@@ -19,7 +19,7 @@
   height: 100%;
   border-radius: 50%;
   background: var(--panel);
-  border: 1.5px solid var(--line);
+  border: 1px solid var(--line);
   overflow: hidden;
 }
 
@@ -52,22 +52,22 @@
 
 .cycle-clock[data-phase="PREP"] .arc-prep {
   background: var(--clock-prep);
-  box-shadow: inset 0 0 18px 4px rgba(138, 130, 116, .4);
+  box-shadow: inset 0 0 18px 4px color-mix(in srgb, var(--clock-prep) 40%, transparent);
 }
 
 .cycle-clock[data-phase="MORNING"] .arc-morning {
   background: var(--clock-morning);
-  box-shadow: inset 0 0 18px 4px rgba(212, 168, 60, .45);
+  box-shadow: inset 0 0 18px 4px color-mix(in srgb, var(--clock-morning) 45%, transparent);
 }
 
 .cycle-clock[data-phase="DAY"] .arc-day {
   background: var(--clock-day);
-  box-shadow: inset 0 0 18px 4px rgba(122, 154, 181, .45);
+  box-shadow: inset 0 0 18px 4px color-mix(in srgb, var(--clock-day) 45%, transparent);
 }
 
 .cycle-clock[data-phase="NIGHT"] .arc-night {
   background: var(--clock-night);
-  box-shadow: inset 0 0 18px 4px rgba(90, 74, 122, .5);
+  box-shadow: inset 0 0 18px 4px color-mix(in srgb, var(--clock-night) 50%, transparent);
 }
 
 .cycle-clock[data-phase="END"] .arc-prep,
@@ -126,11 +126,11 @@
   opacity: .5;
 }
 
-.cycle-clock[data-phase="PREP"] { --clock-glow: 0 0 14px 2px rgba(138, 130, 116, .3); }
-.cycle-clock[data-phase="MORNING"] { --clock-glow: 0 0 14px 2px rgba(212, 168, 60, .4); }
-.cycle-clock[data-phase="DAY"] { --clock-glow: 0 0 14px 2px rgba(122, 154, 181, .35); }
-.cycle-clock[data-phase="NIGHT"] { --clock-glow: 0 0 14px 2px rgba(90, 74, 122, .4); }
-.cycle-clock[data-phase="END"] { --clock-glow: 0 0 8px 1px rgba(90, 106, 90, .2); }
+.cycle-clock[data-phase="PREP"] { --clock-glow: 0 0 14px 2px color-mix(in srgb, var(--clock-prep) 30%, transparent); }
+.cycle-clock[data-phase="MORNING"] { --clock-glow: 0 0 14px 2px color-mix(in srgb, var(--clock-morning) 40%, transparent); }
+.cycle-clock[data-phase="DAY"] { --clock-glow: 0 0 14px 2px color-mix(in srgb, var(--clock-day) 35%, transparent); }
+.cycle-clock[data-phase="NIGHT"] { --clock-glow: 0 0 14px 2px color-mix(in srgb, var(--clock-night) 40%, transparent); }
+.cycle-clock[data-phase="END"] { --clock-glow: 0 0 8px 1px color-mix(in srgb, var(--clock-end) 20%, transparent); }
 
 .cycle-clock-center {
   position: absolute;
@@ -141,12 +141,12 @@
   height: 52%;
   border-radius: 50%;
   background: var(--bg);
-  border: 1.5px solid var(--line);
+  border: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--clock-glow);
+  box-shadow: var(--clock-glow, var(--ring-glow));
   transition: box-shadow .4s ease;
   z-index: 3;
 }
@@ -160,7 +160,7 @@
 }
 
 .cycle-clock-phase {
-  font-size: .5rem;
+  font-size: .625rem;
   text-transform: uppercase;
   letter-spacing: .1em;
   color: var(--muted);
@@ -171,7 +171,7 @@
 .cycle-clock[data-phase="PREP"] .cycle-clock-phase { color: var(--clock-prep); }
 .cycle-clock[data-phase="MORNING"] .cycle-clock-phase { color: var(--clock-morning); }
 .cycle-clock[data-phase="DAY"] .cycle-clock-phase { color: var(--clock-day); }
-.cycle-clock[data-phase="NIGHT"] .cycle-clock-phase { color: var(--clock-night); }
+.cycle-clock[data-phase="NIGHT"] .cycle-clock-phase { color: var(--clock-night-label); }
 .cycle-clock[data-phase="END"] .cycle-clock-phase { color: var(--clock-end); }
 
 @keyframes clock-hand-enter {

@@ -77,3 +77,48 @@ When collapsed, the `.collapsed` class on the wrapper hides the body via `displa
 6. The collapse button is always `.btn.btn-sm.btn-collapse`: 44px square, `+` when collapsed, `-` when expanded.
 7. Collapsed state is persisted in `app.collapsed[key]` and serialized in the save payload.
 8. Use only design tokens: `--panel`, `--panel2`, `--bg2`, `--line`, `--line-dim`, `--text`, `--muted`, `--accent`, `--accent-dim`, `--warn`, `--bad`, `--radius`, `--radius-sm`, `--space-1` through `--space-5`, `--shadow`.
+
+## Palette Tokens
+
+Team colors are the four tokens below; consumable tint tokens (`--accent-faint`, `--accent-dim`, `--accent-mid`, `--glow`, `--ring-glow`) are all derived from `--accent`. Never hardcode a color value in component CSS.
+
+| Token | Value | Used by |
+|---|---|---|
+| `--town` | `#7a9ab5` | Town steel-blue; `.team-TOWN { --tc: var(--town); }` |
+| `--mafia` | `#c45050` | Mafia crimson; `.team-MAFIA { --tc: var(--mafia); }` |
+| `--neutral` | `#c99a2e` | Neutral gold; `.team-NEUTRAL { --tc: var(--neutral); }` |
+| `--evil` | `#8a5a8a` | **Evil plum**; `.team-EVIL { --tc: var(--evil); }` and `.team-EVIL-text { color: var(--evil); }`. The `team-dot` fallback (`--tc, var(--muted)`) and the EVIL seat/row accent border (`border-top: var(--accent-bar) solid var(--tc, var(--line))`) pick up the plum through `--tc`. |
+
+The `--tc` mapping is the single hook every team-colored component reads (`team-dot`, seat tiles, end reveal grid, reference/claims rows, setup deck chips).
+
+## Approved Variants and Exceptions
+
+These are the standing exceptions to the rules above; new work must follow the standard unless it matches one of these patterns.
+
+### The clock header variant
+
+The app header (`header.app-header`) carries only the hamburger (`toggle-sidebar`) and the title. The game header band (`#game-header`, rendered by `UI.renderGameHeader`) is the one approved full-bleed card surface in the header row: a `.card.card-head` wrapper containing the `div.cycle-clock` phase clock (`data-phase` + `data-cycle` on the same element, styled by `styles/clock.css`). Menu items (Switch to App/Helper, Tokens, Claims, Seats, Log, Mod, Roles) live in the sidebar, never in the header card.
+
+### Row density: the ten-by-twelve standard and the dense-log exception
+
+The standard row density for every panel/listing row is `10px 12px` — written as `padding: 10px var(--space-3);` (rows: `.reference-row`, `.claim-row`, `.whisper-entry`, `.helper-player`, `.toggle-row`, `.notice`, seats/setup rows). The **dense exception** is log-style micro-rows where vertical rhythm matters more than touch size: `.player-log-row` (6px 10px) in the player detail sheet and inline chip/flag rows (`.role-pill`, `.tally-chip`, `.seat-btn`). Buttons keep the 44px touch minimum regardless of row density (the `10px 12px` rows are raised to 44px min-height).
+
+### Accent-bar exceptions for notices and log rows
+
+"No left-border accents on panel rows" has two approved exceptions, both carrying semantic color:
+
+- `.notice` rows (game.css): `border-left: 4px solid var(--accent)` with `.notice.ok` / `.notice.accent` / `.notice.bad` / `.notice.info` switching the bar color. These are announcement surfaces, not interactive rows.
+- `.player-log-row` (sheets.css): `border-left` colored by `log-ok` / `log-bad` / `log-accent` per entry kind, plus the `.log-bold` emphasis row.
+
+### Structural hook classes
+
+The overlay panels expose a semantic class on top of the shared `.panel-overlay`/`.panel-backdrop` (z 30/31) so CSS and tests can address them without matching `.panel-overlay` broadly:
+
+- `.claims-panel` — the Public Claims overlay (`js/ui/claims.js`)
+- `.whispers-panel` (id `whispers-panel`) — the Info Tokens relay overlay (`js/ui/panels.js`)
+
+Both render `role="dialog"` and close on X, backdrop tap, or Escape.
+
+### The helper step counter
+
+`styles/helper.css` defines `.helper-step-counter { align-self: center; }` for the night bar's `N / M` index span (`js/ui/helper.js`). The counter is a passive element: it never carries an inline `style=` attribute and never acts as a button.

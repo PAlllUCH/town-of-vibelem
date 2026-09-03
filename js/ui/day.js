@@ -5,13 +5,13 @@
   var UI = window.UI;
 
   UI.renderGameHeader = function (state, cfg, app) {
-    var word = 'Over';
+    var word = UI.str('phaseOver');
     var phaseAttr = 'END';
     var num = Math.max(1, state.dayNumber || 1);
-    if (state.phase === 'NIGHT') { word = 'Night'; phaseAttr = 'NIGHT'; num = Math.max(1, state.night.number || 1); }
-    else if (state.phase === 'MORNING') { word = 'Morning'; phaseAttr = 'MORNING'; num = Math.max(1, state.dayNumber || 1); }
-    else if (state.phase === 'DAY') { word = 'Day'; phaseAttr = 'DAY'; num = Math.max(1, state.dayNumber || 1); }
-    else if (state.phase === 'SEATS' || state.phase === 'SETUP') { word = 'Prep'; phaseAttr = 'PREP'; num = 1; }
+    if (state.phase === 'NIGHT') { word = UI.str('phaseNight'); phaseAttr = 'NIGHT'; num = Math.max(1, state.night.number || 1); }
+    else if (state.phase === 'MORNING') { word = UI.str('phaseMorning'); phaseAttr = 'MORNING'; num = Math.max(1, state.dayNumber || 1); }
+    else if (state.phase === 'DAY') { word = UI.str('phaseDay'); phaseAttr = 'DAY'; num = Math.max(1, state.dayNumber || 1); }
+    else if (state.phase === 'SEATS' || state.phase === 'SETUP') { word = UI.str('phasePrep'); phaseAttr = 'PREP'; num = 1; }
     var label = word + (num !== '' ? ' ' + num : '');
     return '<div class="card card-head">' +
       '<div class="cycle-clock" data-phase="' + phaseAttr + '" data-cycle="' + num + '" aria-label="' + label + '">' +
@@ -27,7 +27,6 @@
       '<span class="cycle-clock-phase">' + word + '</span>' +
       '</div>' +
       '</div>' +
-      '</div>' +
       '</div>';
   };
 
@@ -37,8 +36,8 @@
     if (app.seatOverlay) {
       var sgCollapsed = !!(app.collapsed && app.collapsed['seat-grid']);
       body += '<div class="card card-collapsible' + (sgCollapsed ? ' collapsed' : '') + '">' +
-        '<div class="card-head"><h2>Seat Grid</h2>' +
-        '<button class="btn btn-sm" data-action="toggle-seat-overlay">Close</button>' +
+        '<div class="card-head"><h2>' + UI.str('seatGridTitle') + '</h2>' +
+        '<button class="btn btn-sm" data-action="toggle-seat-overlay">' + UI.str('closeLabel') + '</button>' +
         '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="seat-grid"' +
         ' aria-expanded="' + (sgCollapsed ? 'false' : 'true') + '" aria-controls="card-body-seat-grid">' +
         (sgCollapsed ? '+' : '-') + '</button></div>' +
@@ -47,15 +46,15 @@
     }
     if (state.phase === 'NIGHT') {
       body += UI.nightWizard(state, cfg, app);
-      bar = '<button class="btn btn-primary btn-bar" data-action="resolve-night">Resolve Night</button>';
+      bar = '<button class="btn btn-primary btn-bar" data-action="resolve-night">' + UI.str('resolveNight') + '</button>';
     } else if (state.phase === 'MORNING') {
       body += morningView(state, cfg, app);
-      bar = '<button class="btn btn-primary btn-bar" data-action="begin-day">Begin Day</button>';
+      bar = '<button class="btn btn-primary btn-bar" data-action="begin-day">' + UI.str('beginDay') + '</button>';
     } else if (state.phase === 'DAY') {
       body += dayView(state, cfg, app);
       bar = dayBar(state, app);
     } else {
-      body += '<p class="muted">Session over.</p>';
+      body += '<p class="muted">' + UI.str('sessionOver') + '</p>';
     }
     if (app.picker) {
       var holder = null;
@@ -73,31 +72,34 @@
         '<div class="card-body" id="card-body-picker">' +
         '<p class="muted small">' + UI.esc(app.picker.sub || '') + '</p>' +
         livingBtns(state, 'pick-day-target', holder ? holder.id : null, app.picker.ability) +
-        '<button class="btn btn-block" data-action="picker-cancel">Cancel</button></div></div>';
+        '<button class="btn btn-block" data-action="picker-cancel">' + UI.str('cancelLabel') + '</button></div></div>';
     }
     body += logsCard(state, app);
     return { body: body, bar: bar };
   };
 
   UI.renderSidebar = function (state, app) {
-    var items = [
-      { label: app.mode === 'helper' ? 'Switch to App' : 'Switch to Helper', action: 'toggle-mode' },
-      { label: 'Tokens', action: 'toggle-tokens' },
-      { label: 'Claims', action: 'toggle-claims' },
-      { label: 'Seats', action: 'toggle-seat-overlay' },
-      { label: 'Log', action: 'toggle-logs' },
-      { label: 'Mod', action: 'toggle-mod' },
-      { label: 'Roles', action: 'toggle-reference' }
-    ];
+    var sOpen = app.tokensOpen || app.claimsOpen || app.seatOverlay || app.modOpen || app.referenceOpen;
+    var sidebarOnly = !state || !state.players || state.players.length === 0;
     var h = '';
-    items.forEach(function (item) {
-      h += '<div class="sidebar-item" data-action="' + item.action + '">' + UI.esc(item.label) + '</div>';
-    });
+    h += '<div class="sidebar-item" data-action="toggle-mode">' +
+      UI.esc(app.mode === 'helper' ? UI.str('switchToApp') : UI.str('switchToHelper')) + '</div>';
+    if (!sidebarOnly) {
+      h += '<div class="sidebar-item" data-action="toggle-tokens">' + UI.esc(UI.str('tokensLabel')) + '</div>';
+      h += '<div class="sidebar-item" data-action="toggle-claims">' + UI.esc(UI.str('claimsLabel')) + '</div>';
+      h += '<div class="sidebar-item' + (sOpen ? ' on' : '') + '" data-action="toggle-seat-overlay">' + UI.esc(UI.str('seatsLabel')) + '</div>';
+      h += '<div class="sidebar-item" data-action="toggle-logs">' + UI.esc(UI.str('logLabel')) + '</div>';
+      h += '<div class="sidebar-item" data-action="toggle-mod">' + UI.esc(UI.str('modLabel')) + '</div>';
+      h += '<div class="sidebar-item" data-action="toggle-reference">' + UI.esc(UI.str('rolesLabel')) + '</div>';
+    }
+    h += '<div class="sidebar-group-label">' + UI.str('languageLabel') + '</div>';
+    h += '<div class="sidebar-item sidebar-item-language" data-action="toggle-locale">' +
+      UI.localeToggleButton() + '</div>';
     return h;
   };
 
   UI.renderSidebarLog = function (state) {
-    var logs = (state.logs || []).slice(-20);
+    var logs = ((state && state.logs) || []).slice(-20);
     return logs.map(function (l) { return '<p>' + UI.esc(l) + '</p>'; }).join('');
   };
 
@@ -108,11 +110,11 @@
     var body = '';
     if (ann.forgedWills && ann.forgedWills.length) {
       ann.forgedWills.forEach(function (f) {
-        body += '<div class="notice accent">A will was forged for ' + UI.esc(f.targetName) + '.</div>';
+        body += '<div class="notice accent">' + UI.esc(UI.str('forgedWillLine', f.targetName)) + '</div>';
       });
     }
     if (ann.revivals && ann.revivals.length) {
-      body += '<div class="notice ok"><strong>Revived:</strong> ' + ann.revivals.map(UI.esc).join(', ') + '</div>';
+      body += '<div class="notice ok"><strong>' + UI.esc(UI.str('revivedLabel')) + ':</strong> ' + ann.revivals.map(UI.esc).join(', ') + '</div>';
     }
     if (ann.inheritanceNote) {
       body += '<div class="notice accent">' + UI.esc(ann.inheritanceNote) + '</div>';
@@ -125,12 +127,12 @@
           '<div class="death-cause">' + UI.esc(d.cause || '') + '</div></div>';
       });
     } else {
-      body += '<div class="notice ok">No deaths last night.</div>';
+      body += '<div class="notice ok">' + UI.str('noDeathsLastNight') + '</div>';
     }
     var freshNight = Math.max(1, (state.night && state.night.number || 1) - 1);
     body += UI.whisperResultCard(state, app, freshNight);
-    body += '<div class="notice">Read the announcements above to the table, then tap <strong>Begin Day</strong>.</div>';
-    return UI.card('Morning Announcement', body, 'morning', app);
+    body += '<div class="notice">' + UI.str('readThenBeginDay') + '</div>';
+    return UI.card(UI.str('morningAnnouncementTitle'), body, 'morning', app);
   }
 
   function dayAbilities(state) {
@@ -146,16 +148,16 @@
       var maxUses = (E.ROLES && E.ROLES.vigilante && E.ROLES.vigilante.maxUses) || 3;
       var left = Math.max(0, maxUses - (vig.shotsFired || 0));
       html += '<button class="btn" data-action="day-ability" data-ability="vigilante" ' +
-        (left > 0 ? '' : 'disabled') + '>Vigilante Shot (' + left + ' left)</button>';
+        (left > 0 ? '' : 'disabled') + '>' + UI.esc(UI.str('vigilanteShot', left)) + '</button>';
     }
     if (dep && !dep.usedOncePerGame) {
-      html += '<button class="btn" data-action="day-ability" data-ability="deputy">Deputy Shoot (once)</button>';
+      html += '<button class="btn" data-action="day-ability" data-ability="deputy">' + UI.esc(UI.str('deputyShoot')) + '</button>';
     }
     if (may && !may.revealed) {
-      html += '<button class="btn" data-action="day-ability" data-ability="mayor">Mayor Reveal</button>';
+      html += '<button class="btn" data-action="day-ability" data-ability="mayor">' + UI.esc(UI.str('mayorReveal')) + '</button>';
     }
     if (!vig && !dep && !may) {
-      html += '<p class="muted">No day abilities available.</p>';
+      html += '<p class="muted">' + UI.str('noDayAbilities') + '</p>';
     }
     html += '</div>';
     return html;
@@ -175,56 +177,47 @@
       '<button class="btn" data-action="start-day-timer" data-seconds="180">180s</button>' +
       (running ? '<button class="btn" data-action="adjust-day-timer" data-delta="-10">-10s</button>' +
         '<button class="btn" data-action="adjust-day-timer" data-delta="10">+10s</button>' +
-        '<button class="btn" data-action="stop-day-timer">Stop</button>' : '') +
+        '<button class="btn" data-action="stop-day-timer">' + UI.str('stopTimer') + '</button>' : '') +
       '</div></div>';
-    return UI.card('Discussion Timer', body, 'timer', app);
+    return UI.card(UI.str('timerTitle'), body, 'timer', app);
   }
 
   function dayView(state, cfg, app) {
     var html = '';
     html += dayTimerView(app);
-    html += UI.card('Day Abilities', dayAbilities(state), 'abilities', app);
+    html += UI.card(UI.str('dayAbilitiesTitle'), dayAbilities(state), 'abilities', app);
     html += UI.trialView(state, cfg, app);
     return html;
   }
 
   function dayBar(state, app) {
     var b = '';
-    if (app.picker) {
-      b += '<button class="btn btn-bar" data-action="picker-cancel">Cancel</button>';
-    }
+    var resolvePending = false;
     if (state.trial && state.trial.active && !app.lastTrialResult) {
+      resolvePending = true;
       var action = 'resolve-trial';
-      var lbl = 'Resolve Trial';
+      var lbl = UI.str('verdictStage');
       if (state.trial.stage === 'SECONDS') {
         action = 'resolve-trial';
-        lbl = 'Resolve Nomination';
+        lbl = UI.str('nominationStage');
       } else if (state.trial.stage === 'SENTENCE') {
         action = 'resolve-sentence';
-        lbl = 'Resolve Sentence';
+        lbl = UI.str('sentenceStage');
       }
       b += '<button class="btn btn-primary btn-bar" data-action="' + action + '">' + lbl + '</button>';
     }
-    b += '<button class="btn btn-primary btn-bar" data-action="end-day">End Day</button>';
+    b += '<button class="btn btn-bar' + (resolvePending ? '' : ' btn-primary') + '" data-action="end-day">' + UI.str('endDay') + '</button>';
     return b;
   }
 
   function logsCard(state, app) {
     var logs = state.logs || [];
-    var collapsed = !!(app.collapsed && app.collapsed['log']);
-    var html = '<div class="card card-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
-      '<div class="card-head">' +
-      '<button class="btn btn-sm" data-action="toggle-logs">Event Log (' + logs.length + ')</button>' +
-      '<button class="btn btn-sm btn-collapse" data-action="toggle-card" data-card="log"' +
-      ' aria-expanded="' + (collapsed ? 'false' : 'true') + '" aria-controls="card-body-log">' +
-      (collapsed ? '+' : '-') + '</button></div>' +
-      '<div class="card-body" id="card-body-log">' +
-      '<div class="logs' + (app.logsOpen ? ' open' : '') + '">' +
-      (logs.length ? '<ul>' + logs.slice().reverse().map(function (l) {
+    var body = logs.length
+      ? '<ul>' + logs.slice().reverse().map(function (l) {
         return '<li>' + UI.esc(l) + '</li>';
-      }).join('') + '</ul>' : '<p class="muted small">No events yet.</p>') +
-      '</div></div></div>';
-    return html;
+      }).join('') + '</ul>'
+      : '<p class="muted small">' + UI.str('noEventsYet') + '</p>';
+    return UI.card(UI.str('eventLogTitle', logs.length), body, 'log', app);
   }
 
   function livingBtns(state, action, exclude, ability) {

@@ -2,7 +2,7 @@
 
 **Date:** 8/13/2026
 **Status:** PROPOSAL — requires discussion before implementation
-**Source of truth:** `docs/GDD.md` (rules), `docs/IMPROVEMENTS-STATUS.md` (status), `docs/audit-unimplemented.md` (evidence)
+**Source of truth:** `docs/GDD.md` (rules) and `docs/interface.md` (API contract).
 **Scope:** design document only; no code changes.
 
 ---
@@ -133,7 +133,7 @@ This is the zero-math half (explicit Condemn default, no ambiguous abstains). Th
 
 ### P2-5 — Moderator QoL: Balance Check on the setup screen
 
-**Problem:** the moderator cannot know whether the current preset/count/toggle combination is fair before dealing. The handoff status (`docs/IMPROVEMENTS-STATUS.md`) and `docs/audit-unimplemented.md` both list this feature.
+**Problem:** the moderator cannot know whether the current preset/count/toggle combination is fair before dealing. Sim verdicts and parked items are recorded in the GDD Balance Data Snapshot (§3.1).
 
 **Feature (no GDD rule change; one §12.1 line):**
 

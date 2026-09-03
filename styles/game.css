@@ -9,17 +9,18 @@
 .notice.ok { border-left-color: var(--ok); }
 .notice.accent { border-left-color: var(--accent); }
 .notice.bad { border-left-color: var(--bad); }
-.notice.info { border-left-color: var(--ok); }
+.notice.info { border-left-color: var(--accent); background: var(--accent-faint); }
 
 /* Wizard */
 .wizard-progress {
   color: var(--accent); font-size: .92rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px;
   position: sticky; top: 0; z-index: 2;
-  background: var(--panel); padding: 6px 2px;
+  background: var(--panel); padding: max(6px, env(safe-area-inset-top)) 2px 6px;
 }
 .wizard-title { font-size: 1.2rem; }
 .wizard-prompt { font-size: 1.3rem; line-height: 1.6; background: var(--bg2); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 14px; }
+.wizard-prompt.wizard-prompt-step { font-size: 1.75rem; padding: 22px; line-height: 1.5; }
 .wizard-label { color: var(--text); font-size: .95rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 6px; }
 .actor-done { opacity: .45; }
 .timer {
@@ -33,7 +34,7 @@
   font-weight: 800;
   letter-spacing: .05em;
   margin: 10px 0;
-  box-shadow: 0 0 16px var(--glow-strong), inset 0 0 10px var(--accent-faint);
+  box-shadow: var(--ring-glow), inset 0 0 10px var(--accent-faint);
 }
 
 /* Day discussion timer ring */
@@ -51,7 +52,7 @@
   justify-content: center;
   box-shadow:
     0 0 0 2px var(--line),
-    0 0 32px var(--glow),
+    var(--ring-glow),
     inset 0 0 18px var(--accent-faint);
   transition: box-shadow .3s ease;
 }
@@ -64,8 +65,8 @@
     inset 0 0 18px var(--black-30);
 }
 @keyframes timer-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px var(--line), 0 0 32px var(--glow), inset 0 0 18px var(--accent-faint); }
-  50% { box-shadow: 0 0 0 2px var(--accent), 0 0 44px var(--glow-strong), inset 0 0 18px var(--accent-dim); }
+  0%, 100% { box-shadow: 0 0 0 2px var(--line), var(--ring-glow), inset 0 0 18px var(--accent-faint); }
+  50% { box-shadow: 0 0 0 2px var(--accent), var(--ring-glow), inset 0 0 18px var(--accent-dim); }
 }
 .timer-count {
   font-size: 2.6rem;
@@ -85,7 +86,7 @@
     conic-gradient(var(--bad) calc(var(--p, 0) * 1%), var(--ring-track) 0);
   box-shadow:
     0 0 0 2px var(--line),
-    0 0 32px var(--bad-mid),
+    0 0 16px var(--bad-mid),
     inset 0 0 18px var(--bad-dim);
 }
 .timer-ring.timer-danger .timer-count {
@@ -123,8 +124,8 @@
   background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  padding: 6px;
-  margin: 6px 0;
+  padding: 10px 12px;
+  margin: var(--space-2) 0;
   min-height: 44px;
 }
 .ghost-voter { border-style: dashed; background: var(--muted-faint); }
@@ -174,16 +175,16 @@
 
 .wizard-nav { margin-top: 10px; }
 .wizard-summary { margin-top: 12px; padding: var(--space-4); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
-.summary-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: .85rem; }
+.summary-row { display: flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: .85rem; min-height: 44px; width: 100%; box-sizing: border-box; background: none; border: 0; border-radius: var(--radius-sm); color: inherit; text-align: left; cursor: pointer; }
+button.summary-row:active { background: var(--bg3, rgba(128, 128, 128, .15)); }
+.summary-role { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-arrow { color: var(--muted); }
+.summary-target { flex: 1; text-align: right; }
 
 /* Picker */
 .picker-card { border: 1px solid var(--accent); }
-
-/* Logs */
-.logs { display: none; }
-.logs.open { display: block; }
-.logs ul { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; color: var(--muted); }
-.logs li { margin: 3px 0; }
+.night-card { border: 1px solid var(--accent); }
+.whisper-results { background: var(--bg2); }
 
 /* Night order (prep) */
 .night-order-list { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -191,7 +192,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--bg2);

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Town of Vibelm neural net weights",
-  "description": "Serialization format for trained neural network weights consumed by js/sim/agent-loader.js. One weights file drives all players. Nets are vanilla feed-forward MLPs: ReLU hidden layers, linear output, softmax applied at inference (see js/sim/neural-net.js). The Python trainer (python/network.py, python/agent.py) exports this exact envelope: {version, game_config, network_configs, trained_weights}.",
+  "title": "Town of VibeLem neural net weights",
+  "description": "Serialization format for trained neural network weights consumed by js/sim/agent-loader.js. One weights file drives all players. Nets are vanilla feed-forward MLPs: ReLU hidden layers, linear output, softmax applied at inference (see js/sim/neural-net.js). Trainers export this exact envelope: {version, game_config, network_configs, trained_weights}. All dimensions are derived at runtime from the live feature extractor and engine role list (js/sim/feature-extractor.js over Object.keys(js/engine/01-roles.js ROLES)); they must never be hardcoded, because the role catalog grows with the engine.",
   "type": "object",
   "required": ["version", "game_config", "network_configs", "trained_weights"],
   "properties": {
@@ -27,12 +27,12 @@
         "feature_dim": {
           "type": "integer",
           "minimum": 1,
-          "description": "Length of the base feature vector for one player, computed by FeatureExtractor.getFeatureDimension(state) = 16 + R + playerCount * (3R + 5) where R = role_ids.length. Layout (index ranges): [0..5] phase one-hot (SETUP, SEATS, NIGHT, MORNING, DAY, END); [6] dayNumber/25; [7] night.number/25; [8] alive ratio (alive / playerCount); [9..11] team counts (TOWN, MAFIA, NEUTRAL) / playerCount over all dealt roles; [12..12+R-1] own role one-hot over role_ids; [12+R..12+R+2] own team one-hot (TOWN, MAFIA, NEUTRAL); [15+R] self alive; then per player in seat order, a block of [3 sheriff bits (UNKNOWN, INNOCENT, SUSPICIOUS), R consigliere one-hot (all zeros when unknown), R+1 public claim one-hot + no-claim, R+1 known dead role one-hot + unknown/cleaned]."
+          "description": "Length of the base feature vector for one player, computed by FeatureExtractor.getFeatureDimension(state) = 16 + R + playerCount * (3R + 5) where R = role_ids.length = Object.keys(engine.ROLES).length for the current engine. Recomputed by agent-loader.js at load time and rejected on mismatch; trainers must derive it from FeatureExtractor.getFeatureDimension({player_count}) rather than hardcoding it. Layout (index ranges): [0..5] phase one-hot (SETUP, SEATS, NIGHT, MORNING, DAY, END); [6] dayNumber/25; [7] night.number/25; [8] alive ratio (alive / playerCount); [9..11] team counts (TOWN, MAFIA, NEUTRAL) / playerCount over all dealt roles; [12..12+R-1] own role one-hot over role_ids; [12+R..12+R+2] own team one-hot (TOWN, MAFIA, NEUTRAL); [15+R] self alive; then per player in seat order, a block of [3 sheriff bits (UNKNOWN, INNOCENT, SUSPICIOUS), R consigliere one-hot (all zeros when unknown), R+1 public claim one-hot + no-claim, R+1 known dead role one-hot + unknown/cleaned]."
         },
         "candidate_dim": {
           "type": "integer",
           "minimum": 1,
-          "description": "Length of the candidate block appended to the base features for vote_net and night_net inputs, computed by FeatureExtractor.getCandidateDimension(state) = 3R + 8 where R = role_ids.length. Layout: [alive, is self, is mafia teammate, 3 sheriff bits (UNKNOWN, INNOCENT, SUSPICIOUS), R consigliere one-hot (all zeros when unknown), R+1 public claim one-hot + no-claim, R+1 known dead role one-hot + unknown/cleaned]."
+          "description": "Length of the candidate block appended to the base features for vote_net and night_net inputs, computed by FeatureExtractor.getCandidateDimension(state) = 3R + 8 where R = role_ids.length for the current engine. Recomputed by agent-loader.js at load time and rejected on mismatch. Layout: [alive, is self, is mafia teammate, 3 sheriff bits (UNKNOWN, INNOCENT, SUSPICIOUS), R consigliere one-hot (all zeros when unknown), R+1 public claim one-hot + no-claim, R+1 known dead role one-hot + unknown/cleaned]."
         },
         "role_ids": {
           "type": "array",

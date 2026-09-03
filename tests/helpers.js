@@ -44,7 +44,7 @@ function assignRoles(roles, opts) {
   state.graveyard = [];
   state.deathLog = [];
   state.trial = { active: false, stage: null, accusedId: null, nominatorId: null, seconds: [], votes: [], sentenceVotes: [], dayTrialsDone: 0 };
-  state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null };
+  state.night = { number: 1, actions: [], lastJailTarget: null, lastBlackmailTarget: null, nightZeroDone: false };
   state.dayNumber = 0;
   state.winner = null;
   state.logs = [];
@@ -181,6 +181,7 @@ globalThis.clearTimeout = function () {};
 globalThis.setInterval = function () { return 0; };
 globalThis.clearInterval = function () {};
 
+engine.setLocale('en');
 APP.init();
 APP.goto('setup');
 

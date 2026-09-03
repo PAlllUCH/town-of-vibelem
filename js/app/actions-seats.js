@@ -84,7 +84,7 @@
 
   function resolveNightZero() {
     E.resolveNightZero(APP.state);
-    APP.app.nightZeroDone = true;
+    APP.app.nightZeroDone = {};
     APP.app.wizard = null;
     APP.save();
     APP.renderScreen('seats');

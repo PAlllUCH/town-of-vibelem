@@ -50,9 +50,18 @@
 
   function assignSetupInfo(state) {
     state.executionerTarget = null;
-    var townPlayers = state.players.filter(function (p) { return E.ROLES[p.assignedRole].team === 'TOWN'; });
-    if (state.deck.indexOf('executioner') !== -1 && townPlayers.length > 0) {
-      state.executionerTarget = townPlayers[E._randInt(townPlayers.length)].id;
+    var exeIdx = state.deck.indexOf('executioner');
+    if (exeIdx !== -1) {
+      var townPlayers = state.players.filter(function (p) { return E.ROLES[p.assignedRole].team === 'TOWN'; });
+      if (townPlayers.length > 0) {
+        state.executionerTarget = townPlayers[E._randInt(townPlayers.length)].id;
+      } else {
+        var exe = state.players.find(function (p) { return p.assignedRole === 'executioner'; });
+        if (exe) exe.assignedRole = 'jester';
+        if (state.deck[exeIdx] === 'executioner') state.deck[exeIdx] = 'jester';
+        state.logs.push('The Executioner had no eligible target, so they became a Jester.');
+        if (exe) E._logPlayer(state, exe.id, 'SETUP', 'converted', 'Became a Jester: no eligible Executioner target existed.');
+      }
     }
     state.gfBluffs = [];
     if (state.deck.indexOf('godfather') !== -1) {
@@ -87,7 +96,8 @@
     var houseRules = {
       noKillN1: !!hrOpts.noKillN1,
       noLynchD1: hrOpts.noLynchD1 !== false,
-      classicReveal: !!hrOpts.classicReveal
+      classicReveal: !!hrOpts.classicReveal,
+      jailorNoExecN1: !!hrOpts.jailorNoExecN1
     };
     var teamCounts = null;
     if (opts.teamCounts != null) {
@@ -105,7 +115,7 @@
       teamCounts = { town: tc.town, mafia: tc.mafia, neutral: tc.neutral };
     }
     var deck = E._buildDeck(playerCount, presetId, teamCounts
-      ? { town: opts.town, mafia: opts.mafia, neutral: opts.neutral, civilians: opts.civilians, teamCounts: teamCounts }
+      ? { town: opts.town, mafia: opts.mafia, neutral: opts.neutral, evil: opts.evil, civilians: opts.civilians, teamCounts: teamCounts }
       : opts);
     var players = [];
     for (var i = 1; i <= playerCount; i += 1) {
@@ -147,7 +157,12 @@
       retributionist: { used: false },
       amnesiac: { used: false, rememberedRole: null },
       pendingInheritanceNote: '',
-      morning: { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] }
+      morning: { deaths: [], revivals: [], inheritanceNote: '', blackmailTarget: null, forgedWills: [] },
+      staleDays: 0,
+      maxStaleDays: Number.isInteger(opts.maxStaleDays) && opts.maxStaleDays >= 1 ? opts.maxStaleDays : 5,
+      staleLynchSeen: 0,
+      staleCycleLynches: 0,
+      staleNightSeen: 0
     };
     state.logs.push('Game created: ' + playerCount + ' players, preset ' + presetId + '.');
     return state;
@@ -309,6 +324,7 @@
       if (p.jailorDecision == null) p.jailorDecision = null;
     }
     if (!data.houseRules || typeof data.houseRules !== 'object') data.houseRules = {};
+    if (typeof data.houseRules.jailorNoExecN1 !== 'boolean') data.houseRules.jailorNoExecN1 = false;
     if (!Array.isArray(data.graveyard)) data.graveyard = [];
     data.players.forEach(function (pl) {
       if (typeof pl.diedBefore !== 'boolean') {
@@ -344,6 +360,23 @@
     if (!Array.isArray(data.morning.forgedWills)) data.morning.forgedWills = [];
     if (typeof data.executionerConverted !== 'boolean') data.executionerConverted = false;
     if (data.pendingInheritanceNote == null) data.pendingInheritanceNote = '';
+    if (typeof data.phase !== 'string' || !data.phase) data.phase = 'SETUP';
+    if (!Number.isInteger(data.dayNumber)) data.dayNumber = 0;
+    if (typeof data.presetId !== 'string' || !E.PRESETS[data.presetId]) data.presetId = 'p1';
+    if (data.executionerTarget == null) data.executionerTarget = null;
+    if (!Array.isArray(data.gfBluffs)) data.gfBluffs = [];
+    if (data.witchSide !== 'TOWN' && data.witchSide !== 'MAFIA') data.witchSide = 'MAFIA';
+    if (!Number.isInteger(data.maxStaleDays) || data.maxStaleDays < 1) data.maxStaleDays = 5;
+    if (!Number.isInteger(data.staleDays) || data.staleDays < 0) data.staleDays = 0;
+    var staleLynches = 0;
+    for (var sl = 0; sl < data.graveyard.length; sl += 1) {
+      if (data.graveyard[sl] && data.graveyard[sl].deathCause === 'lynched by the town') staleLynches += 1;
+    }
+    if (!Number.isInteger(data.staleLynchSeen)) data.staleLynchSeen = staleLynches;
+    if (!Number.isInteger(data.staleCycleLynches)) data.staleCycleLynches = staleLynches;
+    if (!Number.isInteger(data.staleNightSeen)) {
+      data.staleNightSeen = Math.max(0, (Number.isInteger(data.night.number) ? data.night.number : 1) - 1);
+    }
     if (data.version == null) data.version = 1;
     return data;
   };
